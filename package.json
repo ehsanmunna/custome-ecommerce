@@ -1,11 +1,37 @@
 {
   "name": "custome-ecommerce",
-  "version": "1.0.0",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable custom e-commerce platform: API, admin dashboard, schema, and reference storefront.",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@12.15.0",
+  "engines": {
+    "node": ">=20.19.0",
+    "pnpm": ">=12.0.0"
   },
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "scripts": {
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm --filter database build && pnpm -r --if-present typecheck",
+    "test": "pnpm --filter database build && pnpm -r --if-present test",
+    "test:integration": "pnpm --filter database test:integration",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:up": "docker compose -f docker/compose.yaml up -d",
+    "db:down": "docker compose -f docker/compose.yaml down",
+    "db:reset": "docker compose -f docker/compose.yaml down -v",
+    "db:migrate": "pnpm --filter database db:migrate",
+    "db:status": "pnpm --filter database db:status",
+    "db:version": "pnpm --filter database db:version",
+    "db:generate": "pnpm --filter database db:generate",
+    "version:generate": "pnpm --filter database version:generate",
+    "dev:api": "pnpm --filter api start:dev"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.5",
+    "eslint": "9.39.5",
+    "prettier": "3.9.10",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.72.0"
+  }
 }

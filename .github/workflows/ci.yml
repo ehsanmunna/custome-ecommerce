@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: app_migrator
+          POSTGRES_PASSWORD: app_migrator_password
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U app_migrator -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      NODE_ENV: test
+      PORT: 3000
+      LOG_LEVEL: info
+      DATABASE_PROBE_TIMEOUT_MS: 2000
+      DATABASE_URL: postgresql://app_runtime:app_runtime_password@localhost:5432/app
+      MIGRATION_DATABASE_URL: postgresql://app_migrator:app_migrator_password@localhost:5432/app
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.15.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Create runtime and migration identities
+        run: psql "$MIGRATION_DATABASE_URL" -f docker/initdb/01-roles.sql
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Unit and migration integration tests
+        run: pnpm test
+
+      - name: Migrate an empty database
+        run: psql "$MIGRATION_DATABASE_URL" -f docker/ci/reset-schema.sql && pnpm db:migrate
+
+      - name: Migration status and version
+        run: |
+          pnpm db:status
+          pnpm db:version
+
+      - name: Fail when expected schema version is stale
+        run: |
+          pnpm version:generate
+          git diff --exit-code packages/database/src/expected-version.ts
+
+      - name: Build
+        run: pnpm build
+
+      - name: Start API and assert readiness
+        run: |
+          set -euo pipefail
+          pnpm --filter api start > api.log 2>&1 &
+          API_PID=$!
+          trap 'kill $API_PID 2>/dev/null || true' EXIT
+
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/v1/health/ready > ready.json; then
+              cat ready.json
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "API did not become ready"
+          cat api.log
+          exit 1

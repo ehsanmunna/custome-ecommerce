@@ -1,32 +1,43 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+context: |
+  Tech stack: NestJS, PostgreSQL
+  Domain: Custom e-commerce platform
+  Monorepo structure: API, admin dashboard, reference storefront
+  OpenSpec schema: spec-driven with proposal, specs, design, tasks artifacts
+  Build order: Database → API → Admin Dashboard → Storefront
+  Phase 0: Foundation (monorepo, API versioning, deployment template)
+  Phase 1: Database (core tables, order tables, translation support, seed data)
+  Phase 2: API (auth, media, catalog, inventory, customer auth, cart/checkout, order lifecycle, payments, couriers, notifications, analytics, hardening)
+  Phase 3: Admin Dashboard (app shell, CRUD operations, inventory, orders, customers/roles, settings, analytics, polish)
+  Phase 4: Storefront (layout, theming, pages, search, cart/checkout, payment flows, account, language switch, performance)
+  Phase 5: Launch Readiness (staging, E2E tests, security, backups, UAT, production go-live)
+  Milestone 1: Full API works testable without UI
+  Milestone 2: Client can run business from admin panel
+  Risks: Payment gateways (sandbox approvals), ShurjoPay/analytics may slip from v1
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Open decisions (may affect scope):
+  - SMS and email providers
+  - Delivery charges (Dhaka vs outside Dhaka)
+  - Cancellations, returns and refunds
+  - Coupons and discounts
+  - Customer notifications for order status changes
 
-# Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
-# Example:
-#   operations:
-#     apply:
-#       guidance:
-#         - Keep test summaries concise
-#     archive:
-#       guidance:
-#         - Summarize the archive outcome before finishing
+rules:
+  proposal:
+    - Keep proposals under 500 words
+    - Always include "Non-goals" section
+  specs:
+    - Reference plan.md items where applicable
+  design:
+    - Follow NestJS conventions (modules, controllers, services)
+    - Use PostgreSQL with TypeORM or Prisma
+    - API versioning at /v1
+
+operations:
+  apply:
+    guidance:
+      - Keep test summaries concise
+  archive:
+    guidance:
+      - Summarize the archive outcome before finishing

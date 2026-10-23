@@ -1,0 +1,30 @@
+{
+  "name": "database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "prisma generate && tsc -p tsconfig.json",
+    "lint": "eslint src test scripts",
+    "typecheck": "prisma generate && tsc --noEmit -p tsconfig.typecheck.json",
+    "test": "vitest run",
+    "test:integration": "vitest run test/integration",
+    "db:generate": "prisma generate && node scripts/generate-expected-version.mjs",
+    "version:generate": "node scripts/generate-expected-version.mjs",
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:status": "node scripts/status.mjs",
+    "db:version": "node scripts/version.mjs"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3",
+    "pg": "8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.0",
+    "@types/pg": "8.23.1",
+    "prisma": "6.19.3",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7"
+  }
+}
