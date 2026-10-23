@@ -41,7 +41,10 @@ describeDatabase('database migrations', () => {
     expect(await readSchemaVersion()).toBe(EXPECTED_SCHEMA_VERSION);
 
     const ledger = await readLedger();
-    expect(ledger.map((entry) => entry.migration_name)).toEqual([EXPECTED_SCHEMA_VERSION]);
+    expect(ledger.map((entry) => entry.migration_name)).toEqual([
+      '20260101000000_init',
+      EXPECTED_SCHEMA_VERSION,
+    ]);
     expect(ledger[0]?.checksum).toBeTruthy();
     expect(ledger[0]?.finished_at).toBeTruthy();
   });
@@ -105,6 +108,7 @@ describeDatabase('database migrations', () => {
     const applied = ledger.filter((entry) => entry.finished_at);
     expect(applied.map((entry) => entry.migration_name)).toEqual([
       '20260101000000_init',
+      '20260102000000_catalog',
       '20260102000000_create_probe',
     ]);
     expect(await readSchemaVersion()).toBe('20260102000000_create_probe');
