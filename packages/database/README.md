@@ -59,3 +59,35 @@ Rules to preserve in later changes:
 - The inventory API owns row locking (`SELECT ... FOR UPDATE`) and writes the counter, reservation, and
   movement in one transaction. The schema provides the backstop constraints, not the concurrency
   control.
+
+## Customer and admin auth schema
+
+The customers/auth migration adds these tables:
+
+- `customers` - customer accounts with optional phone and email identities.
+- `customer_addresses` - delivery addresses owned by a customer.
+- `otp_codes` - hashed, expiring OTP records for customer login and verification.
+- `admin_users` - staff accounts with exactly one role.
+- `admin_roles` and `admin_permissions` - editable role and permission catalog.
+- `admin_role_permissions` - permission grants per role.
+
+Rules to preserve in later changes:
+
+- A customer must have at least one identity: an E.164 `phone`, a lowercase `email`, or both. Unique
+  constraints allow many customers to omit either column.
+- Customer passwords are stored only as an opaque hash in `password_hash`, and only when an email is
+  present. Phone-only accounts use OTP login. The API hashes with Argon2id; the database checks only
+  non-emptiness and a minimum length.
+- OTP `code_hash` values are opaque; raw codes are never stored. OTP records keep channel, purpose,
+  destination, expiry, consumption/invalidation time, and attempt counts. SMS destinations must be
+  E.164; email destinations must be lowercase. History is retained so the API can enforce issuance
+  rate limits.
+- Addresses require a recipient name, E.164 phone, address line 1, district, and division.
+  `country_code` defaults to `BD`. At most one default shipping and one default billing address exist
+  per customer; deleting a customer cascades their addresses.
+- Each admin user has exactly one role. Emails are lowercase and unique, and passwords are opaque
+  hashes.
+- Role and permission keys are stable lowercase identifiers. Role scope is `store` or `platform`;
+  super-admin is platform scope. System roles cannot be deleted. Deleting a custom role cascades its
+  grants, while a permission still granted to a role cannot be deleted.
+- Admin effective permissions are exactly the role's grants; there are no per-user overrides.
