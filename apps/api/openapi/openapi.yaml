@@ -1,0 +1,4156 @@
+openapi: 3.1.0
+info:
+  title: Custom E-commerce API
+  version: 1.0.0
+  summary: Versioned REST API for the shared custom e-commerce platform.
+  description: >-
+    Canonical contract for the planned v1 API. Only operations implemented by the
+    running API are currently available; other operations describe the planned
+    integration boundary and are implemented by their feature changes.
+  contact:
+    name: API maintainers
+servers:
+  - url: /v1
+    description: Version 1 API base path
+x-implemented-operations:
+  - GET /health/live
+  - GET /health/ready
+tags:
+  - name: Health
+  - name: Admin authentication
+  - name: Admin users
+  - name: Roles and permissions
+  - name: Media
+  - name: Storefront catalog
+  - name: Admin catalog
+  - name: Inventory
+  - name: Customer authentication
+  - name: Customer account
+  - name: Carts and checkout
+  - name: Storefront orders
+  - name: Admin orders
+  - name: Returns
+  - name: Payments
+  - name: Shipping
+  - name: Promotions
+  - name: Store settings
+  - name: Storefront CMS
+  - name: Admin CMS
+  - name: Notifications
+  - name: Analytics
+paths:
+  /health/live:
+    get:
+      operationId: healthLive
+      tags: [Health]
+      summary: Check process liveness
+      description: Implemented. Reports only that the API process is running.
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '200':
+          description: Process is alive.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LivenessResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /health/ready:
+    get:
+      operationId: healthReady
+      tags: [Health]
+      summary: Check service readiness
+      description: Implemented. Readiness includes database connectivity and schema compatibility.
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '200':
+          description: The service can accept traffic.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          description: The service is not ready.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/auth/login:
+    post:
+      operationId: adminLogin
+      tags: [Admin authentication]
+      summary: Authenticate an administrator
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordLoginRequest'
+      responses:
+        '200':
+          description: Authenticated administrator and bearer tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/auth/refresh:
+    post:
+      operationId: adminRefreshSession
+      tags: [Admin authentication]
+      summary: Refresh an administrator session
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Refreshed bearer tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/auth/logout:
+    post:
+      operationId: adminLogout
+      tags: [Admin authentication]
+      summary: End the current administrator session
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.auth.logout
+      responses:
+        '204':
+          description: Session ended.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/auth/me:
+    get:
+      operationId: getCurrentAdmin
+      tags: [Admin authentication]
+      summary: Get the current administrator
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.auth.read
+      responses:
+        '200':
+          description: Current administrator and effective role permissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/users:
+    get:
+      operationId: listAdminUsers
+      tags: [Admin users]
+      summary: List administrators
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.users.read
+      responses:
+        '200':
+          description: Paginated administrators.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createAdminUser
+      tags: [Admin users]
+      summary: Create an administrator
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.users.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserCreate'
+      responses:
+        '201':
+          description: Administrator created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/users/{userId}:
+    parameters:
+      - $ref: '#/components/parameters/UserId'
+    get:
+      operationId: getAdminUser
+      tags: [Admin users]
+      summary: Get an administrator
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.users.read
+      responses:
+        '200':
+          description: Administrator details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateAdminUser
+      tags: [Admin users]
+      summary: Update an administrator
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.users.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminUserUpdate'
+      responses:
+        '200':
+          description: Administrator updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteAdminUser
+      tags: [Admin users]
+      summary: Delete an administrator
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.users.delete
+      responses:
+        '204':
+          description: Administrator deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/roles:
+    get:
+      operationId: listRoles
+      tags: [Roles and permissions]
+      summary: List roles
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.roles.read
+      responses:
+        '200':
+          description: Paginated roles.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RolePage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createRole
+      tags: [Roles and permissions]
+      summary: Create a role with permission grants
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.roles.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '201':
+          description: Role created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/roles/{roleId}:
+    parameters:
+      - $ref: '#/components/parameters/RoleId'
+    patch:
+      operationId: updateRole
+      tags: [Roles and permissions]
+      summary: Update a role and its grants
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.roles.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleInput'
+      responses:
+        '200':
+          description: Role updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteRole
+      tags: [Roles and permissions]
+      summary: Delete a non-system role that is not in use
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.roles.delete
+      responses:
+        '204':
+          description: Role deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/permissions:
+    get:
+      operationId: listPermissions
+      tags: [Roles and permissions]
+      summary: List the permission catalog
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: admin.roles.read
+      responses:
+        '200':
+          description: Paginated permissions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PermissionPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/media:
+    get:
+      operationId: listMedia
+      tags: [Media]
+      summary: List media assets
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: media.read
+      responses:
+        '200':
+          description: Paginated media assets.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createMediaUpload
+      tags: [Media]
+      summary: Create a media upload
+      description: Upload transport and provider details are determined by the media feature.
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: media.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+      responses:
+        '201':
+          description: Upload instruction and media record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/media/{mediaId}:
+    parameters:
+      - $ref: '#/components/parameters/MediaId'
+    delete:
+      operationId: deleteMedia
+      tags: [Media]
+      summary: Delete a media record and schedule object cleanup
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: media.delete
+      responses:
+        '204':
+          description: Media record deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/categories:
+    get:
+      operationId: listStorefrontCategories
+      tags: [Storefront catalog]
+      summary: List active categories
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Locale'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Paginated active categories.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/categories/{slug}/products:
+    get:
+      operationId: listProductsByCategory
+      tags: [Storefront catalog]
+      summary: List active products in a category
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Locale'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Paginated products in the category.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/products:
+    get:
+      operationId: searchStorefrontProducts
+      tags: [Storefront catalog]
+      summary: Search and list active products
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Locale'
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 200
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: brand
+          in: query
+          required: false
+          schema:
+            type: string
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Paginated active products.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/products/{slug}:
+    get:
+      operationId: getStorefrontProduct
+      tags: [Storefront catalog]
+      summary: Get an active product by localized slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/Locale'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Product details, variants, localized content, and media.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/brands:
+    get:
+      operationId: listStorefrontBrands
+      tags: [Storefront catalog]
+      summary: List active brands
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Locale'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Paginated active brands.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/brands/{slug}:
+    get:
+      operationId: getStorefrontBrand
+      tags: [Storefront catalog]
+      summary: Get an active brand by localized slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/Locale'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Brand and localized details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/brands:
+    get:
+      operationId: listAdminBrands
+      tags: [Admin catalog]
+      summary: List brands
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.brands.read
+      responses:
+        '200':
+          description: Paginated brands.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrandPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createBrand
+      tags: [Admin catalog]
+      summary: Create a localized brand
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.brands.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandInput'
+      responses:
+        '201':
+          description: Brand created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/brands/{brandId}:
+    parameters:
+      - $ref: '#/components/parameters/BrandId'
+    patch:
+      operationId: updateBrand
+      tags: [Admin catalog]
+      summary: Update a localized brand
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.brands.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrandInput'
+      responses:
+        '200':
+          description: Brand updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brand'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteBrand
+      tags: [Admin catalog]
+      summary: Delete a brand
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.brands.delete
+      responses:
+        '204':
+          description: Brand deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/categories:
+    get:
+      operationId: listAdminCategories
+      tags: [Admin catalog]
+      summary: List categories
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.categories.read
+      responses:
+        '200':
+          description: Paginated categories.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createCategory
+      tags: [Admin catalog]
+      summary: Create a localized category
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.categories.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '201':
+          description: Category created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/categories/{categoryId}:
+    parameters:
+      - $ref: '#/components/parameters/CategoryId'
+    patch:
+      operationId: updateCategory
+      tags: [Admin catalog]
+      summary: Update a category and localized content
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.categories.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryInput'
+      responses:
+        '200':
+          description: Category updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Category'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteCategory
+      tags: [Admin catalog]
+      summary: Delete an unused category
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.categories.delete
+      responses:
+        '204':
+          description: Category deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/categories/{categoryId}/attributes:
+    get:
+      operationId: listCategoryAttributes
+      tags: [Admin catalog]
+      summary: List category attribute definitions
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.categories.read
+      responses:
+        '200':
+          description: Paginated attribute definitions.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttributeDefinitionPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createCategoryAttribute
+      tags: [Admin catalog]
+      summary: Create a category attribute definition
+      parameters:
+        - $ref: '#/components/parameters/CategoryId'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.categories.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttributeDefinitionInput'
+      responses:
+        '201':
+          description: Attribute definition created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttributeDefinition'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/products:
+    get:
+      operationId: listAdminProducts
+      tags: [Admin catalog]
+      summary: List products for administration
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ProductStatus'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.read
+      responses:
+        '200':
+          description: Paginated products.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createProduct
+      tags: [Admin catalog]
+      summary: Create a product
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '201':
+          description: Product created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/products/{productId}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    get:
+      operationId: getAdminProduct
+      tags: [Admin catalog]
+      summary: Get a product for administration
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.read
+      responses:
+        '200':
+          description: Product details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateProduct
+      tags: [Admin catalog]
+      summary: Update product content and lifecycle
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductInput'
+      responses:
+        '200':
+          description: Product updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteProduct
+      tags: [Admin catalog]
+      summary: Delete a product and its unreferenced catalog data
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.delete
+      responses:
+        '204':
+          description: Product deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/products/{productId}/variants:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    post:
+      operationId: createVariant
+      tags: [Admin catalog]
+      summary: Create a sellable product variant
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariantInput'
+      responses:
+        '201':
+          description: Variant created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/variants/{variantId}:
+    parameters:
+      - $ref: '#/components/parameters/VariantId'
+    patch:
+      operationId: updateVariant
+      tags: [Admin catalog]
+      summary: Update a sellable product variant
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariantInput'
+      responses:
+        '200':
+          description: Variant updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteVariant
+      tags: [Admin catalog]
+      summary: Delete an unreferenced variant
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: catalog.products.update
+      responses:
+        '204':
+          description: Variant deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/inventory:
+    get:
+      operationId: listInventory
+      tags: [Inventory]
+      summary: List inventory and derived low-stock state
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: lowStock
+          in: query
+          required: false
+          schema:
+            type: boolean
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: inventory.read
+      responses:
+        '200':
+          description: Paginated inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/inventory/{variantId}/adjustments:
+    post:
+      operationId: adjustInventory
+      tags: [Inventory]
+      summary: Apply a stock adjustment
+      parameters:
+        - $ref: '#/components/parameters/VariantId'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: inventory.adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InventoryAdjustmentInput'
+      responses:
+        '201':
+          description: Adjustment and updated inventory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryItem'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/inventory/reservations:
+    get:
+      operationId: listInventoryReservations
+      tags: [Inventory]
+      summary: List stock reservations
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [active, released, committed, expired]
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: inventory.read
+      responses:
+        '200':
+          description: Paginated reservations.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createManualInventoryReservation
+      tags: [Inventory]
+      summary: Create a manual stock reservation
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: inventory.adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationInput'
+      responses:
+        '201':
+          description: Stock reservation created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/inventory/reservations/{reservationId}/status:
+    patch:
+      operationId: updateInventoryReservationStatus
+      tags: [Inventory]
+      summary: Release or commit a stock reservation
+      parameters:
+        - $ref: '#/components/parameters/ReservationId'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: inventory.adjust
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReservationStatusUpdate'
+      responses:
+        '200':
+          description: Reservation status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers:
+    post:
+      operationId: registerCustomer
+      tags: [Customer authentication]
+      summary: Register a customer account
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerRegistration'
+      responses:
+        '201':
+          description: Customer account created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/auth/login:
+    post:
+      operationId: customerEmailLogin
+      tags: [Customer authentication]
+      summary: Authenticate a customer by email and password
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordLoginRequest'
+      responses:
+        '200':
+          description: Customer and bearer token.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/auth/otp:
+    post:
+      operationId: requestCustomerOtp
+      tags: [Customer authentication]
+      summary: Request a customer one-time code
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpRequest'
+      responses:
+        '202':
+          description: Code request accepted. The code is never returned.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpAccepted'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/auth/otp/verify:
+    post:
+      operationId: verifyCustomerOtp
+      tags: [Customer authentication]
+      summary: Verify a customer one-time code
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+      responses:
+        '200':
+          description: Customer session established.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/me:
+    get:
+      operationId: getCurrentCustomer
+      tags: [Customer account]
+      summary: Get the current customer account
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '200':
+          description: Customer profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateCurrentCustomer
+      tags: [Customer account]
+      summary: Update the current customer account
+      security:
+        - bearerAuth: []
+      x-access: customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomerUpdate'
+      responses:
+        '200':
+          description: Customer profile updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Customer'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/me/addresses:
+    get:
+      operationId: listCustomerAddresses
+      tags: [Customer account]
+      summary: List the current customer's addresses
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '200':
+          description: Paginated customer addresses.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createCustomerAddress
+      tags: [Customer account]
+      summary: Create a customer address
+      security:
+        - bearerAuth: []
+      x-access: customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '201':
+          description: Address created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/me/addresses/{addressId}:
+    parameters:
+      - $ref: '#/components/parameters/AddressId'
+    patch:
+      operationId: updateCustomerAddress
+      tags: [Customer account]
+      summary: Update a customer address
+      security:
+        - bearerAuth: []
+      x-access: customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressInput'
+      responses:
+        '200':
+          description: Address updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Address'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteCustomerAddress
+      tags: [Customer account]
+      summary: Delete a customer address
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '204':
+          description: Address deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/carts:
+    post:
+      operationId: createCart
+      tags: [Carts and checkout]
+      summary: Create a guest or customer cart
+      security: []
+      x-access: public
+      responses:
+        '201':
+          description: New active cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/carts/{cartId}:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+    get:
+      operationId: getCart
+      tags: [Carts and checkout]
+      summary: Get a cart and its current line items
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Cart and current item snapshots.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/carts/{cartId}/items:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+    post:
+      operationId: addCartItem
+      tags: [Carts and checkout]
+      summary: Add a variant to the cart
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemInput'
+      responses:
+        '201':
+          description: Cart item added.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/carts/{cartId}/items/{itemId}:
+    parameters:
+      - $ref: '#/components/parameters/CartId'
+      - $ref: '#/components/parameters/ItemId'
+    patch:
+      operationId: updateCartItem
+      tags: [Carts and checkout]
+      summary: Update a cart line quantity
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CartItemUpdate'
+      responses:
+        '200':
+          description: Cart item updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: removeCartItem
+      tags: [Carts and checkout]
+      summary: Remove an item from the cart
+      security: []
+      x-access: public
+      responses:
+        '204':
+          description: Cart item removed.
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/carts/{cartId}/checkout:
+    post:
+      operationId: checkoutCart
+      tags: [Carts and checkout]
+      summary: Revalidate a cart and place an order
+      description: Checkout rechecks price and stock from the database and snapshots the order.
+      parameters:
+        - $ref: '#/components/parameters/CartId'
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '201':
+          description: Order placed from the cart.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/orders:
+    get:
+      operationId: listAdminOrders
+      tags: [Admin orders]
+      summary: List orders
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OrderStatus'
+        - name: createdFrom
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: createdTo
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: orders.read
+      responses:
+        '200':
+          description: Paginated orders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      operationId: getAdminOrder
+      tags: [Admin orders]
+      summary: Get an order with snapshots and lifecycle history
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: orders.read
+      responses:
+        '200':
+          description: Order details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/orders/{orderId}/status:
+    patch:
+      operationId: updateOrderStatus
+      tags: [Admin orders]
+      summary: Change an order lifecycle status
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: orders.status.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusUpdate'
+      responses:
+        '200':
+          description: Updated order and appended status history.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/orders:
+    get:
+      operationId: listCustomerOrders
+      tags: [Storefront orders]
+      summary: List orders belonging to the current customer
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '200':
+          description: Paginated customer orders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      operationId: getCustomerOrder
+      tags: [Storefront orders]
+      summary: Get an order belonging to the current customer
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '200':
+          description: Customer-visible order details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/orders/{orderId}/returns:
+    post:
+      operationId: requestReturn
+      tags: [Returns]
+      summary: Request a return for an order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      security:
+        - bearerAuth: []
+      x-access: customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnRequest'
+      responses:
+        '201':
+          description: Return request created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/returns:
+    get:
+      operationId: listReturns
+      tags: [Returns]
+      summary: List return requests
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: orders.returns.read
+      responses:
+        '200':
+          description: Paginated returns.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReturnPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/returns/{returnId}/status:
+    patch:
+      operationId: updateReturnStatus
+      tags: [Returns]
+      summary: Update a return request status
+      parameters:
+        - $ref: '#/components/parameters/ReturnId'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: orders.returns.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnStatusUpdate'
+      responses:
+        '200':
+          description: Return status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Return'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/orders/{orderId}/payments:
+    post:
+      operationId: createPaymentAttempt
+      tags: [Payments]
+      summary: Start a payment attempt for an order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentAttemptRequest'
+      responses:
+        '201':
+          description: Payment attempt and provider handoff details.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/payments/{paymentId}:
+    get:
+      operationId: getPaymentStatus
+      tags: [Payments]
+      summary: Get payment status
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Current payment status without provider secrets.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Payment'
+        default:
+          $ref: '#/components/responses/Problem'
+  /webhooks/payments/{provider}:
+    post:
+      operationId: receivePaymentWebhook
+      tags: [Payments]
+      summary: Receive a payment-provider event
+      description: Provider verification and raw webhook storage are not part of this contract.
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [bkash, shurjopay]
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '202':
+          description: Event accepted for processing.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/shipping/zones:
+    get:
+      operationId: listShippingZones
+      tags: [Shipping]
+      summary: List delivery zones and district mappings
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.zones.read
+      responses:
+        '200':
+          description: Paginated shipping zones.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingZonePage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createShippingZone
+      tags: [Shipping]
+      summary: Create a delivery zone
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.zones.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShippingZoneInput'
+      responses:
+        '201':
+          description: Delivery zone created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingZone'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/shipping/zones/{zoneId}:
+    parameters:
+      - $ref: '#/components/parameters/ZoneId'
+    patch:
+      operationId: updateShippingZone
+      tags: [Shipping]
+      summary: Update a delivery zone
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.zones.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShippingZoneInput'
+      responses:
+        '200':
+          description: Delivery zone updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingZone'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteShippingZone
+      tags: [Shipping]
+      summary: Delete an unused delivery zone
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.zones.delete
+      responses:
+        '204':
+          description: Delivery zone deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/shipping/zones/{zoneId}/districts:
+    put:
+      operationId: setShippingZoneDistricts
+      tags: [Shipping]
+      summary: Replace the districts mapped to a zone
+      parameters:
+        - $ref: '#/components/parameters/ZoneId'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.zones.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistrictsInput'
+      responses:
+        '200':
+          description: Zone and mapped districts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShippingZone'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/shipments:
+    get:
+      operationId: listShipments
+      tags: [Shipping]
+      summary: List shipments
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.shipments.read
+      responses:
+        '200':
+          description: Paginated shipments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createShipment
+      tags: [Shipping]
+      summary: Create a shipment record for an order
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: shipping.shipments.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentInput'
+      responses:
+        '201':
+          description: Shipment created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/orders/{orderId}/tracking:
+    get:
+      operationId: getOrderTracking
+      tags: [Shipping]
+      summary: Get customer-visible shipment tracking
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Tracking status without provider credentials.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/coupons:
+    get:
+      operationId: listCoupons
+      tags: [Promotions]
+      summary: List coupons
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: promotions.coupons.read
+      responses:
+        '200':
+          description: Paginated coupons.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createCoupon
+      tags: [Promotions]
+      summary: Create a coupon
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: promotions.coupons.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponInput'
+      responses:
+        '201':
+          description: Coupon created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/coupons/{couponId}:
+    parameters:
+      - $ref: '#/components/parameters/CouponId'
+    patch:
+      operationId: updateCoupon
+      tags: [Promotions]
+      summary: Update a coupon
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: promotions.coupons.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponInput'
+      responses:
+        '200':
+          description: Coupon updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Coupon'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteCoupon
+      tags: [Promotions]
+      summary: Delete a coupon with no redemptions
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: promotions.coupons.delete
+      responses:
+        '204':
+          description: Coupon deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/coupons/validate:
+    post:
+      operationId: validateCoupon
+      tags: [Promotions]
+      summary: Validate a coupon against a cart amount
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CouponValidationRequest'
+      responses:
+        '200':
+          description: Coupon validity and calculated discount.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CouponValidation'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/settings:
+    get:
+      operationId: getPublicStoreSettings
+      tags: [Store settings]
+      summary: Get allowlisted public store settings
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Public settings only; secret references are excluded.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PublicStoreSettings'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/settings:
+    get:
+      operationId: getAdminStoreSettings
+      tags: [Store settings]
+      summary: List non-secret store settings
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: settings.read
+      responses:
+        '200':
+          description: Paginated non-secret settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    patch:
+      operationId: updateAdminStoreSettings
+      tags: [Store settings]
+      summary: Update allowlisted non-secret store settings
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: settings.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsUpdate'
+      responses:
+        '200':
+          description: Updated non-secret settings.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingList'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/pages/{slug}:
+    get:
+      operationId: getPublishedPage
+      tags: [Storefront CMS]
+      summary: Get a published localized CMS page
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+        - $ref: '#/components/parameters/Locale'
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Published page translation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CmsPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/banners:
+    get:
+      operationId: listActiveBanners
+      tags: [Storefront CMS]
+      summary: List active localized banners by placement
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - $ref: '#/components/parameters/Locale'
+        - name: placement
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+      security: []
+      x-access: public
+      responses:
+        '200':
+          description: Active banners.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BannerPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/pages:
+    get:
+      operationId: listAdminPages
+      tags: [Admin CMS]
+      summary: List CMS pages and publication states
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.pages.read
+      responses:
+        '200':
+          description: Paginated CMS pages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CmsPagePage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createCmsPage
+      tags: [Admin CMS]
+      summary: Create a CMS page
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.pages.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CmsPageInput'
+      responses:
+        '201':
+          description: Page created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CmsPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/pages/{pageId}:
+    parameters:
+      - $ref: '#/components/parameters/PageId'
+    patch:
+      operationId: updateCmsPage
+      tags: [Admin CMS]
+      summary: Update a CMS page and localized translations
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.pages.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CmsPageInput'
+      responses:
+        '200':
+          description: Page updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CmsPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteCmsPage
+      tags: [Admin CMS]
+      summary: Delete a CMS page and its translations
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.pages.delete
+      responses:
+        '204':
+          description: Page deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/banners:
+    get:
+      operationId: listAdminBanners
+      tags: [Admin CMS]
+      summary: List banners
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.banners.read
+      responses:
+        '200':
+          description: Paginated banners.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BannerPage'
+        default:
+          $ref: '#/components/responses/Problem'
+    post:
+      operationId: createBanner
+      tags: [Admin CMS]
+      summary: Create a localized banner
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.banners.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BannerInput'
+      responses:
+        '201':
+          description: Banner created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Banner'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/banners/{bannerId}:
+    parameters:
+      - $ref: '#/components/parameters/BannerId'
+    patch:
+      operationId: updateBanner
+      tags: [Admin CMS]
+      summary: Update a banner and its localized content
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.banners.update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BannerInput'
+      responses:
+        '200':
+          description: Banner updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Banner'
+        default:
+          $ref: '#/components/responses/Problem'
+    delete:
+      operationId: deleteBanner
+      tags: [Admin CMS]
+      summary: Delete a banner and its translations
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: cms.banners.delete
+      responses:
+        '204':
+          description: Banner deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/notifications:
+    get:
+      operationId: listNotificationDeliveries
+      tags: [Notifications]
+      summary: List notification delivery records
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: notifications.read
+      responses:
+        '200':
+          description: Paginated delivery records.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/notifications/test:
+    post:
+      operationId: sendTestNotification
+      tags: [Notifications]
+      summary: Send a test notification
+      description: Channel delivery providers and provider-specific behavior remain feature decisions.
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: notifications.test
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestNotificationRequest'
+      responses:
+        '202':
+          description: Test notification accepted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/analytics/overview:
+    get:
+      operationId: getAnalyticsOverview
+      tags: [Analytics]
+      summary: Get key store analytics
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: analytics.read
+      responses:
+        '200':
+          description: Summary analytics for the requested interval.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsOverview'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/analytics/sales:
+    get:
+      operationId: getSalesAnalytics
+      tags: [Analytics]
+      summary: Get sales and order totals over time
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: interval
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: analytics.read
+      responses:
+        '200':
+          description: Sales series in poisha.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SalesSeries'
+        default:
+          $ref: '#/components/responses/Problem'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Customer or administrator access token as declared by x-access.
+  parameters:
+    Page:
+      name: page
+      in: query
+      required: false
+      description: One-based page number. Defaults to 1.
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      required: false
+      description: Number of records per page. Defaults to 20; maximum is 100. Larger values are rejected.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    Locale:
+      name: locale
+      in: query
+      required: false
+      description: Requested localized content language.
+      schema:
+        $ref: '#/components/schemas/Locale'
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    RoleId:
+      name: roleId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    BrandId:
+      name: brandId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    ProductId:
+      name: productId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    VariantId:
+      name: variantId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    AddressId:
+      name: addressId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    CartId:
+      name: cartId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    ReturnId:
+      name: returnId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    PaymentId:
+      name: paymentId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    ZoneId:
+      name: zoneId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    CouponId:
+      name: couponId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    ReservationId:
+      name: reservationId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    PageId:
+      name: pageId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+    BannerId:
+      name: bannerId
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/Id'
+  responses:
+    Problem:
+      description: >-
+        Shared RFC 9457 response for validation, authentication, authorization,
+        not-found, conflict, and server errors. The status field carries the HTTP
+        status code and code carries a stable machine-readable application code.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+  schemas:
+    Id:
+      type: string
+      format: uuid
+    Locale:
+      type: string
+      enum: [bn, en]
+    Money:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Integer amount in Bangladeshi poisha; 100 poisha equals 1 BDT.
+    Problem:
+      type: object
+      description: RFC 9457 problem details with a stable application code.
+      required: [type, title, status, code]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          description: Safe client-facing explanation; internal details and secrets are excluded.
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          pattern: '^[a-z][a-z0-9_.-]*$'
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, code]
+            properties:
+              field:
+                type: string
+              code:
+                type: string
+              message:
+                type: string
+    PageMetadata:
+      type: object
+      required: [total, page, pageSize]
+      properties:
+        total:
+          type: integer
+          minimum: 0
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+    LivenessResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: ok
+    ReadinessResponse:
+      type: object
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+        checks:
+          type: object
+          required: [database, schema]
+          properties:
+            database:
+              $ref: '#/components/schemas/HealthCheck'
+            schema:
+              $ref: '#/components/schemas/HealthCheck'
+    HealthCheck:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+    PasswordLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: '^[^A-Z]+$'
+        password:
+          type: string
+          minLength: 1
+          writeOnly: true
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+          writeOnly: true
+    AuthSession:
+      type: object
+      required: [accessToken, expiresIn]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+          minimum: 1
+        user:
+          anyOf:
+            - $ref: '#/components/schemas/AdminUser'
+            - $ref: '#/components/schemas/Customer'
+    AdminUser:
+      type: object
+      required: [id, email, displayName, status, role, permissions]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        email:
+          type: string
+          format: email
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [active, disabled]
+        role:
+          $ref: '#/components/schemas/Role'
+        permissions:
+          type: array
+          items:
+            type: string
+    AdminUserCreate:
+      type: object
+      required: [email, password, displayName, roleId]
+      properties:
+        email:
+          type: string
+          format: email
+          pattern: '^[^A-Z]+$'
+        password:
+          type: string
+          minLength: 1
+          writeOnly: true
+        displayName:
+          type: string
+          minLength: 1
+        roleId:
+          $ref: '#/components/schemas/Id'
+    AdminUserUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: [active, disabled]
+        roleId:
+          $ref: '#/components/schemas/Id'
+    Role:
+      type: object
+      required: [id, key, name, scope, system, permissions]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_.-]*$'
+        name:
+          type: string
+        description:
+          type: string
+        scope:
+          type: string
+          enum: [store, platform]
+        system:
+          type: boolean
+        permissions:
+          type: array
+          items:
+            type: string
+    RoleInput:
+      type: object
+      required: [key, name, scope, permissionKeys]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_.-]*$'
+        name:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        scope:
+          type: string
+          enum: [store, platform]
+        permissionKeys:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+    Permission:
+      type: object
+      required: [key, group, sortOrder]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_.-]*$'
+        description:
+          type: string
+        group:
+          type: string
+        sortOrder:
+          type: integer
+    MediaAsset:
+      type: object
+      required: [id, provider, key, mimeType, sizeBytes, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        provider:
+          type: string
+          const: r2
+        key:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+          minimum: 0
+        width:
+          type: integer
+          minimum: 0
+        height:
+          type: integer
+          minimum: 0
+        alt:
+          type: object
+          properties:
+            bn:
+              type: string
+            en:
+              type: string
+        url:
+          type: string
+          format: uri
+          readOnly: true
+        createdAt:
+          type: string
+          format: date-time
+    MediaUploadRequest:
+      type: object
+      required: [fileName, mimeType, sizeBytes]
+      properties:
+        fileName:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+          minimum: 0
+        alt:
+          type: object
+          properties:
+            bn:
+              type: string
+            en:
+              type: string
+    Category:
+      type: object
+      required: [id, status, sortOrder, content]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        parentId:
+          $ref: '#/components/schemas/Id'
+        status:
+          type: string
+          enum: [active, archived]
+        sortOrder:
+          type: integer
+        content:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedContent'
+          propertyNames:
+            enum: [bn, en]
+        imageId:
+          $ref: '#/components/schemas/Id'
+    CategoryInput:
+      type: object
+      required: [content]
+      properties:
+        parentId:
+          $ref: '#/components/schemas/Id'
+        status:
+          type: string
+          enum: [active, archived]
+        sortOrder:
+          type: integer
+        imageId:
+          $ref: '#/components/schemas/Id'
+        content:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedContent'
+          propertyNames:
+            enum: [bn, en]
+    LocalizedContent:
+      type: object
+      required: [name, slug]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        slug:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        metaTitle:
+          type: string
+        metaDescription:
+          type: string
+    ProductStatus:
+      type: string
+      enum: [draft, active, archived]
+    Product:
+      type: object
+      required: [id, categoryId, status, content, variants]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        categoryId:
+          $ref: '#/components/schemas/Id'
+        brandId:
+          $ref: '#/components/schemas/Id'
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+        content:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedContent'
+          propertyNames:
+            enum: [bn, en]
+        variants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Variant'
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaAsset'
+    Brand:
+      type: object
+      required: [id, status, content]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        status:
+          type: string
+          enum: [active, archived]
+        content:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedContent'
+          propertyNames:
+            enum: [bn, en]
+        image:
+          $ref: '#/components/schemas/MediaAsset'
+    BrandInput:
+      type: object
+      required: [content]
+      properties:
+        status:
+          type: string
+          enum: [active, archived]
+        imageId:
+          $ref: '#/components/schemas/Id'
+        content:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedContent'
+          propertyNames:
+            enum: [bn, en]
+    ProductInput:
+      type: object
+      required: [categoryId, status, content]
+      properties:
+        categoryId:
+          $ref: '#/components/schemas/Id'
+        brandId:
+          $ref: '#/components/schemas/Id'
+        status:
+          $ref: '#/components/schemas/ProductStatus'
+        content:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            $ref: '#/components/schemas/LocalizedContent'
+          propertyNames:
+            enum: [bn, en]
+        media:
+          type: array
+          items:
+            type: object
+            required: [mediaId]
+            properties:
+              mediaId:
+                $ref: '#/components/schemas/Id'
+              primary:
+                type: boolean
+              sortOrder:
+                type: integer
+    Variant:
+      type: object
+      required: [id, sku, price, status, attributes]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        sku:
+          type: string
+          minLength: 1
+        price:
+          $ref: '#/components/schemas/Money'
+        compareAtPrice:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          enum: [active, archived]
+        sortOrder:
+          type: integer
+        attributes:
+          type: object
+          additionalProperties: true
+    VariantInput:
+      type: object
+      required: [sku, price, attributes]
+      properties:
+        sku:
+          type: string
+          minLength: 1
+        price:
+          $ref: '#/components/schemas/Money'
+        compareAtPrice:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          enum: [active, archived]
+        sortOrder:
+          type: integer
+        attributes:
+          type: object
+          additionalProperties: true
+    AttributeDefinition:
+      type: object
+      required: [key, valueType, required, filterable, sortOrder]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+        valueType:
+          type: string
+          enum: [text, number, boolean, select]
+        required:
+          type: boolean
+        filterable:
+          type: boolean
+        sortOrder:
+          type: integer
+        options:
+          type: array
+          items:
+            type: string
+    AttributeDefinitionInput:
+      type: object
+      required: [key, valueType, required, filterable, sortOrder]
+      properties:
+        key:
+          type: string
+          pattern: '^[a-z][a-z0-9_]*$'
+        valueType:
+          type: string
+          enum: [text, number, boolean, select]
+        required:
+          type: boolean
+        filterable:
+          type: boolean
+        sortOrder:
+          type: integer
+        options:
+          type: array
+          items:
+            type: string
+    InventoryItem:
+      type: object
+      required: [variantId, onHand, reserved, available, lowStockThreshold, lowStock]
+      properties:
+        variantId:
+          $ref: '#/components/schemas/Id'
+        onHand:
+          type: integer
+          minimum: 0
+        reserved:
+          type: integer
+          minimum: 0
+        available:
+          type: integer
+          minimum: 0
+          readOnly: true
+        lowStockThreshold:
+          type: integer
+          minimum: 0
+        lowStock:
+          type: boolean
+          readOnly: true
+    InventoryAdjustmentInput:
+      type: object
+      required: [quantityDelta, reason]
+      properties:
+        quantityDelta:
+          type: integer
+          not:
+            const: 0
+        reason:
+          type: string
+          minLength: 1
+          maxLength: 500
+        lowStockThreshold:
+          type: integer
+          minimum: 0
+    Reservation:
+      type: object
+      required: [id, variantId, quantity, status]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        variantId:
+          $ref: '#/components/schemas/Id'
+        quantity:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [active, released, committed, expired]
+        source:
+          type: string
+          enum: [cart, order, manual]
+        sourceId:
+          $ref: '#/components/schemas/Id'
+        expiresAt:
+          type: string
+          format: date-time
+    ReservationInput:
+      type: object
+      required: [variantId, quantity]
+      properties:
+        variantId:
+          $ref: '#/components/schemas/Id'
+        quantity:
+          type: integer
+          minimum: 1
+        expiresAt:
+          type: string
+          format: date-time
+    ReservationStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [released, committed]
+    Customer:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        phone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        email:
+          type: string
+          format: email
+          pattern: '^[^A-Z]+$'
+        displayName:
+          type: string
+        status:
+          type: string
+          enum: [active, blocked]
+    CustomerRegistration:
+      type: object
+      properties:
+        phone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        email:
+          type: string
+          format: email
+          pattern: '^[^A-Z]+$'
+        password:
+          type: string
+          minLength: 1
+          writeOnly: true
+        displayName:
+          type: string
+      anyOf:
+        - required: [phone]
+        - required: [email]
+      allOf:
+        - if:
+            required: [password]
+            properties:
+              password: {}
+          then:
+            required: [email]
+            properties:
+              email: {}
+    CustomerUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        displayName:
+          type: string
+          minLength: 1
+    OtpRequest:
+      type: object
+      required: [channel, destination, purpose]
+      properties:
+        channel:
+          type: string
+          enum: [sms, email]
+        destination:
+          type: string
+          minLength: 1
+        purpose:
+          type: string
+          enum: [login, registration]
+    OtpAccepted:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          const: accepted
+    OtpVerifyRequest:
+      type: object
+      required: [channel, destination, purpose, code]
+      properties:
+        channel:
+          type: string
+          enum: [sms, email]
+        destination:
+          type: string
+          minLength: 1
+        purpose:
+          type: string
+          enum: [login, registration]
+        code:
+          type: string
+          minLength: 1
+          writeOnly: true
+    Address:
+      type: object
+      required: [id, recipientName, recipientPhone, line1, district, division, countryCode]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        recipientName:
+          type: string
+        recipientPhone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        line1:
+          type: string
+        line2:
+          type: string
+        area:
+          type: string
+        district:
+          type: string
+        division:
+          type: string
+        postalCode:
+          type: string
+        countryCode:
+          type: string
+          pattern: '^[A-Z]{2}$'
+        defaultShipping:
+          type: boolean
+        defaultBilling:
+          type: boolean
+    AddressInput:
+      required: [recipientName, recipientPhone, line1, district, division]
+      type: object
+      properties:
+        recipientName:
+          type: string
+          minLength: 1
+        recipientPhone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        line1:
+          type: string
+          minLength: 1
+        line2:
+          type: string
+        area:
+          type: string
+        district:
+          type: string
+          minLength: 1
+        division:
+          type: string
+          minLength: 1
+        postalCode:
+          type: string
+        countryCode:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          default: BD
+        defaultShipping:
+          type: boolean
+        defaultBilling:
+          type: boolean
+    Cart:
+      type: object
+      required: [id, status, items]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        customerId:
+          $ref: '#/components/schemas/Id'
+        status:
+          type: string
+          enum: [active, converted, abandoned]
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+    CartItem:
+      type: object
+      required: [id, variantId, quantity]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        variantId:
+          $ref: '#/components/schemas/Id'
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+          readOnly: true
+    CartItemInput:
+      type: object
+      required: [variantId, quantity]
+      properties:
+        variantId:
+          $ref: '#/components/schemas/Id'
+        quantity:
+          type: integer
+          minimum: 1
+    CartItemUpdate:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          minimum: 1
+    CheckoutRequest:
+      type: object
+      required: [contactName, contactPhone, delivery, paymentMethod]
+      properties:
+        contactName:
+          type: string
+          minLength: 1
+        contactPhone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        contactEmail:
+          type: string
+          format: email
+          pattern: '^[^A-Z]+$'
+        delivery:
+          $ref: '#/components/schemas/DeliveryAddress'
+        couponCode:
+          type: string
+          pattern: '^[A-Z0-9_-]+$'
+        paymentMethod:
+          type: string
+          enum: [cod, bkash, shurjopay]
+    DeliveryAddress:
+      type: object
+      required: [recipientName, recipientPhone, line1, district, division]
+      properties:
+        recipientName:
+          type: string
+        recipientPhone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        line1:
+          type: string
+          minLength: 1
+        line2:
+          type: string
+        area:
+          type: string
+        district:
+          type: string
+          minLength: 1
+        division:
+          type: string
+          minLength: 1
+        postalCode:
+          type: string
+        countryCode:
+          type: string
+          pattern: '^[A-Z]{2}$'
+          default: BD
+    OrderStatus:
+      type: string
+      enum:
+        [
+          pending,
+          confirmed,
+          processing,
+          shipped,
+          delivered,
+          cancelled,
+          returned,
+          partially_delivered,
+        ]
+    Order:
+      type: object
+      required:
+        [
+          id,
+          number,
+          status,
+          contactName,
+          contactPhone,
+          delivery,
+          subtotal,
+          discount,
+          deliveryFee,
+          tax,
+          total,
+          items,
+        ]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        number:
+          type: string
+          minLength: 1
+        customerId:
+          $ref: '#/components/schemas/Id'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        contactEmail:
+          type: string
+          format: email
+        delivery:
+          $ref: '#/components/schemas/DeliveryAddress'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+        discount:
+          $ref: '#/components/schemas/Money'
+          description: MUST NOT exceed subtotal; a positive discount requires a coupon.
+        deliveryFee:
+          $ref: '#/components/schemas/Money'
+        tax:
+          $ref: '#/components/schemas/Money'
+          description: Informational, included in subtotal, and MUST NOT exceed subtotal.
+        total:
+          $ref: '#/components/schemas/Money'
+          description: subtotal minus discount plus delivery fee; tax is not added again.
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderStatusHistory'
+        createdAt:
+          type: string
+          format: date-time
+    OrderItem:
+      type: object
+      required: [variantId, productName, sku, quantity, unitPrice, lineTotal]
+      properties:
+        variantId:
+          $ref: '#/components/schemas/Id'
+        productName:
+          type: string
+        sku:
+          type: string
+        attributes:
+          type: object
+          additionalProperties: true
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          $ref: '#/components/schemas/Money'
+        lineTotal:
+          $ref: '#/components/schemas/Money'
+          description: Must equal unitPrice multiplied by quantity.
+    OrderStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        note:
+          type: string
+          maxLength: 1000
+    OrderStatusHistory:
+      type: object
+      required: [status, createdAt]
+      properties:
+        previousStatus:
+          $ref: '#/components/schemas/OrderStatus'
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        actorAdminId:
+          $ref: '#/components/schemas/Id'
+        note:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+    Return:
+      type: object
+      required: [id, orderId, status, reason, refundTotal, items, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        orderId:
+          $ref: '#/components/schemas/Id'
+        status:
+          type: string
+          enum: [requested, approved, rejected, received, refunded, cancelled]
+        reason:
+          type: string
+        refundTotal:
+          $ref: '#/components/schemas/Money'
+        items:
+          type: array
+          items:
+            type: object
+            required: [orderItemId, quantity, refundAmount]
+            properties:
+              orderItemId:
+                $ref: '#/components/schemas/Id'
+              quantity:
+                type: integer
+                minimum: 1
+              refundAmount:
+                $ref: '#/components/schemas/Money'
+        createdAt:
+          type: string
+          format: date-time
+    ReturnRequest:
+      type: object
+      required: [reason, items]
+      properties:
+        reason:
+          type: string
+          minLength: 1
+        items:
+          type: array
+          minItems: 1
+          description: Cumulative returned quantity per order item cannot exceed ordered quantity.
+          items:
+            type: object
+            required: [orderItemId, quantity]
+            properties:
+              orderItemId:
+                $ref: '#/components/schemas/Id'
+              quantity:
+                type: integer
+                minimum: 1
+    ReturnStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, rejected, received, refunded, cancelled]
+        note:
+          type: string
+          maxLength: 1000
+    PaymentAttemptRequest:
+      type: object
+      required: [method]
+      properties:
+        method:
+          type: string
+          enum: [cod, bkash, shurjopay]
+    Payment:
+      type: object
+      required: [id, orderId, method, status, amount]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        orderId:
+          $ref: '#/components/schemas/Id'
+        method:
+          type: string
+          enum: [cod, bkash, shurjopay]
+        status:
+          type: string
+          enum: [pending, authorized, paid, failed, cancelled, refunded, partially_refunded]
+          description: Paid/refunded/cancelled states require their corresponding lifecycle timestamp.
+        amount:
+          type: integer
+          format: int64
+          minimum: 1
+        providerReference:
+          type: string
+          description: Non-secret provider transaction reference.
+        handoffUrl:
+          type: string
+          format: uri
+        paidAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+        refundedAt:
+          type: string
+          format: date-time
+    ShippingZone:
+      type: object
+      required: [id, code, name, fee, active, districts]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        code:
+          type: string
+          minLength: 1
+        name:
+          type: string
+        fee:
+          $ref: '#/components/schemas/Money'
+        active:
+          type: boolean
+        districts:
+          type: array
+          items:
+            type: string
+    ShippingZoneInput:
+      type: object
+      required: [code, name, fee, active]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        fee:
+          $ref: '#/components/schemas/Money'
+        active:
+          type: boolean
+    DistrictsInput:
+      type: object
+      required: [districts]
+      properties:
+        districts:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+            minLength: 1
+    Shipment:
+      type: object
+      required: [id, orderId, courier, status, codAmount]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        orderId:
+          $ref: '#/components/schemas/Id'
+        courier:
+          type: string
+          const: steadfast
+        status:
+          type: string
+          enum: [pending, booked, picked_up, in_transit, delivered, returned, cancelled, failed]
+          description: A delivered shipment requires deliveredAt.
+        trackingNumber:
+          type: string
+        codAmount:
+          $ref: '#/components/schemas/Money'
+        deliveredAt:
+          type: string
+          format: date-time
+    ShipmentInput:
+      type: object
+      required: [orderId, codAmount]
+      properties:
+        orderId:
+          $ref: '#/components/schemas/Id'
+        codAmount:
+          $ref: '#/components/schemas/Money'
+    Coupon:
+      type: object
+      required: [id, code, discountType, discountValue, minimumOrder, startsAt, expiresAt, active]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        code:
+          type: string
+          pattern: '^[A-Z0-9_-]+$'
+        discountType:
+          type: string
+          enum: [percentage, fixed]
+        discountValue:
+          type: integer
+          minimum: 1
+        minimumOrder:
+          $ref: '#/components/schemas/Money'
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          description: Must be later than startsAt.
+        totalUsageLimit:
+          type: integer
+          minimum: 1
+        perCustomerUsageLimit:
+          type: integer
+          minimum: 1
+        active:
+          type: boolean
+      allOf:
+        - if:
+            required: [discountType]
+            properties:
+              discountType:
+                const: percentage
+          then:
+            properties:
+              discountValue:
+                maximum: 100
+        - if:
+            required: [discountType]
+            properties:
+              discountType:
+                const: fixed
+          then:
+            properties:
+              discountValue:
+                minimum: 1
+    CouponInput:
+      required: [code, discountType, discountValue, minimumOrder, startsAt, expiresAt, active]
+      type: object
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Z0-9_-]+$'
+        discountType:
+          type: string
+          enum: [percentage, fixed]
+        discountValue:
+          type: integer
+          minimum: 1
+        minimumOrder:
+          $ref: '#/components/schemas/Money'
+        startsAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+          description: Must be later than startsAt.
+        totalUsageLimit:
+          type: integer
+          minimum: 1
+        perCustomerUsageLimit:
+          type: integer
+          minimum: 1
+        active:
+          type: boolean
+      allOf:
+        - if:
+            required: [discountType]
+            properties:
+              discountType:
+                const: percentage
+          then:
+            properties:
+              discountValue:
+                maximum: 100
+        - if:
+            required: [discountType]
+            properties:
+              discountType:
+                const: fixed
+          then:
+            properties:
+              discountValue:
+                minimum: 1
+    CouponValidationRequest:
+      type: object
+      required: [code, subtotal]
+      properties:
+        code:
+          type: string
+          pattern: '^[A-Z0-9_-]+$'
+        subtotal:
+          $ref: '#/components/schemas/Money'
+    CouponValidation:
+      type: object
+      required: [valid]
+      properties:
+        valid:
+          type: boolean
+        discount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          type: string
+          description: Stable validation code when the coupon is not valid.
+    PublicStoreSettings:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/JsonValue'
+      description: Explicitly allowlisted public, non-secret settings only.
+    JsonValue:
+      anyOf:
+        - type: string
+        - type: number
+        - type: integer
+        - type: boolean
+        - type: 'null'
+        - type: array
+          items:
+            $ref: '#/components/schemas/JsonValue'
+        - type: object
+          additionalProperties:
+            $ref: '#/components/schemas/JsonValue'
+    Setting:
+      type: object
+      required: [key, value]
+      properties:
+        key:
+          type: string
+          minLength: 1
+        value:
+          $ref: '#/components/schemas/JsonValue'
+        updatedAt:
+          type: string
+          format: date-time
+    SettingsUpdate:
+      type: object
+      required: [settings]
+      properties:
+        settings:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Setting'
+    SettingList:
+      type: array
+      items:
+        $ref: '#/components/schemas/Setting'
+    CmsPage:
+      type: object
+      required: [id, content]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        content:
+          type: object
+          additionalProperties:
+            type: object
+            required: [slug, status]
+            properties:
+              slug:
+                type: string
+                minLength: 1
+              title:
+                type: string
+              body:
+                type: string
+              metaTitle:
+                type: string
+              metaDescription:
+                type: string
+              status:
+                type: string
+                enum: [draft, published, archived]
+          propertyNames:
+            enum: [bn, en]
+    CmsPageInput:
+      required: [content]
+      type: object
+      properties:
+        content:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            type: object
+            required: [slug, status]
+            properties:
+              slug:
+                type: string
+                minLength: 1
+              title:
+                type: string
+              body:
+                type: string
+              metaTitle:
+                type: string
+              metaDescription:
+                type: string
+              status:
+                type: string
+                enum: [draft, published, archived]
+          propertyNames:
+            enum: [bn, en]
+    Banner:
+      type: object
+      required: [id, placement, sortOrder, active, content]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        placement:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+        mediaId:
+          $ref: '#/components/schemas/Id'
+        content:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              title:
+                type: string
+              body:
+                type: string
+              destinationUrl:
+                type: string
+                format: uri
+          propertyNames:
+            enum: [bn, en]
+    BannerInput:
+      required: [placement, sortOrder, active, content]
+      type: object
+      properties:
+        placement:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+        active:
+          type: boolean
+        mediaId:
+          $ref: '#/components/schemas/Id'
+        content:
+          type: object
+          minProperties: 1
+          additionalProperties:
+            type: object
+            properties:
+              title:
+                type: string
+              body:
+                type: string
+              destinationUrl:
+                type: string
+                format: uri
+          propertyNames:
+            enum: [bn, en]
+    Notification:
+      type: object
+      required: [id, channel, status, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        channel:
+          type: string
+          enum: [sms, email]
+        status:
+          type: string
+          enum: [queued, sent, failed]
+        recipient:
+          type: string
+          description: Masked recipient value.
+        createdAt:
+          type: string
+          format: date-time
+    TestNotificationRequest:
+      type: object
+      required: [channel, recipient]
+      properties:
+        channel:
+          type: string
+          enum: [sms, email]
+        recipient:
+          type: string
+          minLength: 1
+    AnalyticsOverview:
+      type: object
+      required: [orderCount, revenue, averageOrderValue]
+      properties:
+        orderCount:
+          type: integer
+          minimum: 0
+        revenue:
+          $ref: '#/components/schemas/Money'
+        averageOrderValue:
+          $ref: '#/components/schemas/Money'
+    SalesSeries:
+      type: array
+      items:
+        type: object
+        required: [periodStart, orderCount, revenue]
+        properties:
+          periodStart:
+            type: string
+            format: date-time
+          orderCount:
+            type: integer
+            minimum: 0
+          revenue:
+            $ref: '#/components/schemas/Money'
+    CategoryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Category'
+    BrandPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Brand'
+    ProductPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Product'
+    AdminUserPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminUser'
+    RolePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Role'
+    PermissionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Permission'
+    MediaPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MediaAsset'
+    AttributeDefinitionPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AttributeDefinition'
+    InventoryPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/InventoryItem'
+    ReservationPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Reservation'
+    AddressPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Address'
+    OrderPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Order'
+    ReturnPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Return'
+    ShippingZonePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShippingZone'
+    ShipmentPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Shipment'
+    CouponPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Coupon'
+    SettingPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Setting'
+    CmsPagePage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CmsPage'
+    BannerPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Banner'
+    NotificationPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Notification'

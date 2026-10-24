@@ -12,7 +12,7 @@ apps/admin               Admin dashboard (placeholder until the admin phase)
 apps/storefront-starter  SSR storefront starter (placeholder until the storefront phase)
 packages/database        Prisma schema, migrations, generated client, migration scripts
 packages/shared-types    Shared TypeScript contracts
-packages/api-sdk         Generated API client (placeholder until the OpenAPI change)
+packages/api-sdk         Typed TypeScript client generated from the OpenAPI contract
 docker/                  Local PostgreSQL and CI database helpers
 ```
 
@@ -66,6 +66,19 @@ Stop PostgreSQL with `pnpm db:down`. Remove its volume and start over with `pnpm
 | `pnpm db:generate`                              | Generate the Prisma client and `expected-version.ts`            |
 | `pnpm version:generate`                         | Regenerate `expected-version.ts` only                           |
 | `pnpm dev:api`                                  | Run the API in watch mode                                       |
+| `pnpm contract:lint`                            | Validate the canonical OpenAPI document                         |
+| `pnpm contract:check`                           | Check route coverage, contract invariants, and compatibility    |
+| `pnpm contract:test`                            | Test contract compatibility checks                              |
+| `pnpm --filter api-sdk generate`                | Regenerate the TypeScript SDK from OpenAPI                      |
+| `pnpm --filter api-sdk generate:check`          | Fail if generated SDK types are stale                           |
+
+## API contract
+
+The v1 contract lives in [apps/api/openapi/openapi.yaml](apps/api/openapi/openapi.yaml). Health
+liveness and readiness are currently implemented; other documented operations are planned and do
+not become runtime routes until their feature changes are implemented. See
+[apps/api/README.md](apps/api/README.md) for contract update, SDK generation, and compatibility
+guidance.
 
 ## Environment variables
 
