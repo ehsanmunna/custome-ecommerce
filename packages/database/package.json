@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:integration": "vitest run test/integration",
     "db:generate": "prisma generate && node scripts/generate-expected-version.mjs",
+    "db:seed": "prisma generate && tsc -p tsconfig.json && node scripts/seed.mjs",
     "version:generate": "node scripts/generate-expected-version.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "db:status": "node scripts/status.mjs",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "@prisma/client": "6.19.3",
+    "argon2": "^0.45.1",
     "pg": "8.23.1"
   },
   "devDependencies": {

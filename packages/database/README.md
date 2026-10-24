@@ -13,6 +13,24 @@ Key paths:
 The migration scripts read `MIGRATION_DATABASE_URL`. The API only ever reads `DATABASE_URL` (the
 runtime identity, which cannot change schema).
 
+## Client database seeding
+
+After applying all migrations with `MIGRATION_DATABASE_URL`, run `pnpm db:seed` with the client
+runtime `DATABASE_URL`. The seed command uses DML only and does not apply migrations. It creates the
+store roles and baseline grants, conservative non-secret settings, and inactive zero-fee Dhaka and
+outside-Dhaka shipping zones. Existing settings, zone fees, and active states are preserved.
+
+For optional initial administrator bootstrap, provide both `SEED_ADMIN_EMAIL` (valid lowercase
+email) and `SEED_ADMIN_PASSWORD` through the deployment environment when running the seed command.
+The password is stored only as an Argon2id hash. `SEED_ADMIN_DISPLAY_NAME` is optional and defaults
+to `Store Owner`. If no admin exists, the command creates an active owner account; if any admin
+already exists, it leaves all accounts unchanged. Do not place bootstrap credentials in source
+control or logs. If neither credential is set, baseline data is seeded without creating an admin;
+setting only one credential is an error.
+
+The command does not create a platform super-admin, assign shipping districts, or activate shipping
+zones. Review and configure those client-specific values before enabling checkout.
+
 ## Catalog schema
 
 The catalog migration adds these tables:

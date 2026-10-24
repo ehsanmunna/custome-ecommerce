@@ -3,7 +3,8 @@
 Defines the shared admin identity and authorization data model every client database uses: admin
 users, editable roles, a permission catalog, and role-permission grants. It covers plan.md items 4,
 8, and 26 and is the foundation for admin login, RBAC guards, and the staff/roles screens. Role and
-permission seed rows arrive with the seed change; the audit log arrives with change #6.
+permission seed rows arrive with the seed change; platform-role seeding is deferred to a separate
+future change. The audit log arrives with change #6.
 
 ## ADDED Requirements
 

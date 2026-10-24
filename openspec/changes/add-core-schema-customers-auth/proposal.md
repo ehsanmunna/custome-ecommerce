@@ -21,8 +21,9 @@ OTP, admin user, role, and permission schema before any API code is written.
 - Give admin users a unique lowercase email, a password hash, a display name, a status, and exactly
   one role.
 - Model roles with a stable key and a `store` or `platform` scope. Model permissions as a catalog and
-  grant them to roles through role-permission links. Seeded default roles, including super-admin,
-  arrive with the seed change, but system roles cannot be deleted.
+  grant them to roles through role-permission links. The seed change supplies the default store
+  roles; platform super-admin seeding is deferred to a separate future change. System roles cannot
+  be deleted.
 - Enforce integrity with checks, unique and partial unique indexes, foreign keys, one deletion
   trigger, and integration tests against real PostgreSQL.
 

@@ -21,6 +21,7 @@
     "db:down": "docker compose -f docker/compose.yaml down",
     "db:reset": "docker compose -f docker/compose.yaml down -v",
     "db:migrate": "pnpm --filter database db:migrate",
+    "db:seed": "pnpm --filter database db:seed",
     "db:status": "pnpm --filter database db:status",
     "db:version": "pnpm --filter database db:version",
     "db:generate": "pnpm --filter database db:generate",

@@ -60,6 +60,7 @@ Stop PostgreSQL with `pnpm db:down`. Remove its volume and start over with `pnpm
 | `pnpm format` / `pnpm format:check`             | Write / check Prettier formatting                               |
 | `pnpm db:up` / `pnpm db:down` / `pnpm db:reset` | Manage local PostgreSQL                                         |
 | `pnpm db:migrate`                               | Validate applied checksums, then apply pending migrations       |
+| `pnpm db:seed`                                  | Seed safe client defaults after migrations                      |
 | `pnpm db:status`                                | Show applied, current, and pending migrations                   |
 | `pnpm db:version`                               | Print the current `schema_version`                              |
 | `pnpm db:generate`                              | Generate the Prisma client and `expected-version.ts`            |
@@ -68,16 +69,20 @@ Stop PostgreSQL with `pnpm db:down`. Remove its volume and start over with `pnpm
 
 ## Environment variables
 
-`.env.example` documents every variable. Copy it to `.env`; `.env` is git-ignored.
+Copy `.env.example` to `.env`; `.env` is git-ignored. Optional seed-only bootstrap variables are
+documented here and should be provided through the deployment environment only when needed.
 
-| Variable                    | Required           | Meaning                                                        |
-| --------------------------- | ------------------ | -------------------------------------------------------------- |
-| `DATABASE_URL`              | yes                | Runtime PostgreSQL identity used by the API. DML only, no DDL. |
-| `MIGRATION_DATABASE_URL`    | yes for migrations | Migration identity used only by migration and status commands. |
-| `NODE_ENV`                  | yes                | `development`, `test`, or `production`.                        |
-| `PORT`                      | yes                | HTTP port (`3000` locally).                                    |
-| `DATABASE_PROBE_TIMEOUT_MS` | yes                | Upper bound for health and schema probes.                      |
-| `LOG_LEVEL`                 | yes                | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`.         |
+| Variable                    | Required           | Meaning                                                          |
+| --------------------------- | ------------------ | ---------------------------------------------------------------- |
+| `DATABASE_URL`              | yes                | Runtime PostgreSQL identity used by the API. DML only, no DDL.   |
+| `MIGRATION_DATABASE_URL`    | yes for migrations | Migration identity used only by migration and status commands.   |
+| `SEED_ADMIN_EMAIL`          | optional           | Lowercase email for optional first store-admin bootstrap.        |
+| `SEED_ADMIN_PASSWORD`       | optional           | Password for optional first store-admin bootstrap; never commit. |
+| `SEED_ADMIN_DISPLAY_NAME`   | optional           | Initial admin display name (defaults to `Store Owner`).          |
+| `NODE_ENV`                  | yes                | `development`, `test`, or `production`.                          |
+| `PORT`                      | yes                | HTTP port (`3000` locally).                                      |
+| `DATABASE_PROBE_TIMEOUT_MS` | yes                | Upper bound for health and schema probes.                        |
+| `LOG_LEVEL`                 | yes                | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`.           |
 
 Required values have **no fallback**: the API refuses to start and names every missing or invalid key
 before it binds a listener.
@@ -91,6 +96,12 @@ before it binds a listener.
 
 The API must never receive `MIGRATION_DATABASE_URL`. The local theme is created by
 `docker/initdb/01-roles.sql`. Client provisioning must create the same split.
+
+For a new client database, apply migrations first with `MIGRATION_DATABASE_URL`, then run
+`pnpm db:seed` with the runtime `DATABASE_URL`. Provide both bootstrap credential variables together
+only when creating the first store administrator. See
+[database seeding](packages/database/README.md#client-database-seeding) for seeded defaults and
+preservation behavior.
 
 ## Migrations
 

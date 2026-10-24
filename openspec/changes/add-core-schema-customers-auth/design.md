@@ -14,8 +14,9 @@ Constraints that shape the design:
 - One PostgreSQL database per client, one shared schema, no `client_id` columns.
 - PostgreSQL 16; Prisma 6.19.3; migrations are committed SQL and forward-only.
 - Customer email login uses email plus password (user decision); phone login stays OTP-based.
-- Admin authorization uses editable roles and permissions tables (user decision), seeded with
-  owner, manager, staff, support, and super-admin by the later seed change.
+- Admin authorization uses editable roles and permissions tables (user decision), seeded with the
+  store roles owner, manager, staff, and support by the seed change. Platform super-admin seeding
+  is deferred to a separate future change.
 - The platform super-admin role is separate from store roles (project decision).
 - Carts, orders, notifications, and audit logging do not exist yet.
 - No API, admin UI, seed, provider, or background-worker code in this change.
@@ -159,7 +160,8 @@ nullable `postal_code`, `country_code CHAR(2) DEFAULT 'BD'`, and the two default
 
 - **Why:** the admin dashboard phase includes a roles screen, and the user chose editable roles plus a
   permission catalog. Rows let the screen list, group, and grant permissions without a code change;
-  the seed change supplies the default owner, manager, staff, support, and super-admin roles.
+  the seed change supplies the default owner, manager, staff, and support roles. Platform
+  super-admin seeding is deferred to a separate future change.
 - **Alternatives:** a fixed role enum with a permission matrix in code (simpler, but the roles screen
   and client-specific permissions become code changes), or per-user permissions without roles
   (harder to reason about and audit).
@@ -175,9 +177,10 @@ nullable `postal_code`, `country_code CHAR(2) DEFAULT 'BD'`, and the two default
 
 ### 8. Platform administration is a role scope, not a separate table
 
-`admin_roles.scope` is an enum of `store` and `platform`. The later seed change creates `super_admin`
-with platform scope and the four store roles with store scope. An admin is a platform administrator
-when the assigned role has platform scope.
+`admin_roles.scope` is an enum of `store` and `platform`. The seed change creates the four store
+roles with store scope; a separate future platform-administration change is responsible for
+creating `super_admin` with platform scope. An admin is a platform administrator when the assigned
+role has platform scope.
 
 - **Why:** the project requires a separate tech-admin/super-admin role that runs migrations and
   rollbacks, while store roles run the business. A scope column keeps one role table, one assignment
@@ -185,8 +188,9 @@ when the assigned role has platform scope.
 - **Alternatives:** a boolean on `admin_users` (can disagree with the role), a separate
   `platform_admins` table (duplicates email and password handling), or an extra role per platform
   action (does not express the separation).
-- Reliance on seeded keys (`owner`, `manager`, `staff`, `support`, `super_admin`) is a seed concern,
-  not a database enum, so clients can rename display names without a migration.
+- Reliance on seeded store keys (`owner`, `manager`, `staff`, `support`) is a seed concern, not a
+  database enum, so clients can rename display names without a migration. The platform role key is
+  deferred to the future platform-administration seed change.
 
 ### 9. Constraint and index choices
 
@@ -241,8 +245,8 @@ erDiagram
 - **One role per admin is a simplification** -> multi-role support would need a join table and
   aggregated permission queries; it can be added forward if a client requires it.
 - **Seed keys are not enforced as a fixed set** -> the database allows any lowercase role key; the seed
-  change and admin roles screen must treat `owner`, `manager`, `staff`, `support`, and `super_admin`
-  as system defaults.
+  change and admin roles screen must treat `owner`, `manager`, `staff`, and `support` as store
+  system defaults. The platform role is deferred to a future platform-administration seed change.
 - **System roles can still be renamed or re-scoped** -> only deletion is blocked. If seed changes must
   be immutable, tighten the trigger in a later migration; renaming a display name is intentionally
   allowed.
