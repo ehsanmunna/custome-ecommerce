@@ -1,0 +1,147 @@
+enum CustomerStatus {
+  active
+  blocked
+}
+
+enum OtpChannel {
+  sms
+  email
+}
+
+enum OtpPurpose {
+  customer_login
+  phone_verification
+  email_verification
+  password_reset
+}
+
+enum AdminUserStatus {
+  active
+  disabled
+}
+
+enum AdminRoleScope {
+  store
+  platform
+}
+
+model Customer {
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone             String?            @unique
+  email             String?            @unique
+  passwordHash      String?            @map("password_hash")
+  firstName         String?            @map("first_name")
+  lastName          String?            @map("last_name")
+  status            CustomerStatus     @default(active)
+  emailVerifiedAt   DateTime?          @map("email_verified_at") @db.Timestamptz(6)
+  phoneVerifiedAt   DateTime?          @map("phone_verified_at") @db.Timestamptz(6)
+  lastLoginAt       DateTime?          @map("last_login_at") @db.Timestamptz(6)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  addresses         CustomerAddress[]
+  carts             Cart[]
+  orders            Order[]
+  couponRedemptions CouponRedemption[]
+
+  @@index([status])
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId        String   @map("customer_id") @db.Uuid
+  customer          Customer @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  label             String?
+  recipientName     String   @map("recipient_name")
+  recipientPhone    String   @map("recipient_phone")
+  addressLine1      String   @map("address_line1")
+  addressLine2      String?  @map("address_line2")
+  area              String?
+  district          String
+  division          String
+  postalCode        String?  @map("postal_code")
+  countryCode       String   @default("BD") @map("country_code") @db.Char(2)
+  isDefaultShipping Boolean  @default(false) @map("is_default_shipping")
+  isDefaultBilling  Boolean  @default(false) @map("is_default_billing")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([customerId])
+  @@map("customer_addresses")
+}
+
+model OtpCode {
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  channel       OtpChannel
+  purpose       OtpPurpose
+  destination   String
+  codeHash      String     @map("code_hash")
+  expiresAt     DateTime   @map("expires_at") @db.Timestamptz(6)
+  consumedAt    DateTime?  @map("consumed_at") @db.Timestamptz(6)
+  invalidatedAt DateTime?  @map("invalidated_at") @db.Timestamptz(6)
+  attempts      Int        @default(0)
+  maxAttempts   Int        @default(5) @map("max_attempts")
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([destination, purpose, createdAt])
+  @@index([expiresAt])
+  @@map("otp_codes")
+}
+
+model AdminRole {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String                @unique
+  name        String
+  description String?
+  scope       AdminRoleScope        @default(store)
+  isSystem    Boolean               @default(false) @map("is_system")
+  sortOrder   Int                   @default(0) @map("sort_order")
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime              @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  users       AdminUser[]
+  permissions AdminRolePermission[]
+
+  @@index([scope])
+  @@map("admin_roles")
+}
+
+model AdminPermission {
+  id          String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key         String                @unique
+  description String?
+  groupKey    String                @map("group_key")
+  sortOrder   Int                   @default(0) @map("sort_order")
+  createdAt   DateTime              @default(now()) @map("created_at") @db.Timestamptz(6)
+  roles       AdminRolePermission[]
+
+  @@map("admin_permissions")
+}
+
+model AdminRolePermission {
+  roleId       String          @map("role_id") @db.Uuid
+  permissionId String          @map("permission_id") @db.Uuid
+  role         AdminRole       @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  permission   AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("admin_role_permissions")
+}
+
+model AdminUser {
+  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId        String               @map("role_id") @db.Uuid
+  role          AdminRole            @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  email         String               @unique
+  passwordHash  String               @map("password_hash")
+  displayName   String               @map("display_name")
+  status        AdminUserStatus      @default(active)
+  lastLoginAt   DateTime?            @map("last_login_at") @db.Timestamptz(6)
+  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  statusChanges OrderStatusHistory[] @relation("OrderStatusChanges")
+
+  @@index([roleId])
+  @@index([status])
+  @@map("admin_users")
+}

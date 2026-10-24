@@ -12,8 +12,11 @@ loadEnv();
 const migrationUrl = requireEnv('MIGRATION_DATABASE_URL');
 const schemaPath = process.env.MIGRATION_SCHEMA_PATH
   ? resolve(process.env.MIGRATION_SCHEMA_PATH)
-  : resolve(packageRoot, 'prisma', 'schema.prisma');
-const migrationsDir = join(dirname(schemaPath), 'migrations');
+  : resolve(packageRoot, 'prisma');
+const migrationsDir = join(
+  schemaPath.endsWith('.prisma') ? dirname(schemaPath) : schemaPath,
+  'migrations',
+);
 
 if (process.env.DATABASE_URL === migrationUrl) {
   console.warn(

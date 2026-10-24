@@ -6,6 +6,7 @@ database follows this exact stream.
 Key paths:
 
 - `prisma/schema.prisma` — datasource and generator.
+- `prisma/models/` — domain model files loaded together by Prisma.
 - `prisma/migrations/` — committed, immutable SQL migrations.
 - `src/index.ts` — re-exports the generated client and `EXPECTED_SCHEMA_VERSION`.
 
@@ -91,3 +92,47 @@ Rules to preserve in later changes:
   super-admin is platform scope. System roles cannot be deleted. Deleting a custom role cascades its
   grants, while a permission still granted to a role cannot be deleted.
 - Admin effective permissions are exactly the role's grants; there are no per-user overrides.
+
+## Orders, payments, shipping, and coupon schema
+
+The order-side migration adds these tables:
+
+- `carts` and `cart_items` - guest or customer carts with one positive line per variant.
+- `orders`, `order_items`, and `order_status_history` - immutable order snapshots, line items, and
+  append-only lifecycle history.
+- `order_returns` and `order_return_items` - return headers, returned quantities, and refund amounts.
+- `payments` - cash-on-delivery and online payment attempts.
+- `shipping_zones`, `shipping_zone_districts`, and `shipments` - flat delivery fees, district mapping,
+  and Steadfast courier tracking.
+- `coupons` and `coupon_redemptions` - coupon definitions and one redemption per order.
+
+Rules to preserve in later changes:
+
+- Money is integer **poisha**. Order totals follow
+  `total = subtotal - discount + delivery_fee`; tax is the included portion of the subtotal and is never
+  added again. All amounts are non-negative, discount and tax never exceed the subtotal, and a positive
+  discount requires a coupon.
+- Orders keep their own contact, delivery-address, product, and price snapshots. Catalog edits, customer
+  address edits, zone fee changes, and cart changes must not rewrite an existing order.
+- A cart may convert into at most one order (`orders.cart_id` is unique) and becomes `converted`. Guest
+  carts and guest orders have no `customer_id`; deleting a customer keeps the order and clears the
+  reference.
+- `order_status_history` is append-only at the database level: a trigger rejects updates and deletes.
+  Every order gets an initial row, and status changes are new rows.
+- Orders cannot be deleted while items, status history, payments, shipments, returns, or redemptions
+  exist. Cancellation and return statuses express the business outcome instead.
+- Return items must reference an order item from the same order, cannot repeat within one return, and
+  their cumulative quantity cannot exceed the ordered quantity. The trigger sums existing rows; the
+  returns API still needs to serialize concurrent writes per order item.
+- Payments are independent attempts: an order may have many. Provider references are unique per method
+  when present, `paid` requires `paid_at`, refunded states require `refunded_at`, and `cancelled`
+  requires `cancelled_at`. No credentials, raw payloads, card numbers, or CVV are stored.
+- Delivery zones have unique codes and non-negative flat fees; each district maps to at most one zone.
+  Orders keep the zone reference and the fee at placement, so a zone used by an order cannot be deleted.
+- Shipments support the `steadfast` courier, default to `pending`, allow multiple rows per order, require
+  `delivered_at` for `delivered`, and keep tracking numbers unique when present. A negative COD amount is
+  rejected.
+- Coupon codes are uppercase (`A-Z`, `0-9`, `_`, `-`) and unique. Percentage discounts are 1-100, fixed
+  discounts are positive, and limits are positive when present. An order has at most one redemption, so
+  coupons do not stack; usage limits are derived from redemption rows and must be enforced inside the
+  checkout transaction.

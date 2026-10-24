@@ -41,3 +41,5 @@ operations:
   archive:
     guidance:
       - Summarize the archive outcome before finishing
+githubCopilot:
+  cloudAgent: true

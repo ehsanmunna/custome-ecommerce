@@ -1,0 +1,61 @@
+enum Courier {
+  steadfast
+}
+
+enum ShipmentStatus {
+  pending
+  booked
+  picked_up
+  in_transit
+  delivered
+  returned
+  cancelled
+  failed
+}
+
+model ShippingZone {
+  id                String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String                 @unique
+  name              String
+  deliveryFeePoisha Int                    @map("delivery_fee_poisha")
+  isActive          Boolean                @default(true) @map("is_active")
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  districts         ShippingZoneDistrict[]
+  orders            Order[]
+
+  @@index([isActive])
+  @@map("shipping_zones")
+}
+
+model ShippingZoneDistrict {
+  district  String       @id
+  zoneId    String       @map("zone_id") @db.Uuid
+  zone      ShippingZone @relation(fields: [zoneId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([zoneId])
+  @@map("shipping_zone_districts")
+}
+
+model Shipment {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId         String         @map("order_id") @db.Uuid
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  courier         Courier        @default(steadfast)
+  status          ShipmentStatus @default(pending)
+  trackingNumber  String?        @map("tracking_number")
+  codAmountPoisha Int            @default(0) @map("cod_amount_poisha")
+  bookedAt        DateTime?      @map("booked_at") @db.Timestamptz(6)
+  pickedUpAt      DateTime?      @map("picked_up_at") @db.Timestamptz(6)
+  deliveredAt     DateTime?      @map("delivered_at") @db.Timestamptz(6)
+  returnedAt      DateTime?      @map("returned_at") @db.Timestamptz(6)
+  cancelledAt     DateTime?      @map("cancelled_at") @db.Timestamptz(6)
+  failedAt        DateTime?      @map("failed_at") @db.Timestamptz(6)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([orderId])
+  @@index([status])
+  @@map("shipments")
+}
