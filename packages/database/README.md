@@ -136,3 +136,34 @@ Rules to preserve in later changes:
   discounts are positive, and limits are positive when present. An order has at most one redemption, so
   coupons do not stack; usage limits are derived from redemption rows and must be enforced inside the
   checkout transaction.
+
+## Store settings and CMS schema
+
+The settings/CMS migration adds:
+
+- `store_settings` — unique keys and structured JSON values for non-secret store configuration.
+- `provider_secret_references` — unique provider/credential-name pairs containing only an opaque
+  reference to externally managed secrets.
+- `cms_pages` and `cms_page_translations` — page identity and locale-specific slug, title, structured
+  content, SEO metadata, and publication state.
+- `cms_banners` and `cms_banner_translations` — shared placement, ordering, active state, optional media
+  reference, and locale-specific title, body, and destination URL.
+
+Rules to preserve in later changes:
+
+- Store setting values are reserved for non-secret configuration. The persistence schema has no
+  provider credential-value column; provider credentials are kept outside PostgreSQL and represented
+  only by secret references. Generic JSON cannot identify arbitrary secrets, so settings APIs must
+  validate supported keys and values and never accept credential values.
+- Provider/credential-name pairs are unique. The database verifies references are non-empty but does
+  not resolve them; provider adapters must use the configured external secret manager.
+- Page translations support the shared `bn` and `en` locales, are unique per page and locale, and have
+  slugs unique within each locale. Publication state belongs to each translation and defaults to
+  `draft`; publishing one locale does not publish another.
+- Page content and store setting values are JSONB objects. SEO metadata is optional and localized with
+  its page translation. The schema does not prescribe an editor-specific content-block format.
+- Banners share their placement key, sort order, and active state across locales; translations are
+  optional and unique per banner and locale. Banner media references an existing `media_assets` row;
+  deleting that asset clears the reference but preserves the banner.
+- Deleting a page or banner cascades to its translations. No default settings, pages, banner placements,
+  or content are seeded by the migration.

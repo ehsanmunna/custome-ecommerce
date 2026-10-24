@@ -47,6 +47,7 @@ describeDatabase('database migrations', () => {
       '20260103000000_inventory',
       '20260104000000_customers_auth',
       '20260105000000_orders_payments_shipping',
+      '20260106000000_settings_cms',
     ]);
     expect(ledger[0]?.checksum).toBeTruthy();
     expect(ledger[0]?.finished_at).toBeTruthy();
@@ -86,20 +87,20 @@ describeDatabase('database migrations', () => {
     expect(deployFixtureProject(project).status).toBe(0);
     await insertProbeRow('customer data');
 
-    addFixtureMigration(project, { name: '20260106000000_add_note', sql: ADD_NOTE });
+    addFixtureMigration(project, { name: '20260107000000_add_note', sql: ADD_NOTE });
     const second = deployFixtureProject(project);
     expect(second.status, second.stderr).toBe(0);
 
     const row = await readProbeRow();
     expect(row?.name).toBe('customer data');
-    expect(await readSchemaVersion()).toBe('20260106000000_add_note');
+    expect(await readSchemaVersion()).toBe('20260107000000_add_note');
   });
 
   it('rolls back a failed migration and keeps the previous schema version', async () => {
     project = createFixtureProject([
       { name: '20260102000000_create_probe', sql: CREATE_PROBE },
       {
-        name: '20260106000000_failing',
+        name: '20260107000000_failing',
         sql: 'CREATE TABLE should_be_rolled_back (id integer);\nSELECT * FROM table_that_does_not_exist;',
       },
     ]);
@@ -116,6 +117,7 @@ describeDatabase('database migrations', () => {
       '20260103000000_inventory',
       '20260104000000_customers_auth',
       '20260105000000_orders_payments_shipping',
+      '20260106000000_settings_cms',
     ]);
     expect(await readSchemaVersion()).toBe(EXPECTED_SCHEMA_VERSION);
 

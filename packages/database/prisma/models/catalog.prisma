@@ -181,6 +181,7 @@ model MediaAsset {
   updatedAt      DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   altTexts       MediaAltText[]
   productMedia   ProductMedia[]
+  cmsBanners     CmsBanner[]
   categoryImages Category[]     @relation("CategoryImage")
   brandImages    Brand[]        @relation("BrandImage")
 
