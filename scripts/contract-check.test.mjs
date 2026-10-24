@@ -19,6 +19,19 @@ test('v1 contract operations are complete and cover every implemented Nest route
   assert.deepEqual(validateContract(contract, inspectControllerRoutes()), []);
 });
 
+test('Nest route parameters are normalized to OpenAPI path parameters', () => {
+  const routes = inspectControllerRoutes();
+
+  assert(
+    routes.some(({ method, route }) => method === 'get' && route === '/storefront/products/{slug}'),
+  );
+  assert(
+    routes.some(
+      ({ method, route }) => method === 'patch' && route === '/admin/variants/{variantId}',
+    ),
+  );
+});
+
 test('additive contract operations remain compatible', () => {
   const before = {
     paths: {

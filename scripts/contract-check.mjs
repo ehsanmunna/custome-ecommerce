@@ -90,7 +90,7 @@ function inspectControllerRoutes() {
           const route = `/${[prefix, suffix].filter(Boolean).join('/')}`
             .replace(/\/+/g, '/')
             .replace(/\/$/, '');
-          routes.push({ method, route: route || '/' });
+          routes.push({ method, route: route.replace(/:([A-Za-z0-9_]+)/g, '{$1}') || '/' });
         }
       }
     }

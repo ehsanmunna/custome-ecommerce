@@ -48,9 +48,59 @@ describeDatabase('database migrations', () => {
       '20260104000000_customers_auth',
       '20260105000000_orders_payments_shipping',
       '20260106000000_settings_cms',
+      '20261024000000_auth_sessions',
+      '20261025000000_catalog_translation_descriptions',
     ]);
     expect(ledger[0]?.checksum).toBeTruthy();
     expect(ledger[0]?.finished_at).toBeTruthy();
+
+    const columns = await withClient(migrationUrl!, async (client) => {
+      const result = await client.query(
+        `SELECT table_name, column_name, is_nullable
+         FROM information_schema.columns
+         WHERE table_schema = 'public'
+           AND table_name IN ('category_translations', 'brand_translations')
+           AND column_name = 'description'
+         ORDER BY table_name`,
+      );
+      return result.rows;
+    });
+    expect(columns).toEqual([
+      {
+        table_name: 'brand_translations',
+        column_name: 'description',
+        is_nullable: 'YES',
+      },
+      {
+        table_name: 'category_translations',
+        column_name: 'description',
+        is_nullable: 'YES',
+      },
+    ]);
+
+    const descriptions = await withClient(migrationUrl!, async (client) => {
+      const category = await client.query('INSERT INTO categories DEFAULT VALUES RETURNING id');
+      const brand = await client.query('INSERT INTO brands DEFAULT VALUES RETURNING id');
+      await client.query(
+        `INSERT INTO category_translations (category_id, locale, name, slug, description)
+         VALUES ($1, 'en', 'Category', 'category', $2)`,
+        [category.rows[0]?.id, 'Category description'],
+      );
+      await client.query(
+        `INSERT INTO brand_translations (brand_id, locale, name, slug, description)
+         VALUES ($1, 'en', 'Brand', 'brand', $2)`,
+        [brand.rows[0]?.id, 'Brand description'],
+      );
+      const result = await client.query(
+        `SELECT description FROM category_translations WHERE category_id = $1
+         UNION ALL
+         SELECT description FROM brand_translations WHERE brand_id = $2
+         ORDER BY description`,
+        [category.rows[0]?.id, brand.rows[0]?.id],
+      );
+      return result.rows.map(({ description }) => description);
+    });
+    expect(descriptions).toEqual(['Brand description', 'Category description']);
   });
 
   it('changes nothing when the migration command is run twice', async () => {
@@ -87,20 +137,20 @@ describeDatabase('database migrations', () => {
     expect(deployFixtureProject(project).status).toBe(0);
     await insertProbeRow('customer data');
 
-    addFixtureMigration(project, { name: '20260107000000_add_note', sql: ADD_NOTE });
+    addFixtureMigration(project, { name: '20261026000000_add_note', sql: ADD_NOTE });
     const second = deployFixtureProject(project);
     expect(second.status, second.stderr).toBe(0);
 
     const row = await readProbeRow();
     expect(row?.name).toBe('customer data');
-    expect(await readSchemaVersion()).toBe('20260107000000_add_note');
+    expect(await readSchemaVersion()).toBe('20261026000000_add_note');
   });
 
   it('rolls back a failed migration and keeps the previous schema version', async () => {
     project = createFixtureProject([
       { name: '20260102000000_create_probe', sql: CREATE_PROBE },
       {
-        name: '20260107000000_failing',
+        name: '20261026000000_failing',
         sql: 'CREATE TABLE should_be_rolled_back (id integer);\nSELECT * FROM table_that_does_not_exist;',
       },
     ]);
@@ -118,6 +168,8 @@ describeDatabase('database migrations', () => {
       '20260104000000_customers_auth',
       '20260105000000_orders_payments_shipping',
       '20260106000000_settings_cms',
+      '20261024000000_auth_sessions',
+      '20261025000000_catalog_translation_descriptions',
     ]);
     expect(await readSchemaVersion()).toBe(EXPECTED_SCHEMA_VERSION);
 

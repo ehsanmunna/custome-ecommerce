@@ -60,6 +60,7 @@ model CategoryTranslation {
   locale          ContentLocale
   name            String
   slug            String
+  description     String?
   metaTitle       String?       @map("meta_title")
   metaDescription String?       @map("meta_description")
   category        Category      @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -88,6 +89,7 @@ model BrandTranslation {
   locale          ContentLocale
   name            String
   slug            String
+  description     String?
   metaTitle       String?       @map("meta_title")
   metaDescription String?       @map("meta_description")
   brand           Brand         @relation(fields: [brandId], references: [id], onDelete: Cascade, onUpdate: Cascade)

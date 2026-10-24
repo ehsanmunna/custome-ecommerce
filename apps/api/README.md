@@ -1,9 +1,34 @@
 # API contract
 
 The canonical OpenAPI 3.1 contract is [openapi/openapi.yaml](./openapi/openapi.yaml). Its server base
-is `/v1`, so the health operation `GET /health/live` resolves to `/v1/health/live`. The two health
-operations are currently implemented. Other operations describe the planned v1 boundary and are not
-available until their feature changes implement them.
+is `/v1`, so `GET /health/live` resolves to `/v1/health/live`. Health, authentication, customer
+registration, and catalog operations are implemented. Other operations describe the planned v1
+boundary and are not available until their feature changes implement them.
+
+## Authentication
+
+Customer and admin sessions use short-lived signed access tokens and rotating opaque refresh tokens.
+Refresh tokens are stored only as keyed hashes; protected requests check the persisted session and
+current account status. Admin permissions and role scope are resolved from current role assignments
+on each request.
+
+Set distinct `AUTH_TOKEN_SIGNING_SECRET` and `AUTH_TOKEN_HASH_SECRET` values of at least 32
+characters in production. Generate them from a cryptographically secure source and keep them in the
+deployment secret manager. Development and test environments generate per-process secrets when
+these values are omitted, so sessions are invalidated on restart.
+
+OTP requests return `503 Service Unavailable` until an SMS/email delivery adapter is configured.
+The API does not return OTP values or claim successful delivery when no provider is available.
+Access-token and refresh-token lifetimes, OTP expiry/attempt limits, and issuance rate limits can be
+configured with the corresponding `AUTH_*` environment variables; validated defaults are listed in
+`.env.example` and `apps/api/src/platform/config/env.schema.ts`.
+
+Before enabling OTP authentication in production, select the SMS/email providers, implement an
+`OtpDeliveryAdapter` for the supported channels, and register it for `OTP_DELIVERY_ADAPTER` in
+`AuthModule` in place of `UnavailableOtpDeliveryAdapter`. Provision provider credentials through the
+deployment secret manager and verify delivery failure/timeout handling. No production provider or
+provider-specific environment variables are configured by this change, so OTP requests continue to
+return `503` until that integration is deployed.
 
 ## Updating the contract
 

@@ -28,6 +28,42 @@ describe('configuration validation', () => {
     expect(() => validateEnv({ ...validEnv, DATABASE_URL: 'mysql://localhost/app' })).toThrowError(
       /DATABASE_URL/,
     );
+    expect(() => validateEnv({ ...validEnv, AUTH_OTP_MAX_ATTEMPTS: '0' })).toThrowError(
+      /AUTH_OTP_MAX_ATTEMPTS/,
+    );
+  });
+
+  it('requires independent auth secrets of sufficient length in production', () => {
+    expect(() => validateEnv({ ...validEnv, NODE_ENV: 'production' })).toThrowError(
+      /AUTH_TOKEN_SIGNING_SECRET/,
+    );
+
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        NODE_ENV: 'production',
+        AUTH_TOKEN_SIGNING_SECRET: 'a'.repeat(32),
+        AUTH_TOKEN_HASH_SECRET: 'b'.repeat(32),
+      }),
+    ).not.toThrow();
+
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        NODE_ENV: 'production',
+        AUTH_TOKEN_SIGNING_SECRET: 'same-secret-used-for-both-32-characters',
+        AUTH_TOKEN_HASH_SECRET: 'same-secret-used-for-both-32-characters',
+      }),
+    ).toThrowError(/must differ/);
+  });
+
+  it('rejects short configured auth secrets', () => {
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        AUTH_TOKEN_SIGNING_SECRET: 'too-short',
+      }),
+    ).toThrowError(/AUTH_TOKEN_SIGNING_SECRET/);
   });
 
   it('reports every offending key in one error', () => {

@@ -657,6 +657,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/storefront/customers/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Refresh a customer session */
+        post: operations["customerRefreshSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/storefront/customers/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** End the current customer session */
+        post: operations["customerLogout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/storefront/customers/me": {
         parameters: {
             query?: never;
@@ -1669,6 +1703,7 @@ export interface components {
         CustomerUpdate: {
             displayName?: string;
         };
+        /** @description Destination is an E.164 phone for SMS or a lowercase email address for email. */
         OtpRequest: {
             /** @enum {string} */
             channel: "sms" | "email";
@@ -1680,6 +1715,7 @@ export interface components {
             /** @constant */
             status: "accepted";
         };
+        /** @description The one-time code is a six-digit value delivered only through the selected channel. */
         OtpVerifyRequest: {
             /** @enum {string} */
             channel: "sms" | "email";
@@ -3456,6 +3492,50 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuthSession"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    customerRefreshSession: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefreshRequest"];
+            };
+        };
+        responses: {
+            /** @description Refreshed customer bearer tokens. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthSession"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    customerLogout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

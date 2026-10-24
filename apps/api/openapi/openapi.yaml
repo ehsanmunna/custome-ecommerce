@@ -4,9 +4,9 @@ info:
   version: 1.0.0
   summary: Versioned REST API for the shared custom e-commerce platform.
   description: >-
-    Canonical contract for the planned v1 API. Only operations implemented by the
-    running API are currently available; other operations describe the planned
-    integration boundary and are implemented by their feature changes.
+    Canonical contract for the planned v1 API. Only operations listed in
+    x-implemented-operations are currently available; other operations describe
+    the planned integration boundary and are implemented by their feature changes.
   contact:
     name: API maintainers
 servers:
@@ -15,6 +15,41 @@ servers:
 x-implemented-operations:
   - GET /health/live
   - GET /health/ready
+  - POST /admin/auth/login
+  - POST /admin/auth/refresh
+  - POST /admin/auth/logout
+  - GET /admin/auth/me
+  - POST /storefront/customers
+  - POST /storefront/customers/auth/login
+  - POST /storefront/customers/auth/otp
+  - POST /storefront/customers/auth/otp/verify
+  - POST /storefront/customers/auth/refresh
+  - POST /storefront/customers/auth/logout
+  - GET /storefront/customers/me
+  - GET /storefront/categories
+  - GET /storefront/categories/{slug}/products
+  - GET /storefront/products
+  - GET /storefront/products/{slug}
+  - GET /storefront/brands
+  - GET /storefront/brands/{slug}
+  - GET /admin/brands
+  - POST /admin/brands
+  - PATCH /admin/brands/{brandId}
+  - DELETE /admin/brands/{brandId}
+  - GET /admin/categories
+  - POST /admin/categories
+  - PATCH /admin/categories/{categoryId}
+  - DELETE /admin/categories/{categoryId}
+  - GET /admin/categories/{categoryId}/attributes
+  - POST /admin/categories/{categoryId}/attributes
+  - GET /admin/products
+  - POST /admin/products
+  - GET /admin/products/{productId}
+  - PATCH /admin/products/{productId}
+  - DELETE /admin/products/{productId}
+  - POST /admin/products/{productId}/variants
+  - PATCH /admin/variants/{variantId}
+  - DELETE /admin/variants/{variantId}
 tags:
   - name: Health
   - name: Admin authentication
@@ -1169,6 +1204,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/auth/refresh:
+    post:
+      operationId: customerRefreshSession
+      tags: [Customer authentication]
+      summary: Refresh a customer session
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Refreshed customer bearer tokens.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthSession'
+        default:
+          $ref: '#/components/responses/Problem'
+  /storefront/customers/auth/logout:
+    post:
+      operationId: customerLogout
+      tags: [Customer authentication]
+      summary: End the current customer session
+      security:
+        - bearerAuth: []
+      x-access: customer
+      responses:
+        '204':
+          description: Session ended.
         default:
           $ref: '#/components/responses/Problem'
   /storefront/customers/me:
@@ -3139,6 +3209,7 @@ components:
           minLength: 1
     OtpRequest:
       type: object
+      description: Destination is an E.164 phone for SMS or a lowercase email address for email.
       required: [channel, destination, purpose]
       properties:
         channel:
@@ -3159,6 +3230,7 @@ components:
           const: accepted
     OtpVerifyRequest:
       type: object
+      description: The one-time code is a six-digit value delivered only through the selected channel.
       required: [channel, destination, purpose, code]
       properties:
         channel:
