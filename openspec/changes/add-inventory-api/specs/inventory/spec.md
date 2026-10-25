@@ -1,88 +1,57 @@
-# Spec Delta
-
 ## Purpose
 
-Provides inventory management for products across multiple locations, including warehouse definitions, inventory tracking, availability calculation, and location-based pricing.
+Exposes the platform's single-location, per-variant inventory through an authenticated API with derived availability, auditable adjustments, and reservation management.
 
 ## ADDED Requirements
 
-### Requirement: Inventory CRUD operations
-The system SHALL allow administrators to create, read, update, and delete inventory records for products at warehouses. Each inventory item MUST belong to a valid warehouse and product. Inventory quantity can be modified via PUT requests.
+### Requirement: Inventory listing
+The system SHALL allow authorized administrators to retrieve paginated inventory records and optionally filter to records whose available quantity is at or below the configured low-stock threshold. Available quantity MUST be derived as on-hand quantity minus reserved quantity; low-stock state MUST be derived by comparing available quantity to the threshold.
 
-#### Scenario: Create inventory item
-- **WHEN** administrator sends POST to `/api/inventory/products/<product-id>`
-- **THEN** system creates inventory item with initial quantity and returns 201 status
+#### Scenario: List inventory
+- **WHEN** an administrator with `inventory.read` requests `GET /v1/admin/inventory`
+- **THEN** the system returns a paginated list with on-hand, reserved, available, threshold, and low-stock values for each variant
 
-#### Scenario: Update inventory quantity
-- **WHEN** administrator sends PUT to `/api/inventory/products/<product-id>` with new quantity
-- **THEN** system updates inventory item and returns 200 status with updated data
+#### Scenario: Filter low-stock inventory
+- **WHEN** an administrator requests `GET /v1/admin/inventory?lowStock=true`
+- **THEN** the system returns only records whose available quantity is less than or equal to their low-stock threshold
 
-#### Scenario: Delete inventory item
-- **WHEN** administrator sends DELETE to `/api/inventory/products/<product-id>`
-- **THEN** system deletes inventory item and returns 204 status
+### Requirement: Stock adjustments
+The system SHALL allow administrators with `inventory.adjust` to adjust stock for a valid product variant. Each adjustment MUST have a non-zero quantity delta and non-empty reason, MUST preserve non-negative available stock, and MUST atomically update the inventory balance and append a stock movement. Inventory writes MUST be serialized for the affected variant.
 
-### Requirement: Availability calculation
-The system SHALL calculate product availability based on inventory status. A product is available for purchase only when inventory quantity exceeds zero for all applicable warehouses. Availability status must be returned in product detail responses.
+#### Scenario: Apply a stock adjustment
+- **WHEN** an administrator posts a valid adjustment to `/v1/admin/inventory/{variantId}/adjustments`
+- **THEN** the system returns the updated inventory record and records the adjustment in the append-only stock movement ledger
 
-#### Scenario: Calculate available product
-- **WHEN** product has inventory quantity greater than zero
-- **THEN** system returns `inventory_status: 'available'` in product detail response
+#### Scenario: Initialize inventory for a variant
+- **WHEN** an administrator applies a positive adjustment to a valid variant that does not yet have an inventory record
+- **THEN** the system creates a zero-balance inventory record and applies the adjustment atomically
 
-#### Scenario: Calculate unavailable product
-- **WHEN** product has inventory quantity of zero at all warehouses
-- **THEN** system returns `inventory_status: 'unavailable'` in product detail response
+#### Scenario: Reject an adjustment that makes stock invalid
+- **WHEN** an adjustment would make on-hand quantity negative or lower than reserved quantity
+- **THEN** the system rejects the adjustment without changing the inventory balance or movement ledger
 
-#### Scenario: Calculate partially available product
-- **WHEN** product has inventory quantity greater than zero at some warehouses but not all
-- **THEN** system returns `inventory_status: 'partially_available'` in product detail response
+### Requirement: Stock reservations
+The system SHALL allow authorized administrators to list reservations, create manual reservations, and release or commit active reservations. Creating a reservation MUST require a valid variant, a positive quantity no greater than available stock, and MUST update the reserved balance atomically. Reservation status changes MUST update the reserved balance and append the corresponding stock movement in the same transaction.
 
-### Requirement: Warehouse management
-The system SHALL allow administrators to define and manage warehouses. Each warehouse has a name, location, and description. Warehouses must have unique names and cannot be deleted when active inventory exists.
+#### Scenario: Create a manual reservation
+- **WHEN** an administrator with `inventory.adjust` creates a reservation for a valid variant with sufficient available stock
+- **THEN** the system creates an active reservation and decreases the variant's available quantity by the reserved amount
 
-#### Scenario: Create warehouse
-- **WHEN** administrator sends POST to `/api/inventory/warehouses` with valid data
-- **THEN** system creates warehouse and returns 201 status
+#### Scenario: Reject a reservation exceeding available stock
+- **WHEN** an administrator requests a reservation greater than the variant's available quantity
+- **THEN** the system rejects the request without changing the inventory balance
 
-#### Scenario: Create warehouse with duplicate name
-- **WHEN** administrator sends POST with a name that already exists
-- **THEN** system returns 409 status with validation error
+#### Scenario: Release an active reservation
+- **WHEN** an administrator releases an active reservation
+- **THEN** the system marks it released and restores its quantity to available stock exactly once
 
-#### Scenario: Delete warehouse with inventory
-- **WHEN** administrator sends DELETE to `/api/inventory/warehouses/<warehouse-id>`
-- **AND** warehouse has active inventory items
-- **THEN** system returns 403 status with message indicating inventory dependency
+#### Scenario: Commit an active reservation
+- **WHEN** an administrator commits an active reservation
+- **THEN** the system marks it committed and deducts the reserved quantity from on-hand and reserved balances
 
-### Requirement: Inventory validation on checkout
-The system SHALL validate product inventory before processing checkout requests. A product must have positive inventory quantity at the selected warehouse. Checkout requests to unavailable products MUST be rejected.
+### Requirement: Inventory access control
+The system MUST require the `inventory.read` permission to list inventory or reservations and the `inventory.adjust` permission to adjust stock or manage reservations. Requests without the required authorization MUST be rejected.
 
-#### Scenario: Checkout with available product
-- **WHEN** user sends POST to `/api/checkout` with product ID and warehouse ID where inventory exists
-- **THEN** checkout proceeds with inventory validation passing
-
-#### Scenario: Checkout with unavailable product
-- **WHEN** user sends POST to `/api/checkout` with product ID where inventory quantity is zero
-- **THEN** system returns 400 status with inventory validation error
-
-#### Scenario: Checkout with missing warehouse
-- **WHEN** user sends POST to `/api/checkout` with product ID and non-existent warehouse ID
-- **THEN** system returns 404 status with warehouse not found error
-
-## MODIFIED Requirements
-
-### Requirement: Product availability
-**MODIFIED**: Product availability is now determined by inventory status rather than product status. Products with inventory quantity greater than zero are considered available regardless of their product status field. Product availability for purchase must check inventory status first.
-
-#### Scenario: Available product with inactive status
-- **WHEN** product has inventory quantity greater than zero but product status is `inactive`
-- **THEN** product is still considered available for purchase
-
-#### Scenario: Unavailable product with active status
-- **WHEN** product has inventory quantity of zero but product status is `active`
-- **THEN** product is NOT available for purchase
-
-### Requirement: Product detail response
-**MODIFIED**: Product detail response MUST include inventory status information. The response MUST contain a new field `inventory_status` with possible values: `available`, `unavailable`, or `partially_available`. The response MUST contain `inventory_items` array listing warehouse-specific inventory data.
-
-#### Scenario: Product detail with inventory
-- **WHEN** GET request to `/api/products/<product-id>` for product with inventory
-- **THEN** response includes `inventory_status: 'available'` and `inventory_items` array with warehouse details
+#### Scenario: Deny inventory access without permission
+- **WHEN** an administrator without the required inventory permission requests a protected inventory operation
+- **THEN** the system rejects the request without exposing or changing inventory data

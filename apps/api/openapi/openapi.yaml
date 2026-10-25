@@ -50,6 +50,11 @@ x-implemented-operations:
   - POST /admin/products/{productId}/variants
   - PATCH /admin/variants/{variantId}
   - DELETE /admin/variants/{variantId}
+  - GET /admin/inventory
+  - POST /admin/inventory/{variantId}/adjustments
+  - GET /admin/inventory/reservations
+  - POST /admin/inventory/reservations
+  - PATCH /admin/inventory/reservations/{reservationId}/status
   - GET /admin/media
   - POST /admin/media
   - POST /admin/media/{mediaId}/complete

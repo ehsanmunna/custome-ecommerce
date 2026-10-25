@@ -2,82 +2,37 @@
 
 ## Context
 
-Current product model has a single availability status with no inventory tracking. Admin dashboard has basic product management. No warehouse concept exists. Inventory data is managed through a single product table field.
+The database already contains Prisma models and migrations for `inventory_items`, `stock_reservations`, and append-only `stock_movements`. Inventory is single-location and keyed by product variant. The NestJS API uses Prisma, Zod request schemas, permission metadata, and a versioned `/v1` route prefix. See `proposal.md` and the inventory requirements for scope.
 
 ## Goals / Non-Goals
 
 **Goals:**
-- Implement inventory management system supporting multiple warehouses and inventory tracking
-- Calculate product availability based on inventory status
-- Expose inventory management API endpoints
-- Integrate inventory checks into product detail and checkout flows
+- Implement the existing OpenAPI inventory operations in the API.
+- Preserve atomicity between balance changes, reservation changes, and movement-ledger entries.
+- Derive available and low-stock values from persisted balances.
 
 **Non-Goals:**
-- Inventory auditing (audit trails for inventory changes)
-- Inventory sync with external warehouses
-- Bulk inventory operations (import/export)
-- Inventory reports and analytics
+- Add or change database tables, warehouses, product-level inventory fields, or location-based pricing.
+- Add availability caching, admin screens, storefront UI, or checkout endpoints.
 
 ## Decisions
 
-**Decision: Warehouse model** → Create separate `warehouses` table rather than adding location fields to products.
-- **Rationale**: Warehouses have their own identity (name, address, status) beyond product relationships. Separating them enables future expansion (warehouse-specific settings, separate inventory limits per warehouse).
-- **Alternatives considered**: Adding location fields to products (would make inventory management complex and limit to single location), using product locations (insufficient for warehouse-specific settings and access control).
+**Use the existing Prisma inventory schema** → The API maps its domain operations onto the current `InventoryItem`, `StockReservation`, and `StockMovement` models. The Prisma schema and SQL migrations remain the source of truth; no TypeORM entities or parallel inventory tables are introduced.
 
-**Decision: Inventory as separate entity** → Inventory items link products to warehouses, not just a quantity field on products.
-- **Rationale**: Multiple inventory records needed per product (one per warehouse). Centralizing inventory logic in a service rather than embedding it in product service.
-- **Alternatives considered**: Storing inventory as nested product data (would require complex nested queries and updates).
+**Keep inventory single-location and per variant** → Each balance belongs to a product variant. Product-level availability, warehouse selection, and location-specific prices are not introduced.
 
-**Decision: Availability calculation** → Implement as a service method called by checkout controller, not as a database trigger or computed column.
-- **Rationale**: Calculation may involve external factors (e.g., geographic restrictions). Service layer provides flexibility for future extensions.
-- **Alternatives considered**: Database trigger (harder to test), computed column (limits calculation complexity), API endpoint (adds latency to every product query).
+**Serialize each stock mutation in a database transaction** → Lock the affected inventory row with PostgreSQL row-level locking before validating and changing stock. A first positive adjustment may create a zero-balance row for a valid variant before applying the adjustment. Update the balance, reservation state where applicable, and append-only movement record in the same transaction. Database constraints remain the final guard against invalid balances.
 
-**Decision: Inventory validation on checkout** → Validate inventory at checkout time, not at product availability endpoint.
-- **Rationale**: Inventory may change between requests (concurrent updates). Checking at checkout ensures accuracy. Product availability endpoint can cache for performance.
-- **Alternatives considered**: Real-time inventory checks on every product query (high load), pre-calculated availability (staging issues with concurrent inventory changes).
+**Use the existing API contract and authorization model** → Implement the inventory paths and schemas already defined in `apps/api/openapi/openapi.yaml`. Protect reads with `inventory.read` and mutations with `inventory.adjust`; do not invent another route hierarchy or authorization mechanism.
+
+**Do not cache inventory availability** → Read current values from PostgreSQL. This follows the project's no-cache rule and keeps inventory decisions consistent with checkout's database recheck.
 
 ## Risks / Trade-offs
 
-**Risk**: Inventory race conditions during concurrent updates
-→ **Mitigation**: Use database row-level locking in inventory update operations; implement idempotent update tokens for client-side retry.
-
-**Risk**: Inventory queries becoming expensive with many warehouses
-→ **Mitigation**: Add database indexes on warehouse-product relationships; implement availability caching with configurable TTL.
-
-**Risk**: Existing product data migration
-→ **Mitigation**: Create migration to initialize inventory items for all active products with quantity 1000 at the "default" warehouse. Products without explicit inventory configuration can have a default inventory level.
-
-**Risk**: Checkout performance degradation from inventory checks
-→ **Mitigation**: Implement availability caching for products accessed frequently; consider Redis cache layer for high-traffic sites.
+- **Concurrent mutations could oversell or corrupt reserved totals** → Lock the variant inventory row and perform validation plus all related writes within one transaction.
+- **The append-only movement trigger rejects ledger edits** → Treat movements as immutable and represent corrections as new compensating movements.
+- **Concurrent first-time adjustments could create duplicate inventory rows** → Use the variant primary key and transactional upsert/locking; database uniqueness ensures one balance per variant.
 
 ## Migration Plan
 
-1. **Database migrations**:
-   - Create `warehouses` table
-   - Create `inventory_items` table with product_id and warehouse_id foreign keys
-   - Create `location_prices` table for location-based pricing
-   - Add inventory-related columns to products table (`inventory_status`, `inventory_items`, `price_fallback`)
-   - Run data migration to initialize inventory items for existing products
-
-2. **API layer**:
-   - Create inventory module with warehouses service, inventory items service
-   - Create availability calculation service
-   - Add inventory validation interceptor to checkout flow
-   - Update product service to include inventory status in responses
-   - Add new API endpoints under `/api/inventory/` and update `/api/products/`
-
-3. **Admin dashboard**:
-   - Create inventory section in admin sidebar
-   - Implement inventory management forms for warehouses and inventory items
-   - Update product creation/editing to include inventory configuration
-
-4. **Client updates**:
-   - Update product detail page to check inventory status
-   - Add inventory validation to checkout flow
-   - Display inventory availability to users
-
-## Open Questions
-
-- Should inventory quantities be integers or decimals? (Decimals allow for fractional inventory, integers are simpler for UI)
-- What happens to inventory on product deletion? (Should inventory be deleted too, or soft-deleted?)
-- Should location-based pricing be limited to certain fields (e.g., price only) or applied to all product attributes?
+No database migration is needed. The inventory schema was added by the existing core-schema change. Implement and test the API against that schema, then mark the corresponding operations as implemented in the OpenAPI contract. Rollback consists of removing the API module and reverting the OpenAPI implementation markers; database data and migrations remain untouched.
