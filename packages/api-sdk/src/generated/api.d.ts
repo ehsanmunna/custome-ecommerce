@@ -227,6 +227,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/media/{mediaId}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Complete a media upload
+         * @description Verifies the uploaded R2 object and records its authoritative metadata.
+         */
+        post: operations["completeMediaUpload"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/media/{mediaId}": {
         parameters: {
             query?: never;
@@ -1525,8 +1547,32 @@ export interface components {
             };
             /** Format: uri */
             readonly url?: string;
+            upload?: components["schemas"]["MediaUploadInstruction"];
+            variants?: components["schemas"]["MediaVariants"];
             /** Format: date-time */
             createdAt: string;
+        };
+        MediaUploadInstruction: {
+            /** Format: uri */
+            url: string;
+            /** @constant */
+            method: "PUT";
+            headers: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            expiresAt: string;
+        };
+        MediaVariant: {
+            /** Format: uri */
+            url: string;
+            width: number;
+        };
+        MediaVariants: {
+            thumbnail?: components["schemas"]["MediaVariant"];
+            card?: components["schemas"]["MediaVariant"];
+            detail?: components["schemas"]["MediaVariant"];
+            large?: components["schemas"]["MediaVariant"];
         };
         MediaUploadRequest: {
             fileName: string;
@@ -1536,6 +1582,11 @@ export interface components {
                 bn?: string;
                 en?: string;
             };
+        };
+        /** @description Supplied image dimensions must be positive and provided together or omitted. */
+        MediaUploadCompleteRequest: {
+            width?: number;
+            height?: number;
         };
         Category: {
             id: components["schemas"]["Id"];
@@ -2612,6 +2663,33 @@ export interface operations {
         responses: {
             /** @description Upload instruction and media record. */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAsset"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    completeMediaUpload: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mediaId: components["parameters"]["MediaId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MediaUploadCompleteRequest"];
+            };
+        };
+        responses: {
+            /** @description Verified media record. */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

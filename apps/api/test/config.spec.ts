@@ -66,6 +66,51 @@ describe('configuration validation', () => {
     ).toThrowError(/AUTH_TOKEN_SIGNING_SECRET/);
   });
 
+  it('applies safe media defaults without requiring R2 credentials', () => {
+    const config = validateEnv(validEnv);
+
+    expect(config.R2_UPLOAD_TTL_SECONDS).toBe(600);
+    expect(config.R2_MAX_UPLOAD_BYTES).toBe(10_485_760);
+    expect(config.R2_IMAGE_RESIZING_ENABLED).toBe(true);
+    expect(config.R2_ACCOUNT_ID).toBeUndefined();
+  });
+
+  it('accepts complete R2 configuration and coerces numeric and boolean values', () => {
+    const config = validateEnv({
+      ...validEnv,
+      R2_ACCOUNT_ID: 'account-id',
+      R2_BUCKET: 'media-bucket',
+      R2_ACCESS_KEY_ID: 'access-key',
+      R2_SECRET_ACCESS_KEY: 'secret-key',
+      R2_PUBLIC_BASE_URL: 'https://cdn.example.com',
+      R2_UPLOAD_TTL_SECONDS: '3600',
+      R2_MAX_UPLOAD_BYTES: '104857600',
+      R2_IMAGE_RESIZING_ENABLED: 'false',
+    });
+
+    expect(config.R2_UPLOAD_TTL_SECONDS).toBe(3600);
+    expect(config.R2_MAX_UPLOAD_BYTES).toBe(104_857_600);
+    expect(config.R2_IMAGE_RESIZING_ENABLED).toBe(false);
+  });
+
+  it('rejects unsafe media limits and non-boolean toggles', () => {
+    expect(() => validateEnv({ ...validEnv, R2_UPLOAD_TTL_SECONDS: '59' })).toThrowError(
+      /R2_UPLOAD_TTL_SECONDS/,
+    );
+    expect(() => validateEnv({ ...validEnv, R2_UPLOAD_TTL_SECONDS: '3601' })).toThrowError(
+      /R2_UPLOAD_TTL_SECONDS/,
+    );
+    expect(() => validateEnv({ ...validEnv, R2_MAX_UPLOAD_BYTES: '0' })).toThrowError(
+      /R2_MAX_UPLOAD_BYTES/,
+    );
+    expect(() => validateEnv({ ...validEnv, R2_MAX_UPLOAD_BYTES: '104857601' })).toThrowError(
+      /R2_MAX_UPLOAD_BYTES/,
+    );
+    expect(() => validateEnv({ ...validEnv, R2_IMAGE_RESIZING_ENABLED: 'yes' })).toThrowError(
+      /R2_IMAGE_RESIZING_ENABLED/,
+    );
+  });
+
   it('reports every offending key in one error', () => {
     let message = '';
 

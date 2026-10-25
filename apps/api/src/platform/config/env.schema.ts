@@ -7,6 +7,14 @@ const postgresUrl = z
     'must be a postgres:// or postgresql:// connection URL',
   );
 
+const booleanFromString = z.preprocess((value) => {
+  if (typeof value === 'string') {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+  }
+  return value;
+}, z.boolean());
+
 export const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']),
@@ -35,6 +43,14 @@ export const envSchema = z
     AUTH_OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(5),
     AUTH_OTP_RATE_LIMIT_COUNT: z.coerce.number().int().min(1).max(20).default(5),
     AUTH_OTP_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(60).max(86_400).default(3600),
+    R2_ACCOUNT_ID: z.string().trim().min(1).optional(),
+    R2_BUCKET: z.string().trim().min(1).optional(),
+    R2_ACCESS_KEY_ID: z.string().trim().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().trim().min(1).optional(),
+    R2_PUBLIC_BASE_URL: z.string().trim().min(1).optional(),
+    R2_UPLOAD_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(600),
+    R2_MAX_UPLOAD_BYTES: z.coerce.number().int().min(1).max(104_857_600).default(10_485_760),
+    R2_IMAGE_RESIZING_ENABLED: booleanFromString.default(true),
   })
   .superRefine((config, context) => {
     if (config.NODE_ENV === 'production') {

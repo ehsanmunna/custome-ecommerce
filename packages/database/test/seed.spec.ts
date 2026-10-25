@@ -88,11 +88,15 @@ describeDatabase('database seed operation', () => {
       ]),
     );
     const ownerPermissions = grants.owner as Set<string>;
-    expect(ownerPermissions.size).toBe(13);
+    expect(ownerPermissions.size).toBe(15);
+    expect(ownerPermissions.has('media_read')).toBe(true);
+    expect(ownerPermissions.has('media_manage')).toBe(true);
     expect(grants.manager).toEqual(
       new Set([
         'catalog_read',
         'catalog_manage',
+        'media_read',
+        'media_manage',
         'inventory_read',
         'inventory_manage',
         'orders_read',
@@ -104,7 +108,9 @@ describeDatabase('database seed operation', () => {
         'roles_read',
       ]),
     );
-    expect(grants.staff).toEqual(new Set(['catalog_read', 'inventory_read', 'orders_read']));
+    expect(grants.staff).toEqual(
+      new Set(['catalog_read', 'media_read', 'inventory_read', 'orders_read']),
+    );
     expect(grants.support).toEqual(new Set(['orders_read', 'customers_read']));
     expect((grants.staff as Set<string>).has('orders_change_status')).toBe(false);
     expect((grants.support as Set<string>).has('orders_change_status')).toBe(false);
@@ -158,7 +164,7 @@ describeDatabase('database seed operation', () => {
     await seedDatabase(client, null);
 
     expect(await client.adminRole.count()).toBe(4);
-    expect(await client.adminPermission.count()).toBe(13);
+    expect(await client.adminPermission.count()).toBe(15);
     expect(await client.storeSetting.count()).toBe(4);
     expect(await client.shippingZone.count()).toBe(2);
     expect(await client.storeSetting.findUnique({ where: { key: 'tax' } })).toMatchObject({

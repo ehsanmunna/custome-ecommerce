@@ -2,8 +2,8 @@
 
 The canonical OpenAPI 3.1 contract is [openapi/openapi.yaml](./openapi/openapi.yaml). Its server base
 is `/v1`, so `GET /health/live` resolves to `/v1/health/live`. Health, authentication, customer
-registration, and catalog operations are implemented. Other operations describe the planned v1
-boundary and are not available until their feature changes implement them.
+registration, catalog, and media operations are implemented. Other operations describe the planned
+v1 boundary and are not available until their feature changes implement them.
 
 ## Authentication
 
@@ -29,6 +29,55 @@ Before enabling OTP authentication in production, select the SMS/email providers
 deployment secret manager and verify delivery failure/timeout handling. No production provider or
 provider-specific environment variables are configured by this change, so OTP requests continue to
 return `503` until that integration is deployed.
+
+## Media storage
+
+Media objects live in the client's own Cloudflare R2 account; the API stores metadata only and
+never receives the binary. Configure the API with `R2_ACCOUNT_ID`, `R2_BUCKET`,
+`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_PUBLIC_BASE_URL`. Supply credentials through
+the client's deployment secret manager and never commit them to the repository. The API starts
+without these values, but media operations return `503 Service Unavailable` until the complete
+group is configured.
+
+`R2_UPLOAD_TTL_SECONDS` bounds the presigned upload lifetime, `R2_MAX_UPLOAD_BYTES` bounds the
+accepted object size, and `R2_IMAGE_RESIZING_ENABLED` controls whether resized delivery URLs are
+returned. `R2_PUBLIC_BASE_URL` must be the public custom domain (or `r2.dev` URL) bound to the
+bucket and must allow public reads for delivery.
+
+The admin upload sequence is:
+
+1. `POST /v1/admin/media` with `fileName`, `mimeType`, `sizeBytes`, and optional `alt` text. The API
+   generates the object key, stores a pending metadata record, and returns `upload.url`,
+   `upload.method`, `upload.headers`, and `upload.expiresAt`.
+2. The admin client sends the file bytes directly to that URL with `PUT` and exactly the returned
+   headers. The API never proxies the binary and the presigned URL must not be logged or shared.
+3. `POST /v1/admin/media/{mediaId}/complete` verifies the object with a HEAD request and records the
+   authoritative size and content type, plus optional `width`/`height` supplied together. Completion
+   is idempotent; a missing object returns `409 Conflict`.
+4. `DELETE /v1/admin/media/{mediaId}` removes metadata and then best-effort deletes the object. A
+   cleanup failure is logged but does not fail the request.
+
+The bucket must allow `PUT` from the admin origin with the `Content-Type` header and allow `HEAD`
+from the API. Configure a CORS rule similar to:
+
+```json
+[
+  {
+    "AllowedOrigins": ["https://admin.example.com"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "MaxAgeSeconds": 3600
+  }
+]
+```
+
+Delivery URLs use `R2_PUBLIC_BASE_URL` plus the object key. When resizing is enabled, responses also
+include `thumbnail` (160 px), `card` (480 px), `detail` (960 px), and `large` (1600 px) URLs built
+through Cloudflare Image Resizing (`/cdn-cgi/image/width=<n>,format=auto/<key>`). The public custom
+domain must be routed through Cloudflare with Image Resizing enabled; otherwise clients should use
+the original `url`. Upload intents that are never completed, or whose object is deleted outside the
+API, should be cleaned up by periodically deleting metadata older than the accepted lifecycle window
+and any orphaned objects during operations review.
 
 ## Updating the contract
 

@@ -50,6 +50,10 @@ x-implemented-operations:
   - POST /admin/products/{productId}/variants
   - PATCH /admin/variants/{variantId}
   - DELETE /admin/variants/{variantId}
+  - GET /admin/media
+  - POST /admin/media
+  - POST /admin/media/{mediaId}/complete
+  - DELETE /admin/media/{mediaId}
 tags:
   - name: Health
   - name: Admin authentication
@@ -435,6 +439,33 @@ paths:
       responses:
         '201':
           description: Upload instruction and media record.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/media/{mediaId}/complete:
+    parameters:
+      - $ref: '#/components/parameters/MediaId'
+    post:
+      operationId: completeMediaUpload
+      tags: [Media]
+      summary: Complete a media upload
+      description: Verifies the uploaded R2 object and records its authoritative metadata.
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: media.create
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaUploadCompleteRequest'
+      responses:
+        '200':
+          description: Verified media record.
           content:
             application/json:
               schema:
@@ -2826,9 +2857,51 @@ components:
           type: string
           format: uri
           readOnly: true
+        upload:
+          $ref: '#/components/schemas/MediaUploadInstruction'
+        variants:
+          $ref: '#/components/schemas/MediaVariants'
         createdAt:
           type: string
           format: date-time
+    MediaUploadInstruction:
+      type: object
+      required: [url, method, headers, expiresAt]
+      properties:
+        url:
+          type: string
+          format: uri
+        method:
+          type: string
+          const: PUT
+        headers:
+          type: object
+          additionalProperties:
+            type: string
+        expiresAt:
+          type: string
+          format: date-time
+    MediaVariant:
+      type: object
+      required: [url, width]
+      properties:
+        url:
+          type: string
+          format: uri
+        width:
+          type: integer
+          minimum: 1
+    MediaVariants:
+      type: object
+      properties:
+        thumbnail:
+          $ref: '#/components/schemas/MediaVariant'
+        card:
+          $ref: '#/components/schemas/MediaVariant'
+        detail:
+          $ref: '#/components/schemas/MediaVariant'
+        large:
+          $ref: '#/components/schemas/MediaVariant'
     MediaUploadRequest:
       type: object
       required: [fileName, mimeType, sizeBytes]
@@ -2848,6 +2921,16 @@ components:
               type: string
             en:
               type: string
+    MediaUploadCompleteRequest:
+      type: object
+      description: Supplied image dimensions must be positive and provided together or omitted.
+      properties:
+        width:
+          type: integer
+          minimum: 1
+        height:
+          type: integer
+          minimum: 1
     Category:
       type: object
       required: [id, status, sortOrder, content]

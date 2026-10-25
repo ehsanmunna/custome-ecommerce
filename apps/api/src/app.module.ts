@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { CatalogModule } from './catalog/catalog.module';
+import { MediaModule } from './media/media.module';
 import { AppConfigModule } from './platform/config/app-config.module';
 import { DatabaseModule } from './platform/database/database.module';
 import { HealthModule } from './platform/health/health.module';
@@ -16,6 +17,7 @@ import { SchemaModule } from './platform/schema/schema.module';
     HealthModule,
     AuthModule,
     CatalogModule,
+    MediaModule,
   ],
 })
 export class AppModule {}

@@ -11,6 +11,8 @@ const roles = [
 const permissions = [
   { key: 'catalog_read', groupKey: 'catalog', description: 'View catalog records' },
   { key: 'catalog_manage', groupKey: 'catalog', description: 'Manage catalog records' },
+  { key: 'media_read', groupKey: 'media', description: 'View media assets' },
+  { key: 'media_manage', groupKey: 'media', description: 'Manage media assets' },
   { key: 'inventory_read', groupKey: 'inventory', description: 'View inventory' },
   { key: 'inventory_manage', groupKey: 'inventory', description: 'Manage inventory' },
   { key: 'orders_read', groupKey: 'orders', description: 'View orders' },
@@ -27,6 +29,8 @@ const permissions = [
 const managerPermissionKeys = new Set([
   'catalog_read',
   'catalog_manage',
+  'media_read',
+  'media_manage',
   'inventory_read',
   'inventory_manage',
   'orders_read',
@@ -37,7 +41,12 @@ const managerPermissionKeys = new Set([
   'settings_read',
   'roles_read',
 ]);
-const staffPermissionKeys = new Set(['catalog_read', 'inventory_read', 'orders_read']);
+const staffPermissionKeys = new Set([
+  'catalog_read',
+  'media_read',
+  'inventory_read',
+  'orders_read',
+]);
 const supportPermissionKeys = new Set(['orders_read', 'customers_read']);
 
 const settingDefaults = [
