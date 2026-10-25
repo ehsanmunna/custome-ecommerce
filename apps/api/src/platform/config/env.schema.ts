@@ -51,6 +51,14 @@ export const envSchema = z
     R2_UPLOAD_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(600),
     R2_MAX_UPLOAD_BYTES: z.coerce.number().int().min(1).max(104_857_600).default(10_485_760),
     R2_IMAGE_RESIZING_ENABLED: booleanFromString.default(true),
+    STEADFAST_API_KEY: z.string().trim().min(1).optional(),
+    STEADFAST_API_BASE_URL: z
+      .string()
+      .trim()
+      .min(1)
+      .url('must be a valid URL')
+      .optional(),
+    STEADFAST_WEBHOOK_SECRET: z.string().trim().min(1).optional(),
   })
   .superRefine((config, context) => {
     if (config.NODE_ENV === 'production') {

@@ -98,12 +98,27 @@ export class AppConfigService {
     return this.read('R2_IMAGE_RESIZING_ENABLED');
   }
 
+  get steadfastApiKey(): string | undefined {
+    return this.config.get('STEADFAST_API_KEY');
+  }
+
+  get steadfastApiBaseUrl(): string | undefined {
+    return this.config.get('STEADFAST_API_BASE_URL');
+  }
+
+  get steadfastWebhookSecret(): string | undefined {
+    return this.config.get('STEADFAST_WEBHOOK_SECRET');
+  }
+
   get secretValues(): string[] {
     return [
       this.databaseUrl,
       this.authTokenSigningSecret,
       this.authTokenHashSecret,
       ...[this.r2AccessKeyId, this.r2SecretAccessKey].filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      ),
+      ...[this.steadfastApiKey, this.steadfastWebhookSecret].filter(
         (value): value is string => typeof value === 'string' && value.length > 0,
       ),
     ];
@@ -132,6 +147,9 @@ export class AppConfigService {
       R2_UPLOAD_TTL_SECONDS: this.r2UploadTtlSeconds,
       R2_MAX_UPLOAD_BYTES: this.r2MaxUploadBytes,
       R2_IMAGE_RESIZING_ENABLED: this.r2ImageResizingEnabled,
+      STEADFAST_API_KEY: '[REDACTED]',
+      STEADFAST_API_BASE_URL: this.steadfastApiBaseUrl ?? '',
+      STEADFAST_WEBHOOK_SECRET: '[REDACTED]',
     };
   }
 }
