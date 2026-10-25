@@ -59,6 +59,12 @@ x-implemented-operations:
   - POST /admin/media
   - POST /admin/media/{mediaId}/complete
   - DELETE /admin/media/{mediaId}
+  - POST /storefront/carts
+  - GET /storefront/carts/{cartId}
+  - POST /storefront/carts/{cartId}/items
+  - PATCH /storefront/carts/{cartId}/items/{itemId}
+  - DELETE /storefront/carts/{cartId}/items/{itemId}
+  - POST /storefront/carts/{cartId}/checkout
 tags:
   - name: Health
   - name: Admin authentication

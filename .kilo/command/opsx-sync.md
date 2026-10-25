@@ -1,11 +1,3 @@
----
-name: "opsx-sync"
-description: "Sync delta specs from a change to main specs"
-invokable: true
----
-
-This workflow prompt is already active. Follow its instructions directly. Do not call a tool named after this workflow.
-
 Sync delta specs from a change to main specs.
 
 This is an **agent-driven** operation - you will read delta specs and directly edit main specs to apply the changes. This allows intelligent merging (e.g., adding a scenario without copying the entire requirement).

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
+import { CartCheckoutModule } from './cart-checkout/cart-checkout.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { MediaModule } from './media/media.module';
@@ -17,6 +18,7 @@ import { SchemaModule } from './platform/schema/schema.module';
     SchemaModule,
     HealthModule,
     AuthModule,
+    CartCheckoutModule,
     CatalogModule,
     InventoryModule,
     MediaModule,
