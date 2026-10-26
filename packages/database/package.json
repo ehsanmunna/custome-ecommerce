@@ -14,7 +14,7 @@
     "test": "vitest run",
     "test:integration": "vitest run test/integration",
     "db:generate": "prisma generate && node scripts/generate-expected-version.mjs",
-    "db:seed": "prisma generate && tsc -p tsconfig.json && node scripts/seed.mjs",
+    "db:seed": "cmd /c \"set PRISMA_CLI_QUERY_ENGINE_TYPE=binary&& prisma generate && tsc -p tsconfig.json && node scripts/seed.mjs\"",
     "version:generate": "node scripts/generate-expected-version.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "db:status": "node scripts/status.mjs",

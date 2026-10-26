@@ -1,4 +1,3 @@
-import argon2 from 'argon2';
 import { Prisma, PrismaClient } from '@prisma/client';
 
 const roles = [
@@ -256,6 +255,7 @@ async function ensureFirstAdmin(
     throw new Error('Could not resolve the owner role for administrator bootstrap.');
   }
 
+  const argon2 = (await import('argon2')).default;
   const passwordHash = await argon2.hash(bootstrap.password, { type: argon2.argon2id });
   await tx.adminUser.create({
     data: {
