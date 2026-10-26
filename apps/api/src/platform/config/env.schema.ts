@@ -43,6 +43,11 @@ export const envSchema = z
     AUTH_OTP_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(10).default(5),
     AUTH_OTP_RATE_LIMIT_COUNT: z.coerce.number().int().min(1).max(20).default(5),
     AUTH_OTP_RATE_LIMIT_WINDOW_SECONDS: z.coerce.number().int().min(60).max(86_400).default(3600),
+    RESEND_API_KEY: z.string().trim().min(1).optional(),
+    RESEND_FROM_EMAIL: z.string().trim().min(1).optional(),
+    TWILIO_ACCOUNT_SID: z.string().trim().min(1).optional(),
+    TWILIO_AUTH_TOKEN: z.string().trim().min(1).optional(),
+    TWILIO_FROM_NUMBER: z.string().trim().min(1).optional(),
     R2_ACCOUNT_ID: z.string().trim().min(1).optional(),
     R2_BUCKET: z.string().trim().min(1).optional(),
     R2_ACCESS_KEY_ID: z.string().trim().min(1).optional(),
@@ -61,6 +66,24 @@ export const envSchema = z
     STEADFAST_WEBHOOK_SECRET: z.string().trim().min(1).optional(),
   })
   .superRefine((config, context) => {
+    for (const group of [
+      ['RESEND_API_KEY', 'RESEND_FROM_EMAIL'],
+      ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN', 'TWILIO_FROM_NUMBER'],
+    ] as const) {
+      const supplied = group.filter((key) => config[key] !== undefined);
+      if (supplied.length > 0 && supplied.length < group.length) {
+        for (const key of group) {
+          if (config[key] === undefined) {
+            context.addIssue({
+              code: 'custom',
+              path: [key],
+              message: 'is required when any setting for this provider is configured',
+            });
+          }
+        }
+      }
+    }
+
     if (config.NODE_ENV === 'production') {
       for (const key of ['AUTH_TOKEN_SIGNING_SECRET', 'AUTH_TOKEN_HASH_SECRET'] as const) {
         if (!config[key]) {

@@ -5,7 +5,8 @@ import { AdminAuthController, CustomerAuthController } from './auth.controller';
 import { AuthenticationGuard } from './authentication.guard';
 import { AuthService } from './auth.service';
 import { AuthSessionService } from './auth-session.service';
-import { OTP_DELIVERY_ADAPTER, UnavailableOtpDeliveryAdapter } from './otp-delivery';
+import { OTP_DELIVERY_ADAPTER } from './otp-delivery';
+import { ProviderOtpDeliveryAdapter } from './otp-delivery.providers';
 import { PasswordHashService } from './password-hash.service';
 import { AppConfigService } from '../platform/config/app-config.service';
 import { ProblemDetailsFilter } from '../platform/problem-details.filter';
@@ -20,7 +21,19 @@ import { ProblemDetailsFilter } from '../platform/problem-details.filter';
     AuthenticationGuard,
     ProblemDetailsFilter,
     { provide: AUTH_RUNTIME_CONFIG, useExisting: AppConfigService },
-    { provide: OTP_DELIVERY_ADAPTER, useClass: UnavailableOtpDeliveryAdapter },
+    {
+      provide: OTP_DELIVERY_ADAPTER,
+      useFactory: (config: AppConfigService) =>
+        new ProviderOtpDeliveryAdapter({
+          resendApiKey: config.resendApiKey,
+          resendFromEmail: config.resendFromEmail,
+          twilioAccountSid: config.twilioAccountSid,
+          twilioAuthToken: config.twilioAuthToken,
+          twilioFromNumber: config.twilioFromNumber,
+          authOtpTtlSeconds: config.authOtpTtlSeconds,
+        }),
+      inject: [AppConfigService],
+    },
     { provide: APP_GUARD, useExisting: AuthenticationGuard },
     { provide: APP_FILTER, useExisting: ProblemDetailsFilter },
   ],

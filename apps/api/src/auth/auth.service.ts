@@ -148,7 +148,7 @@ export class AuthService {
   }
 
   async requestCustomerOtp(input: OtpRequestInput): Promise<{ status: 'accepted' }> {
-    if (!this.otpDelivery.configured) {
+    if (!this.otpDelivery.isConfigured(input.channel)) {
       throw new ServiceUnavailableException('One-time code delivery is not configured');
     }
 

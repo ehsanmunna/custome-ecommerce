@@ -17,18 +17,23 @@ characters in production. Generate them from a cryptographically secure source a
 deployment secret manager. Development and test environments generate per-process secrets when
 these values are omitted, so sessions are invalidated on restart.
 
-OTP requests return `503 Service Unavailable` until an SMS/email delivery adapter is configured.
-The API does not return OTP values or claim successful delivery when no provider is available.
+Customer OTP delivery is available independently by channel. Configure `RESEND_API_KEY` and
+`RESEND_FROM_EMAIL` to enable email through Resend; verify the sender domain/address in Resend first.
+Configure `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, and `TWILIO_FROM_NUMBER` to enable SMS through
+Twilio; provision the sender number for the account and destination region. Each provider group must
+be either entirely absent or entirely set. The API starts when both groups are absent, but OTP
+requests for an unconfigured channel return `503 Service Unavailable`. A configured channel remains
+usable if the other provider is unavailable.
+The API never returns OTP values and does not claim successful delivery when the selected channel is
+unavailable.
+Supply credentials through the deployment secret manager and never commit them to the repository.
+Provider calls have bounded timeouts and are not retried automatically. Rejections, invalid responses,
+and timeouts invalidate the pending OTP and return a temporary failure; provider response details
+and OTP values are not exposed. Messages contain concise Bangla and English wording with the
+configured OTP validity period.
 Access-token and refresh-token lifetimes, OTP expiry/attempt limits, and issuance rate limits can be
 configured with the corresponding `AUTH_*` environment variables; validated defaults are listed in
 `.env.example` and `apps/api/src/platform/config/env.schema.ts`.
-
-Before enabling OTP authentication in production, select the SMS/email providers, implement an
-`OtpDeliveryAdapter` for the supported channels, and register it for `OTP_DELIVERY_ADAPTER` in
-`AuthModule` in place of `UnavailableOtpDeliveryAdapter`. Provision provider credentials through the
-deployment secret manager and verify delivery failure/timeout handling. No production provider or
-provider-specific environment variables are configured by this change, so OTP requests continue to
-return `503` until that integration is deployed.
 
 ## Media storage
 

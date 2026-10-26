@@ -75,6 +75,39 @@ describe('configuration validation', () => {
     expect(config.R2_ACCOUNT_ID).toBeUndefined();
   });
 
+  it('allows OTP providers to be omitted or configured as complete independent groups', () => {
+    expect(validateEnv(validEnv).RESEND_API_KEY).toBeUndefined();
+
+    const config = validateEnv({
+      ...validEnv,
+      RESEND_API_KEY: 'resend-secret',
+      RESEND_FROM_EMAIL: 'otp@example.com',
+      TWILIO_ACCOUNT_SID: 'AC123',
+      TWILIO_AUTH_TOKEN: 'twilio-secret',
+      TWILIO_FROM_NUMBER: '+15005550006',
+    });
+
+    expect(config.RESEND_API_KEY).toBe('resend-secret');
+    expect(config.TWILIO_ACCOUNT_SID).toBe('AC123');
+  });
+
+  it('rejects incomplete OTP provider configuration and identifies missing keys', () => {
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        RESEND_API_KEY: 'resend-secret',
+      }),
+    ).toThrowError(/RESEND_FROM_EMAIL/);
+
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        TWILIO_ACCOUNT_SID: 'AC123',
+        TWILIO_FROM_NUMBER: '+15005550006',
+      }),
+    ).toThrowError(/TWILIO_AUTH_TOKEN/);
+  });
+
   it('accepts complete R2 configuration and coerces numeric and boolean values', () => {
     const config = validateEnv({
       ...validEnv,

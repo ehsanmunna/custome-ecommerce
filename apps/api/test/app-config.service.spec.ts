@@ -85,4 +85,31 @@ describe('app configuration service', () => {
       config.authTokenHashSecret,
     ]);
   });
+
+  it('exposes OTP provider settings and redacts provider credentials', () => {
+    const config = createConfig({
+      RESEND_API_KEY: 'resend-secret',
+      RESEND_FROM_EMAIL: 'otp@example.com',
+      TWILIO_ACCOUNT_SID: 'AC123',
+      TWILIO_AUTH_TOKEN: 'twilio-secret',
+      TWILIO_FROM_NUMBER: '+15005550006',
+    });
+
+    expect(config.resendApiKey).toBe('resend-secret');
+    expect(config.resendFromEmail).toBe('otp@example.com');
+    expect(config.twilioAccountSid).toBe('AC123');
+    expect(config.twilioAuthToken).toBe('twilio-secret');
+    expect(config.twilioFromNumber).toBe('+15005550006');
+    expect(config.secretValues).toContain('resend-secret');
+    expect(config.secretValues).toContain('twilio-secret');
+    expect(config.describe()).toMatchObject({
+      RESEND_API_KEY: '[REDACTED]',
+      RESEND_FROM_EMAIL: 'otp@example.com',
+      TWILIO_ACCOUNT_SID: '[REDACTED]',
+      TWILIO_AUTH_TOKEN: '[REDACTED]',
+      TWILIO_FROM_NUMBER: '+15005550006',
+    });
+    expect(JSON.stringify(config.describe())).not.toContain('resend-secret');
+    expect(JSON.stringify(config.describe())).not.toContain('twilio-secret');
+  });
 });

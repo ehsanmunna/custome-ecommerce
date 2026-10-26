@@ -36,6 +36,7 @@ const tokenPair = {
 function createHarness(
   options: {
     otpConfigured?: boolean;
+    otpConfiguredChannels?: Array<'sms' | 'email'>;
     otpCodeCreate?: (data: Record<string, unknown>) => Promise<{ id: string }>;
     otpCount?: number;
     otpFindFirst?: Record<string, unknown> | null;
@@ -118,7 +119,11 @@ function createHarness(
     revoke: vi.fn(async () => undefined),
   } as unknown as AuthSessionService;
   const delivery = {
-    configured: options?.otpConfigured ?? false,
+    isConfigured: vi.fn((channel: 'sms' | 'email') =>
+      options.otpConfiguredChannels
+        ? options.otpConfiguredChannels.includes(channel)
+        : (options?.otpConfigured ?? false),
+    ),
     send: options?.otpSend ?? vi.fn(async () => undefined),
   } as OtpDeliveryAdapter;
   const crypto = new AuthCryptoService(config);
@@ -308,6 +313,39 @@ describe('customer authentication service', () => {
       ),
     ).rejects.toThrow(ServiceUnavailableException);
     expect(prisma.customer.findFirst).not.toHaveBeenCalled();
+  });
+
+  it('keeps OTP channel availability independent', async () => {
+    const { service, delivery, prisma } = createHarness({
+      otpConfiguredChannels: ['email'],
+      customerFindFirst: {
+        id: 'customer-id',
+        emailVerifiedAt: null,
+        phoneVerifiedAt: null,
+      },
+    });
+
+    await expect(
+      service.requestCustomerOtp(
+        otpRequestSchema.parse({
+          channel: 'sms',
+          destination: '+8801712345678',
+          purpose: 'login',
+        }),
+      ),
+    ).rejects.toThrow(ServiceUnavailableException);
+    expect(prisma.customer.findFirst).not.toHaveBeenCalled();
+
+    await expect(
+      service.requestCustomerOtp(
+        otpRequestSchema.parse({
+          channel: 'email',
+          destination: 'user@example.com',
+          purpose: 'login',
+        }),
+      ),
+    ).resolves.toEqual({ status: 'accepted' });
+    expect(delivery.send).toHaveBeenCalledWith('email', 'user@example.com', expect.any(String));
   });
 
   it('stores only an OTP hash and sends the code through the selected channel', async () => {

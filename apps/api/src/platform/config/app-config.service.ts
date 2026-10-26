@@ -66,6 +66,26 @@ export class AppConfigService {
     return this.read('AUTH_OTP_RATE_LIMIT_WINDOW_SECONDS');
   }
 
+  get resendApiKey(): string | undefined {
+    return this.config.get('RESEND_API_KEY');
+  }
+
+  get resendFromEmail(): string | undefined {
+    return this.config.get('RESEND_FROM_EMAIL');
+  }
+
+  get twilioAccountSid(): string | undefined {
+    return this.config.get('TWILIO_ACCOUNT_SID');
+  }
+
+  get twilioAuthToken(): string | undefined {
+    return this.config.get('TWILIO_AUTH_TOKEN');
+  }
+
+  get twilioFromNumber(): string | undefined {
+    return this.config.get('TWILIO_FROM_NUMBER');
+  }
+
   get r2AccountId(): string | undefined {
     return this.config.get('R2_ACCOUNT_ID');
   }
@@ -118,6 +138,9 @@ export class AppConfigService {
       ...[this.r2AccessKeyId, this.r2SecretAccessKey].filter(
         (value): value is string => typeof value === 'string' && value.length > 0,
       ),
+      ...[this.resendApiKey, this.twilioAuthToken].filter(
+        (value): value is string => typeof value === 'string' && value.length > 0,
+      ),
       ...[this.steadfastApiKey, this.steadfastWebhookSecret].filter(
         (value): value is string => typeof value === 'string' && value.length > 0,
       ),
@@ -139,6 +162,11 @@ export class AppConfigService {
       AUTH_OTP_MAX_ATTEMPTS: this.authOtpMaxAttempts,
       AUTH_OTP_RATE_LIMIT_COUNT: this.authOtpRateLimitCount,
       AUTH_OTP_RATE_LIMIT_WINDOW_SECONDS: this.authOtpRateLimitWindowSeconds,
+      RESEND_API_KEY: '[REDACTED]',
+      RESEND_FROM_EMAIL: this.resendFromEmail ?? '',
+      TWILIO_ACCOUNT_SID: '[REDACTED]',
+      TWILIO_AUTH_TOKEN: '[REDACTED]',
+      TWILIO_FROM_NUMBER: this.twilioFromNumber ?? '',
       R2_ACCOUNT_ID: '[REDACTED]',
       R2_ACCESS_KEY_ID: '[REDACTED]',
       R2_SECRET_ACCESS_KEY: '[REDACTED]',
