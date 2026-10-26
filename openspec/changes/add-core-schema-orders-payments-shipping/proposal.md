@@ -5,9 +5,9 @@ any API code can be written. This change adds the order-side schema from Phase 1
 
 ## What Changes
 
-- Add Prisma models and one forward migration for carts, cart items, orders, order items, status
-  history, returns, return items, payments, shipping zones, district mappings, shipments, coupons, and
-  redemptions.
+- Add Prisma models and a forward migration for carts, cart items, orders, order items, status history,
+  returns, return items, payments, shipping zones, district mappings, shipments, coupons, and
+  redemptions; ship the integrity follow-up in a separate forward-only migration.
 - Allow guest or customer carts. A cart holds one line per variant with a positive quantity; checkout
   later converts it into an order.
 - Store orders with a human-readable number, optional customer, guest contact, delivery-address
@@ -15,6 +15,8 @@ any API code can be written. This change adds the order-side schema from Phase 1
   and price so catalog edits cannot rewrite history.
 - Record every order status change in append-only history with the previous/next status, acting admin,
   note, and timestamp.
+- Create the initial order status-history row in the database and enforce status-aware return quantity
+  limits, including releasing quantities for rejected or cancelled returns.
 - Store returns as a header plus returned items, with quantities, reasons, status, and refund amounts.
   Refund execution stays an API/payment concern.
 - Store payment attempts with method (`cod`, `bkash`, `shurjopay`), status, amount, provider references,
@@ -53,8 +55,10 @@ any API code can be written. This change adds the order-side schema from Phase 1
 ## Impact
 
 - Affected specs: `cart-checkout`, `orders`, `payments`, `shipping`, and `pricing-promotions` (all new).
-- Affected code: `packages/database` (Prisma models, one migration, `expected-version.ts`, integration
+- Affected code: `packages/database` (Prisma models, forward-only migrations, `expected-version.ts`, integration
   tests, and README); no API routes.
 - Dependencies: no new runtime packages; PostgreSQL 16 features only.
 - Operational impact: every client database must run `db:migrate` before a build that expects this
   schema.
+- Since the original migration has already been applied, these integrity corrections MUST ship in a
+  new forward-only migration; the existing migration file and checksum MUST remain unchanged.

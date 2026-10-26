@@ -53,3 +53,10 @@
 - [x] 4.3 Run a full fresh-database migration and the database integration suite one final time
 - [x] 4.4 Run `openspec validate add-core-schema-orders-payments-shipping --strict`
 - [x] 4.5 Confirm no API, admin, storefront, seed, provider, or notification code changed in this change
+
+## 5. Post-implementation integrity follow-up
+
+- [x] 5.1 Add a new forward-only migration without changing the applied orders/payments/shipping migration; backfill missing initial history rows, add a partial unique index for initial rows, and create an order-insert trigger that records the initial status
+- [x] 5.2 Update the return-item validation trigger so only `requested`, `approved`, `received`, and `refunded` returns count toward the cumulative quantity; reject new items on `rejected` or `cancelled` returns
+- [x] 5.3 Add PostgreSQL integration coverage for automatic initial history, the backfill and uniqueness rule, return quantity release on rejection/cancellation, and rejection of items added to terminal returns
+- [x] 5.4 Apply the corrective migration to both fresh and previously migrated databases, regenerate `expected-version.ts`, update the database README, and run database lint, typecheck, and integration tests

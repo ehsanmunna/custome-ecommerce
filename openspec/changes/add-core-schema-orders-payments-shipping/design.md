@@ -92,8 +92,8 @@ timestamps.
 - `coupon_id` is nullable and uses `ON DELETE RESTRICT`. A check requires `coupon_id IS NOT NULL OR
   discount_poisha = 0`, so an untracked discount cannot appear on an order.
 - Orders are effectively permanent: `order_items`, `order_status_history`, `payments`, `shipments`,
-  `order_returns`, and `coupon_redemptions` all use `ON DELETE RESTRICT`. An initial history row exists
-  for every order, so deleting an order is always blocked once it is created.
+  `order_returns`, and `coupon_redemptions` all use `ON DELETE RESTRICT`. An insert trigger creates an
+  initial history row for every order, so deleting an order is blocked once it is created.
 
 ### 3. Order money is integer poisha with arithmetic checks
 
@@ -147,8 +147,12 @@ total_poisha = subtotal_poisha - discount_poisha + delivery_fee_poisha
 - **Alternatives:** a single `status` column only (no history), a JSONB array on the order (harder to
   query and constrain), or a generic audit table (change #6 owns the broader audit log; this table is
   order-specific).
-- A `BEFORE UPDATE OR DELETE` trigger rejects changes to existing history rows. The initial row and
-  subsequent rows are written by the API in the same transaction as the order/status change.
+- An `AFTER INSERT` trigger creates one initial row with `from_status = NULL` and `to_status` equal to
+  the inserted order's status. A partial unique index on `order_id` where `from_status IS NULL`
+  prevents a second initial row. Backfill this row for existing orders that lack one before creating
+  the index and trigger.
+- A `BEFORE UPDATE OR DELETE` trigger rejects changes to existing history rows. Subsequent transition
+  rows are written by the API in the same transaction as the order/status change.
 - `from_status` is nullable only for the initial row. `to_status` uses the same order status enum as
   `orders.status`. The database does not enforce which transitions are legal; the orders API will.
 - `changed_by_admin_id` is nullable for system-created rows. A later API can require an admin for manual
@@ -168,9 +172,11 @@ reason text, with `UNIQUE (return_id, order_item_id)`.
   quantity checks), or refunding through the payments table only (loses the return reason and item
   detail).
 - A `BEFORE INSERT OR UPDATE` trigger checks that the referenced order item belongs to the return's
-  order and that the cumulative returned quantity for that order item does not exceed the ordered
-  quantity. The trigger sums existing return-item rows, so concurrent writers still need a transaction
-  that serializes returns for the same order item.
+  order and that the cumulative quantity on `requested`, `approved`, `received`, and `refunded`
+  returns does not exceed the ordered quantity. Items on `rejected` and `cancelled` returns do not
+  count, and new items cannot be added to those terminal returns.
+- The trigger sums matching return-item rows, so concurrent writers and status transitions that affect
+  this sum still need a transaction that serializes returns for the same order item.
 - Deleting a return removes its items. Deleting an order with returns is blocked by the header's
   `ON DELETE RESTRICT`.
 
@@ -272,14 +278,18 @@ every Prisma command loads the folder. Keep `prisma/migrations/` beside `schema.
   twice). The move is mechanical and must not change generated SQL.
 - The migration remains a single SQL file; schema file layout does not affect migration history.
 
-### 12. One forward migration, no backfill
+### 12. Forward-only migration history
 
-Add `prisma/migrations/20260105000000_orders_payments_shipping/migration.sql` after the customers/auth
-migration, containing enums, tables, checks, indexes, foreign keys, the status-history trigger, and the
-return-item validation trigger in dependency order.
+The initial schema is in
+`prisma/migrations/20260105000000_orders_payments_shipping/migration.sql`, after the customers/auth
+migration. Since that migration has been applied, add a separate corrective migration after it; never
+edit the applied migration or change its checksum.
 
-- **Why one migration:** all order-side tables are new and always applied together; there is no existing
-  order data to backfill.
+- The corrective migration backfills one initial history row for each existing order that has none,
+  adds the partial unique index and order-insert trigger, and updates the return-item validation trigger
+  for status-aware quantity accounting.
+- Apply both migrations on fresh databases and only the corrective migration on databases that already
+  applied the initial schema migration.
 - Regenerate `src/expected-version.ts` through `db:generate`; CI fails when it is stale.
 - The timestamp follows the stream (`20260105...`), not the wall clock, so ordering stays obvious.
 
@@ -316,9 +326,9 @@ erDiagram
   cumulative returns consistently.
 - **Coupon usage limits can be exceeded by concurrent checkouts** → a count-then-insert is not atomic.
   The checkout API must lock the coupon or the order/customer scope, or use a serializable transaction.
-- **Return quantity trigger can race** → two concurrent returns for the same order item can both pass
-  the cumulative check. The returns API must serialize writes per order item (row lock or serializable
-  transaction).
+- **Return quantity trigger can race** → two concurrent returns or a return-status change and item
+  write for the same order item can both pass a stale cumulative check. The returns API must serialize
+  writes and status transitions per order item (row lock or serializable transaction).
 - **`orders.coupon_id` duplicates `coupon_redemptions.order_id`** → checkout writes both in one
   transaction. The unique redemption is the enforcement point; a reconciliation query can detect drift.
 - **Order status transitions are not enforced by the database** → the orders API owns the transition

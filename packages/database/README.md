@@ -113,7 +113,7 @@ Rules to preserve in later changes:
 
 ## Orders, payments, shipping, and coupon schema
 
-The order-side migration adds these tables:
+The order-side migrations add these tables:
 
 - `carts` and `cart_items` - guest or customer carts with one positive line per variant.
 - `orders`, `order_items`, and `order_status_history` - immutable order snapshots, line items, and
@@ -123,6 +123,11 @@ The order-side migration adds these tables:
 - `shipping_zones`, `shipping_zone_districts`, and `shipments` - flat delivery fees, district mapping,
   and Steadfast courier tracking.
 - `coupons` and `coupon_redemptions` - coupon definitions and one redemption per order.
+
+The forward-only integrity migration backfills missing initial status-history rows and creates one
+automatically for each new order. It also ensures return quantities are counted only while a return is
+`requested`, `approved`, `received`, or `refunded`; `rejected` and `cancelled` returns release their
+quantities and cannot accept new items. The original order-side migration remains unchanged.
 
 Rules to preserve in later changes:
 
@@ -136,12 +141,15 @@ Rules to preserve in later changes:
   carts and guest orders have no `customer_id`; deleting a customer keeps the order and clears the
   reference.
 - `order_status_history` is append-only at the database level: a trigger rejects updates and deletes.
-  Every order gets an initial row, and status changes are new rows.
+  A trigger creates exactly one initial row matching the order's initial status, and status changes
+  are new rows.
 - Orders cannot be deleted while items, status history, payments, shipments, returns, or redemptions
   exist. Cancellation and return statuses express the business outcome instead.
 - Return items must reference an order item from the same order, cannot repeat within one return, and
-  their cumulative quantity cannot exceed the ordered quantity. The trigger sums existing rows; the
-  returns API still needs to serialize concurrent writes per order item.
+  active returns (`requested`, `approved`, `received`, or `refunded`) cannot cumulatively exceed the
+  ordered quantity. `rejected` and `cancelled` returns do not count and cannot accept new items. The
+  trigger sums existing rows; the returns API still needs to serialize concurrent writes and
+  status changes per order item.
 - Payments are independent attempts: an order may have many. Provider references are unique per method
   when present, `paid` requires `paid_at`, refunded states require `refunded_at`, and `cancelled`
   requires `cancelled_at`. No credentials, raw payloads, card numbers, or CVV are stored.

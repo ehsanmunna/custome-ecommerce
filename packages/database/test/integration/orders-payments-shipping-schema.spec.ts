@@ -536,10 +536,18 @@ describeDatabase('orders, payments, and shipping schema', () => {
       const adminId = await createAdmin(client);
 
       const initial = await client.query<{ id: string }>(
-        `INSERT INTO order_status_history (order_id, from_status, to_status, note)
-         VALUES ($1, NULL, 'pending', 'Order placed') RETURNING id`,
+        `SELECT id FROM order_status_history
+         WHERE order_id = $1 AND from_status IS NULL`,
         [orderId],
       );
+      expect(initial.rows).toHaveLength(1);
+      await expect(
+        client.query(
+          `INSERT INTO order_status_history (order_id, from_status, to_status, note)
+           VALUES ($1, NULL, 'pending', 'Duplicate initial row')`,
+          [orderId],
+        ),
+      ).rejects.toMatchObject({ code: '23505' });
       await client.query(
         `INSERT INTO order_status_history
            (order_id, from_status, to_status, changed_by_admin_id, note)
@@ -583,7 +591,9 @@ describeDatabase('orders, payments, and shipping schema', () => {
       const otherOrderId = await createOrder(client, zoneId, { orderNumber: 'ORD-OTHER' });
       const variant = await createVariant(client, 'SKU-RETURN-ONE');
       const otherVariant = await createVariant(client, 'SKU-RETURN-TWO');
-      const orderItemId = await addOrderItem(client, orderId, variant.id, { quantity: 3 });
+      const terminalGuardVariant = await createVariant(client, 'SKU-RETURN-TERMINAL');
+      const orderItemId = await addOrderItem(client, orderId, variant.id, { quantity: 4 });
+      const terminalGuardItemId = await addOrderItem(client, orderId, terminalGuardVariant.id);
       const otherItemId = await addOrderItem(client, otherOrderId, otherVariant.id);
 
       const returnId = await createReturn(client, orderId);
@@ -612,7 +622,34 @@ describeDatabase('orders, payments, and shipping schema', () => {
       await addReturnItem(client, secondReturnId, orderItemId, 2, 2000);
       const thirdReturnId = await createReturn(client, orderId);
       await expect(
-        addReturnItem(client, thirdReturnId, orderItemId, 1, 1000),
+        addReturnItem(client, thirdReturnId, orderItemId, 2, 2000),
+      ).rejects.toMatchObject({ code: '23514' });
+
+      await client.query(
+        "UPDATE order_returns SET status = 'rejected' WHERE id = $1",
+        [returnId],
+      );
+      await addReturnItem(client, thirdReturnId, orderItemId, 2, 2000);
+      await expect(
+        addReturnItem(client, returnId, terminalGuardItemId),
+      ).rejects.toMatchObject({ code: '23514' });
+
+      await client.query(
+        `UPDATE order_returns
+         SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP
+         WHERE id = $1`,
+        [thirdReturnId],
+      );
+      const fourthReturnId = await createReturn(client, orderId);
+      await addReturnItem(client, fourthReturnId, orderItemId, 2, 2000);
+      await expect(
+        client.query(
+          "UPDATE order_returns SET status = 'requested' WHERE id = $1",
+          [thirdReturnId],
+        ),
+      ).rejects.toMatchObject({ code: '23514' });
+      await expect(
+        addReturnItem(client, thirdReturnId, terminalGuardItemId),
       ).rejects.toMatchObject({ code: '23514' });
 
       await expect(client.query('DELETE FROM orders WHERE id = $1', [orderId])).rejects.toMatchObject(
