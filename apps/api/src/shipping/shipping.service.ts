@@ -27,7 +27,7 @@ export type VerifyWebhookSignature = (
 
 export const VERIFY_WEBHOOK_SIGNATURE = Symbol('VERIFY_WEBHOOK_SIGNATURE');
 
-interface ShipmentView {
+export interface ShipmentView {
   id: string;
   orderId: string;
   trackingNumber: string | null;
