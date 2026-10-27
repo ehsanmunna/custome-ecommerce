@@ -5,6 +5,7 @@ import { CatalogModule } from './catalog/catalog.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { MediaModule } from './media/media.module';
 import { ShippingModule } from './shipping/shipping.module';
+import { RolesModule } from './roles/roles.module';
 import { AppConfigModule } from './platform/config/app-config.module';
 import { DatabaseModule } from './platform/database/database.module';
 import { HealthModule } from './platform/health/health.module';
@@ -24,6 +25,7 @@ import { SchemaModule } from './platform/schema/schema.module';
     InventoryModule,
     MediaModule,
     ShippingModule,
+    RolesModule,
   ],
 })
 export class AppModule {}

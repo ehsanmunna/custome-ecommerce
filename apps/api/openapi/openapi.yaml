@@ -59,6 +59,11 @@ x-implemented-operations:
   - POST /admin/media
   - POST /admin/media/{mediaId}/complete
   - DELETE /admin/media/{mediaId}
+  - GET /admin/permissions
+  - GET /admin/roles
+  - POST /admin/roles
+  - PATCH /admin/roles/{roleId}
+  - DELETE /admin/roles/{roleId}
   - POST /storefront/carts
   - GET /storefront/carts/{cartId}
   - POST /storefront/carts/{cartId}/items
