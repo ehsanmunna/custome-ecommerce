@@ -13,7 +13,7 @@ const describeDatabase = hasDatabase ? describe : describe.skip;
 const MISSING_ID = '00000000-0000-0000-0000-000000000000';
 const VALID_PHONE = '+8801712345678';
 const OTHER_PHONE = '+8801812345678';
-const PASSWORD_HASH = '$argon2id$v=19$m=65536,t=3,p=4$0123456789abcdef';
+const PASSWORD_HASH = '0123456789abcdef0123456789abcdef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 let orderSequence = 0;
 let couponSequence = 0;
 

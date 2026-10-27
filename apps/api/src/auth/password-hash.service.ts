@@ -1,13 +1,22 @@
 import { Injectable } from '@nestjs/common';
-import * as argon2 from 'argon2';
+import { randomBytes, scryptSync, timingSafeEqual } from 'node:crypto';
 
 @Injectable()
 export class PasswordHashService {
   hash(password: string): Promise<string> {
-    return argon2.hash(password, { type: argon2.argon2id });
+    const salt = randomBytes(16).toString('hex');
+    const derivedKey = scryptSync(password, salt, 64);
+    return Promise.resolve(`${salt}:${derivedKey.toString('hex')}`);
   }
 
   verify(passwordHash: string, password: string): Promise<boolean> {
-    return argon2.verify(passwordHash, password);
+    const [salt, key] = passwordHash.split(':');
+    if (!salt || !key) {
+      return Promise.resolve(false);
+    }
+    const derivedKey = scryptSync(password, salt, 64);
+    return Promise.resolve(
+      timingSafeEqual(Buffer.from(key, 'hex'), derivedKey),
+    );
   }
 }

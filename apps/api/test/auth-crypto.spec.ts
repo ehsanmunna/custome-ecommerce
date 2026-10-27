@@ -67,7 +67,7 @@ describe('authentication cryptography', () => {
     const passwords = new PasswordHashService();
     const hash = await passwords.hash('correct horse battery staple');
 
-    expect(hash).toMatch(/^\$argon2id\$/);
+    expect(hash).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/);
     await expect(passwords.verify(hash, 'correct horse battery staple')).resolves.toBe(true);
     await expect(passwords.verify(hash, 'not the password')).resolves.toBe(false);
   }, 15_000);

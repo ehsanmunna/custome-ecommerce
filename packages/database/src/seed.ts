@@ -1,4 +1,5 @@
 import { Prisma, PrismaClient } from '@prisma/client';
+import { randomBytes, scryptSync } from 'node:crypto';
 
 const roles = [
   { key: 'owner', name: 'Owner', sortOrder: 0 },
@@ -255,8 +256,9 @@ async function ensureFirstAdmin(
     throw new Error('Could not resolve the owner role for administrator bootstrap.');
   }
 
-  const argon2 = (await import('argon2')).default;
-  const passwordHash = await argon2.hash(bootstrap.password, { type: argon2.argon2id });
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = scryptSync(bootstrap.password, salt, 64);
+  const passwordHash = `${salt}:${derivedKey.toString('hex')}`;
   await tx.adminUser.create({
     data: {
       roleId: ownerRoleId,

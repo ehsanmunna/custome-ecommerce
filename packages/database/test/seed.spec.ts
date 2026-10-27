@@ -218,7 +218,7 @@ describeDatabase('database seed operation', () => {
       status: 'active',
       role: { key: 'owner', scope: 'store' },
     });
-    expect(admin?.passwordHash.startsWith('$argon2id$')).toBe(true);
+    expect(admin?.passwordHash).toMatch(/^[0-9a-f]{32}:[0-9a-f]{128}$/);
     expect(admin?.passwordHash).not.toContain(bootstrap.password);
 
     expect((await seedDatabase(client, bootstrap)).admin).toBe('skipped-existing-admin');
@@ -232,7 +232,7 @@ describeDatabase('database seed operation', () => {
       data: {
         roleId: owner.id,
         email: 'existing@example.com',
-        passwordHash: '$argon2id$existing-hash',
+        passwordHash: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         displayName: 'Existing Admin',
       },
     });
@@ -247,7 +247,7 @@ describeDatabase('database seed operation', () => {
     expect(await client.adminUser.findMany()).toMatchObject([
       {
         email: 'existing@example.com',
-        passwordHash: '$argon2id$existing-hash',
+        passwordHash: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         displayName: 'Existing Admin',
       },
     ]);
