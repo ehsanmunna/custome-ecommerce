@@ -17,7 +17,24 @@ export const roleInputSchema = z
     path: ['permissionKeys'],
   });
 
-export const roleUpdateInputSchema = roleInputSchema.partial().strict();
+export const roleUpdateInputSchema = z
+  .object({
+    key: roleKeySchema.optional(),
+    name: z.string().trim().min(1).max(200).optional(),
+    description: z.string().trim().max(2_000).optional(),
+    scope: z.enum(['store', 'platform']).optional(),
+    permissionKeys: z.array(z.string()).min(1).optional(),
+  })
+  .strict()
+  .refine((input) => {
+    if (input.permissionKeys !== undefined) {
+      return new Set(input.permissionKeys).size === input.permissionKeys.length;
+    }
+    return true;
+  }, {
+    message: 'Permission keys must be unique',
+    path: ['permissionKeys'],
+  });
 
 export const paginationQuerySchema = z
   .object({

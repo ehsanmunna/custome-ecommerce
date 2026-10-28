@@ -216,7 +216,7 @@ const logger = { log: vi.fn(), error: vi.fn() };
     });
 
     expect(response.status).toBe(201);
-    const body = await response.json();
+    const body = (await response.json()) as { id: string; status: string };
     expect(body.id).toBe('cart-id');
     expect(body.status).toBe('active');
     expect(cartService.createCart).toHaveBeenCalledWith(undefined);
@@ -286,7 +286,7 @@ const logger = { log: vi.fn(), error: vi.fn() };
     });
 
     expect(response.status).toBe(201);
-    const body = await response.json();
+    const body = (await response.json()) as { status: string; totalPoisha: number };
     expect(body.status).toBe('pending');
     expect(body.totalPoisha).toBe(7000);
     expect(cartService.checkout).toHaveBeenCalledWith(VALID_CART_ID, expect.any(Object));
