@@ -34,7 +34,9 @@ corepack enable pnpm
 cp .env.example .env
 pnpm install
 pnpm db:up
+pnpm db:generate
 pnpm db:migrate
+pnpm db:seed
 pnpm build
 pnpm --filter api start:dev
 ```
@@ -59,11 +61,11 @@ Stop PostgreSQL with `pnpm db:down`. Remove its volume and start over with `pnpm
 | `pnpm test:integration`                         | Run only the database integration tests                         |
 | `pnpm format` / `pnpm format:check`             | Write / check Prettier formatting                               |
 | `pnpm db:up` / `pnpm db:down` / `pnpm db:reset` | Manage local PostgreSQL                                         |
-| `pnpm db:migrate`                               | Validate applied checksums, then apply pending migrations       |
-| `pnpm db:seed`                                  | Seed safe client defaults after migrations                      |
+| `pnpm db:generate`                              | Generate Prisma client code from `schema.prisma` (code generation only; no database connection) |
+| `pnpm db:migrate`                               | Validate applied migration checksums, then apply pending DDL migrations (`MIGRATION_DATABASE_URL`) |
+| `pnpm db:seed`                                  | Insert baseline roles, permissions, settings, zones, and optional first admin (`DATABASE_URL`; data only) |
 | `pnpm db:status`                                | Show applied, current, and pending migrations                   |
 | `pnpm db:version`                               | Print the current `schema_version`                              |
-| `pnpm db:generate`                              | Generate the Prisma client and `expected-version.ts`            |
 | `pnpm version:generate`                         | Regenerate `expected-version.ts` only                           |
 | `pnpm dev:api`                                  | Run the API in watch mode                                       |
 | `pnpm contract:lint`                            | Validate the canonical OpenAPI document                         |
