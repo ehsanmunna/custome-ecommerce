@@ -70,6 +70,8 @@ x-implemented-operations:
   - PATCH /storefront/carts/{cartId}/items/{itemId}
   - DELETE /storefront/carts/{cartId}/items/{itemId}
   - POST /storefront/carts/{cartId}/checkout
+  - POST /admin/shipping/parcels
+  - POST /webhooks/shipping/steadfast
 tags:
   - name: Health
   - name: Admin authentication
@@ -1962,6 +1964,53 @@ paths:
                 $ref: '#/components/schemas/ShipmentPage'
         default:
           $ref: '#/components/responses/Problem'
+  /admin/shipping/parcels:
+    post:
+      operationId: createShippingParcel
+      tags: [Shipping]
+      summary: Create a shipping parcel for an order
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: orders_manage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShippingParcelRequest'
+      responses:
+        '201':
+          description: Parcel created and shipment booked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        default:
+          $ref: '#/components/responses/Problem'
+  /webhooks/shipping/steadfast:
+    post:
+      operationId: receiveShippingWebhook
+      tags: [Shipping]
+      summary: Receive a Steadfast shipping webhook event
+      description: Verifies the provider signature and updates shipment status.
+      security: []
+      x-access: public
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SteadfastWebhookRequest'
+      responses:
+        '200':
+          description: Shipment status updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Shipment'
+        default:
+          $ref: '#/components/responses/Problem'
   /admin/coupons:
     get:
       operationId: listCoupons
@@ -3797,6 +3846,51 @@ components:
           $ref: '#/components/schemas/Id'
         codAmount:
           $ref: '#/components/schemas/Money'
+    ShippingParcelRequest:
+      type: object
+      required: [orderId, codAmountPoisha, customerName, customerPhone, customerAddress, customerCity, itemName, itemQuantity]
+      properties:
+        orderId:
+          $ref: '#/components/schemas/Id'
+        customerName:
+          type: string
+          minLength: 1
+        customerPhone:
+          type: string
+          minLength: 1
+        customerAddress:
+          type: string
+          minLength: 1
+        customerCity:
+          type: string
+          minLength: 1
+        codAmountPoisha:
+          type: integer
+          minimum: 0
+        itemName:
+          type: string
+          minLength: 1
+        itemQuantity:
+          type: integer
+          minimum: 1
+        itemWeightGram:
+          type: integer
+          minimum: 1
+    SteadfastWebhookRequest:
+      type: object
+      required: [tracking_number, status]
+      properties:
+        tracking_number:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          minLength: 1
+        occurred_at:
+          type: string
+          format: date-time
+        note:
+          type: string
     Coupon:
       type: object
       required: [id, code, discountType, discountValue, minimumOrder, startsAt, expiresAt, active]
