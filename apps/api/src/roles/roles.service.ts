@@ -23,7 +23,7 @@ interface RoleInput {
   permissionKeys: string[];
 }
 
-interface RoleOutput {
+export interface RoleOutput {
   id: string;
   key: string;
   name: string;
@@ -40,7 +40,7 @@ interface PaginationMeta {
   totalPages: number;
 }
 
-interface RolePage {
+export interface RolePage {
   items: RoleOutput[];
   meta: PaginationMeta;
 }
@@ -53,7 +53,7 @@ interface PermissionOutput {
   sortOrder: number;
 }
 
-interface PermissionPage {
+export interface PermissionPage {
   items: PermissionOutput[];
   meta: PaginationMeta;
 }
