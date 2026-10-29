@@ -4,10 +4,9 @@
   "private": true,
   "description": "Reusable custom e-commerce platform: API, admin dashboard, schema, and reference storefront.",
   "license": "UNLICENSED",
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@8.15.0",
   "engines": {
-    "node": ">=20.19.0",
-    "pnpm": ">=12.0.0"
+    "node": ">=20.19.0"
   },
   "scripts": {
     "build": "pnpm -r --if-present build",
@@ -26,13 +25,18 @@
     "db:version": "pnpm --filter database db:version",
     "db:generate": "pnpm --filter database db:generate",
     "version:generate": "pnpm --filter database version:generate",
-    "dev:api": "pnpm --filter api start:dev"
+    "dev:api": "pnpm --filter api start:dev",
+    "contract:lint": "redocly lint apps/api/openapi/openapi.yaml",
+    "contract:check": "node scripts/contract-check.mjs",
+    "contract:test": "node --test scripts/contract-check.test.mjs"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
+    "@redocly/cli": "2.71.0",
     "eslint": "9.39.5",
     "prettier": "3.9.10",
     "typescript": "5.9.3",
-    "typescript-eslint": "8.72.0"
+    "typescript-eslint": "8.72.0",
+    "yaml": "2.9.1"
   }
 }

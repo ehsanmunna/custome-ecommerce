@@ -15,7 +15,7 @@ const VALID_PHONE = '+8801712345678';
 const OTHER_PHONE = '+8801812345678';
 const VALID_EMAIL = 'customer@example.com';
 const OTHER_EMAIL = 'other@example.com';
-const PASSWORD_HASH = '$argon2id$v=19$m=65536,t=3,p=4$0123456789abcdef';
+const PASSWORD_HASH = '0123456789abcdef0123456789abcdef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 const OTP_HASH = '0123456789abcdef0123456789abcdef';
 
 async function asRuntime<T>(callback: (client: Client) => Promise<T>): Promise<T> {

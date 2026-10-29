@@ -25,6 +25,11 @@ enum AdminRoleScope {
   platform
 }
 
+enum AuthIdentityType {
+  customer
+  admin
+}
+
 model Customer {
   id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   phone             String?            @unique
@@ -144,4 +149,32 @@ model AdminUser {
   @@index([roleId])
   @@index([status])
   @@map("admin_users")
+}
+
+model AuthSession {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identityType AuthIdentityType @map("identity_type")
+  subjectId    String           @map("subject_id") @db.Uuid
+  expiresAt    DateTime         @map("expires_at") @db.Timestamptz(6)
+  revokedAt    DateTime?        @map("revoked_at") @db.Timestamptz(6)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  refreshTokens AuthRefreshToken[]
+
+  @@index([identityType, subjectId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model AuthRefreshToken {
+  id         String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId  String      @map("session_id") @db.Uuid
+  session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  tokenHash  String      @unique @map("token_hash")
+  expiresAt  DateTime    @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime?   @map("consumed_at") @db.Timestamptz(6)
+  createdAt  DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([sessionId, consumedAt])
+  @@index([expiresAt])
+  @@map("auth_refresh_tokens")
 }

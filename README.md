@@ -12,7 +12,7 @@ apps/admin               Admin dashboard (placeholder until the admin phase)
 apps/storefront-starter  SSR storefront starter (placeholder until the storefront phase)
 packages/database        Prisma schema, migrations, generated client, migration scripts
 packages/shared-types    Shared TypeScript contracts
-packages/api-sdk         Generated API client (placeholder until the OpenAPI change)
+packages/api-sdk         Typed TypeScript client generated from the OpenAPI contract
 docker/                  Local PostgreSQL and CI database helpers
 ```
 
@@ -34,7 +34,9 @@ corepack enable pnpm
 cp .env.example .env
 pnpm install
 pnpm db:up
+pnpm db:generate
 pnpm db:migrate
+pnpm db:seed
 pnpm build
 pnpm --filter api start:dev
 ```
@@ -59,33 +61,53 @@ Stop PostgreSQL with `pnpm db:down`. Remove its volume and start over with `pnpm
 | `pnpm test:integration`                         | Run only the database integration tests                         |
 | `pnpm format` / `pnpm format:check`             | Write / check Prettier formatting                               |
 | `pnpm db:up` / `pnpm db:down` / `pnpm db:reset` | Manage local PostgreSQL                                         |
-| `pnpm db:migrate`                               | Validate applied checksums, then apply pending migrations       |
-| `pnpm db:seed`                                  | Seed safe client defaults after migrations                      |
+| `pnpm db:generate`                              | Generate Prisma client code from `schema.prisma` (code generation only; no database connection) |
+| `pnpm db:migrate`                               | Validate applied migration checksums, then apply pending DDL migrations (`MIGRATION_DATABASE_URL`) |
+| `pnpm db:seed`                                  | Insert baseline roles, permissions, settings, zones, and optional first admin (`DATABASE_URL`; data only) |
 | `pnpm db:status`                                | Show applied, current, and pending migrations                   |
 | `pnpm db:version`                               | Print the current `schema_version`                              |
-| `pnpm db:generate`                              | Generate the Prisma client and `expected-version.ts`            |
 | `pnpm version:generate`                         | Regenerate `expected-version.ts` only                           |
 | `pnpm dev:api`                                  | Run the API in watch mode                                       |
+| `pnpm contract:lint`                            | Validate the canonical OpenAPI document                         |
+| `pnpm contract:check`                           | Check route coverage, contract invariants, and compatibility    |
+| `pnpm contract:test`                            | Test contract compatibility checks                              |
+| `pnpm --filter api-sdk generate`                | Regenerate the TypeScript SDK from OpenAPI                      |
+| `pnpm --filter api-sdk generate:check`          | Fail if generated SDK types are stale                           |
+
+## API contract
+
+The v1 contract lives in [apps/api/openapi/openapi.yaml](apps/api/openapi/openapi.yaml). Health,
+customer registration/authentication, and admin authentication are implemented; other documented
+operations are planned and do not become runtime routes until their feature changes are implemented. See
+[apps/api/README.md](apps/api/README.md) for contract update, SDK generation, and compatibility
+guidance and authentication configuration.
 
 ## Environment variables
 
 Copy `.env.example` to `.env`; `.env` is git-ignored. Optional seed-only bootstrap variables are
 documented here and should be provided through the deployment environment only when needed.
 
-| Variable                    | Required           | Meaning                                                          |
-| --------------------------- | ------------------ | ---------------------------------------------------------------- |
-| `DATABASE_URL`              | yes                | Runtime PostgreSQL identity used by the API. DML only, no DDL.   |
-| `MIGRATION_DATABASE_URL`    | yes for migrations | Migration identity used only by migration and status commands.   |
-| `SEED_ADMIN_EMAIL`          | optional           | Lowercase email for optional first store-admin bootstrap.        |
-| `SEED_ADMIN_PASSWORD`       | optional           | Password for optional first store-admin bootstrap; never commit. |
-| `SEED_ADMIN_DISPLAY_NAME`   | optional           | Initial admin display name (defaults to `Store Owner`).          |
-| `NODE_ENV`                  | yes                | `development`, `test`, or `production`.                          |
-| `PORT`                      | yes                | HTTP port (`3000` locally).                                      |
-| `DATABASE_PROBE_TIMEOUT_MS` | yes                | Upper bound for health and schema probes.                        |
-| `LOG_LEVEL`                 | yes                | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`.           |
+| Variable                         | Required           | Meaning                                                          |
+| -------------------------------- | ------------------ | ---------------------------------------------------------------- |
+| `DATABASE_URL`                   | yes                | Runtime PostgreSQL identity used by the API. DML only, no DDL.   |
+| `MIGRATION_DATABASE_URL`         | yes for migrations | Migration identity used only by migration and status commands.   |
+| `SEED_ADMIN_EMAIL`               | optional           | Lowercase email for optional first store-admin bootstrap.        |
+| `SEED_ADMIN_PASSWORD`            | optional           | Password for optional first store-admin bootstrap; never commit. |
+| `SEED_ADMIN_DISPLAY_NAME`        | optional           | Initial admin display name (defaults to `Store Owner`).          |
+| `NODE_ENV`                       | yes                | `development`, `test`, or `production`.                          |
+| `PORT`                           | yes                | HTTP port (`3000` locally).                                      |
+| `DATABASE_PROBE_TIMEOUT_MS`      | yes                | Upper bound for health and schema probes.                        |
+| `LOG_LEVEL`                      | yes                | `fatal`, `error`, `warn`, `info`, `debug`, or `trace`.           |
+| `AUTH_TOKEN_SIGNING_SECRET`      | production         | 32+ character signing secret; distinct from the hash secret.     |
+| `AUTH_TOKEN_HASH_SECRET`         | production         | 32+ character keyed-hash secret; distinct from signing secret.   |
+| `AUTH_ACCESS_TOKEN_TTL_SECONDS`  | optional           | Access-token lifetime (default 900 seconds).                     |
+| `AUTH_REFRESH_TOKEN_TTL_SECONDS` | optional           | Refresh-session lifetime (default 2,592,000 seconds).            |
+| `AUTH_OTP_*`                     | optional           | OTP expiry, attempt, and issuance-rate settings; see API README. |
 
 Required values have **no fallback**: the API refuses to start and names every missing or invalid key
-before it binds a listener.
+before it binds a listener. In development/test only, omitted auth secrets are randomly generated
+per process; production must configure both secrets. OTP delivery remains unavailable until a real
+delivery adapter is configured.
 
 ## Two database identities
 

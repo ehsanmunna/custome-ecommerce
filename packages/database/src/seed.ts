@@ -1,5 +1,5 @@
-import argon2 from 'argon2';
 import { Prisma, PrismaClient } from '@prisma/client';
+import { randomBytes, scryptSync } from 'node:crypto';
 
 const roles = [
   { key: 'owner', name: 'Owner', sortOrder: 0 },
@@ -11,6 +11,8 @@ const roles = [
 const permissions = [
   { key: 'catalog_read', groupKey: 'catalog', description: 'View catalog records' },
   { key: 'catalog_manage', groupKey: 'catalog', description: 'Manage catalog records' },
+  { key: 'media_read', groupKey: 'media', description: 'View media assets' },
+  { key: 'media_manage', groupKey: 'media', description: 'Manage media assets' },
   { key: 'inventory_read', groupKey: 'inventory', description: 'View inventory' },
   { key: 'inventory_manage', groupKey: 'inventory', description: 'Manage inventory' },
   { key: 'orders_read', groupKey: 'orders', description: 'View orders' },
@@ -27,6 +29,8 @@ const permissions = [
 const managerPermissionKeys = new Set([
   'catalog_read',
   'catalog_manage',
+  'media_read',
+  'media_manage',
   'inventory_read',
   'inventory_manage',
   'orders_read',
@@ -37,7 +41,12 @@ const managerPermissionKeys = new Set([
   'settings_read',
   'roles_read',
 ]);
-const staffPermissionKeys = new Set(['catalog_read', 'inventory_read', 'orders_read']);
+const staffPermissionKeys = new Set([
+  'catalog_read',
+  'media_read',
+  'inventory_read',
+  'orders_read',
+]);
 const supportPermissionKeys = new Set(['orders_read', 'customers_read']);
 
 const settingDefaults = [
@@ -247,7 +256,9 @@ async function ensureFirstAdmin(
     throw new Error('Could not resolve the owner role for administrator bootstrap.');
   }
 
-  const passwordHash = await argon2.hash(bootstrap.password, { type: argon2.argon2id });
+  const salt = randomBytes(16).toString('hex');
+  const derivedKey = scryptSync(bootstrap.password, salt, 64);
+  const passwordHash = `${salt}:${derivedKey.toString('hex')}`;
   await tx.adminUser.create({
     data: {
       roleId: ownerRoleId,

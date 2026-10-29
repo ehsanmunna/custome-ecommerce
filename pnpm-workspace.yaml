@@ -8,3 +8,6 @@ allowBuilds:
   argon2: true
   esbuild: true
   prisma: true
+
+minimumReleaseAgeExclude:
+  - '@redocly/cli@2.71.0'

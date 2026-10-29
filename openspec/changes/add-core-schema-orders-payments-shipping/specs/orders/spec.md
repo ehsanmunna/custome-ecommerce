@@ -175,12 +175,14 @@ referenced by an order item MUST NOT be deleted.
 
 The system SHALL record every order status change with the order, the previous status, the next status,
 the acting admin when the change is made by a person, an optional note, and a creation timestamp. An
-order MUST get an initial history row at creation. Existing history rows MUST NOT be updated or deleted.
+order MUST get exactly one initial history row at creation, with no previous status and a next status
+matching the order's initial status. Existing history rows MUST NOT be updated or deleted.
 
 #### Scenario: Initial history recorded
 
 - **WHEN** an order is created
-- **THEN** an initial history row records no previous status and the `pending` status
+- **THEN** exactly one initial history row is created with no previous status and the order's initial
+  status (defaulting to `pending`)
 
 #### Scenario: Status transition recorded
 
@@ -213,8 +215,10 @@ The system SHALL store return headers with a required existing order, a status o
 `approved`, `rejected`, `received`, `refunded`, or `cancelled`, a reason, a non-negative refund total,
 and the relevant lifecycle timestamps. A new return MUST default to `requested`. Return items MUST
 reference an order item from the same order, carry a positive quantity and a non-negative refund amount,
-and MUST NOT appear twice in the same return. The cumulative returned quantity for an order item MUST NOT
-exceed the ordered quantity. Deleting a return SHALL delete its return items.
+and MUST NOT appear twice in the same return. The cumulative quantity on returns in `requested`,
+`approved`, `received`, or `refunded` status MUST NOT exceed the ordered quantity for an order item.
+Items on `rejected` or `cancelled` returns MUST NOT count toward that limit, and new items MUST NOT be
+added to a rejected or cancelled return. Deleting a return SHALL delete its return items.
 
 #### Scenario: Return requested
 
@@ -234,6 +238,16 @@ exceed the ordered quantity. Deleting a return SHALL delete its return items.
 #### Scenario: Return quantity above ordered quantity rejected
 
 - **WHEN** the cumulative returned quantity for an order item would exceed the ordered quantity
+- **THEN** the write is rejected
+
+#### Scenario: Rejected or cancelled returns release quantity
+
+- **WHEN** a return containing an item is changed to `rejected` or `cancelled`
+- **THEN** its quantity no longer counts toward the maximum returnable quantity for that order item
+
+#### Scenario: Terminal return cannot accept new items
+
+- **WHEN** an item is added to a return with `rejected` or `cancelled` status
 - **THEN** the write is rejected
 
 #### Scenario: Duplicate return item rejected

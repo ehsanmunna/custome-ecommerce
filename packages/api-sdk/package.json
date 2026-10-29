@@ -7,9 +7,15 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "lint": "eslint src",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "generate": "openapi-typescript ../../apps/api/openapi/openapi.yaml -o src/generated/api.d.ts",
+    "generate:check": "openapi-typescript ../../apps/api/openapi/openapi.yaml --check -o src/generated/api.d.ts"
   },
   "devDependencies": {
+    "openapi-typescript": "7.13.0",
     "typescript": "5.9.3"
+  },
+  "dependencies": {
+    "openapi-fetch": "0.17.0"
   }
 }

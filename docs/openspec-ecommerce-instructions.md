@@ -144,7 +144,7 @@ Each client gets their own storefront and their own database.
 |---|---|
 | `platform-config` | Settings, feature flags, tenant `.env`, `schema_version` check, health checks |
 | `auth-customers` | Phone OTP and email login, guest checkout, addresses, OTP rate limits |
-| `auth-admin` | Admin users, roles (owner/manager/staff/support), permissions, tech-admin role, audit log |
+| `auth-admin` | Admin users, roles (owner/manager/staff/support), permissions, tech-admin role, audit log; API endpoints `GET/POST/PATCH/DELETE /admin/roles` and `GET /admin/permissions` implemented via `add-admin-roles-endpoint` |
 | `catalog` | Products, categories, brands, attribute definitions, variants, SEO fields, translations |
 | `media` | Image upload (R2), variants/resizing, key-based URLs |
 | `inventory` | Stock per variant, reservations, movements ledger, adjustments, low-stock alerts |
@@ -184,15 +184,16 @@ the next, except where noted.
 |---|---|---|
 | 8 | `define-openapi-contract` | OpenAPI spec first, SDK generation |
 | 9 | `add-auth-api` | Customer OTP and email login, admin login, RBAC guards |
-| 10 | `add-catalog-api` | Catalog CRUD, search and filters |
-| 11 | `add-media-api` | Presigned uploads to R2, resize job |
-| 12 | `add-inventory-api` | `reserve`, `release`, `deduct`, `adjust` service interface |
-| 13 | `add-cart-checkout-api` | Cart, delivery charge, order placement (COD first) |
-| 14 | `add-orders-api` | Status transitions with permissions, history, returns |
-| 15 | `add-payment-adapters` | bKash, ShurjoPay |
-| 16 | `add-steadfast-shipping-adapter` | Create shipment, track status |
-| 17 | `add-notification-adapters` | SMS and email adapters, bn/en templates |
-| 18 | `add-checkout-vertical-slice-tests` | End-to-end: product, cart, COD order, stock change |
+| 10 | `add-admin-roles-endpoint` | `GET/POST/PATCH/DELETE /admin/roles` and `GET /admin/permissions` API endpoints with role-based access control |
+| 11 | `add-catalog-api` | Catalog CRUD, search and filters |
+| 12 | `add-media-api` | Presigned uploads to R2, resize job |
+| 13 | `add-inventory-api` | `reserve`, `release`, `deduct`, `adjust` service interface |
+| 14 | `add-cart-checkout-api` | Cart, delivery charge, order placement (COD first) |
+| 15 | `add-orders-api` | Status transitions with permissions, history, returns |
+| 16 | `add-payment-adapters` | bKash, ShurjoPay |
+| 17 | `add-steadfast-shipping-adapter` | Create shipment, track status |
+| 18 | `add-notification-adapters` | SMS and email adapters, bn/en templates |
+| 19 | `add-checkout-vertical-slice-tests` | End-to-end: product, cart, COD order, stock change |
 
 ### Phase 3: Admin dashboard
 
