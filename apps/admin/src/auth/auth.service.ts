@@ -79,6 +79,14 @@ export class AuthService {
     return this.currentUser;
   }
 
+  hasPermission(permission: string): boolean {
+    return this.currentUser?.permissions?.includes(permission) ?? false;
+  }
+
+  hasAnyPermission(permissions: string[]): boolean {
+    return permissions.some((p) => this.hasPermission(p));
+  }
+
   async login(email: string, password: string): Promise<AuthSession> {
     const response = await this.http
       .post<AuthSession>(`${this.config.apiBaseUrl}${this.config.loginPath}`, { email, password })
