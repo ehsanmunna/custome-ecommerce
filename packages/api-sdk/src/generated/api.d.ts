@@ -151,6 +151,48 @@ export interface paths {
         patch: operations["updateAdminUser"];
         trace?: never;
     };
+    "/admin/customers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search customers for store support
+         * @description Returns a limited customer profile; never returns passwords, OTP data, or authentication tokens.
+         */
+        get: operations["listAdminCustomers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/customers/{customerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Get customer support context
+         * @description Returns the limited profile, addresses, and order summaries without authentication secrets or OTP data.
+         */
+        get: operations["getAdminCustomer"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/roles": {
         parameters: {
             query?: never;
@@ -872,7 +914,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List orders */
+        /**
+         * List orders
+         * @description Returns store-scoped order snapshots and lifecycle history.
+         */
         get: operations["listAdminOrders"];
         put?: never;
         post?: never;
@@ -914,7 +959,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change an order lifecycle status */
+        /**
+         * Change an order lifecycle status
+         * @description Allowed transitions are pending to confirmed or cancelled, confirmed to processing or cancelled, processing to shipped or cancelled, shipped to delivered or partially_delivered, partially_delivered to delivered, and delivered to returned.
+         */
         patch: operations["updateOrderStatus"];
         trace?: never;
     };
@@ -978,7 +1026,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List return requests */
+        /**
+         * List return requests
+         * @description Returns store-scoped return requests with append-only lifecycle history.
+         */
         get: operations["listReturns"];
         put?: never;
         post?: never;
@@ -1001,7 +1052,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update a return request status */
+        /**
+         * Update a return request status
+         * @description Allowed transitions are requested to approved, rejected, or cancelled, approved to received or cancelled, and received to refunded. Rejected, cancelled, and refunded are terminal.
+         */
         patch: operations["updateReturnStatus"];
         trace?: never;
     };
@@ -1143,6 +1197,43 @@ export interface paths {
         get: operations["getOrderTracking"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/shipping/parcels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create a shipping parcel for an order */
+        post: operations["createShippingParcel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/webhooks/shipping/steadfast": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Receive a Steadfast shipping webhook event
+         * @description Verifies the provider signature and updates shipment status.
+         */
+        post: operations["receiveShippingWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1494,6 +1585,45 @@ export interface components {
             status: "active" | "disabled";
             role: components["schemas"]["Role"];
             permissions: string[];
+        };
+        AdminCustomer: {
+            id: components["schemas"]["Id"];
+            /** Format: email */
+            email?: string;
+            phone?: string;
+            firstName?: string;
+            lastName?: string;
+            /** @enum {string} */
+            status: "active" | "blocked";
+            /** Format: date-time */
+            createdAt: string;
+        };
+        AdminCustomerDetail: components["schemas"]["AdminCustomer"] & {
+            addresses: components["schemas"]["AdminCustomerAddress"][];
+            orders: components["schemas"]["AdminCustomerOrderSummary"][];
+        };
+        AdminCustomerAddress: {
+            id: components["schemas"]["Id"];
+            label?: string;
+            recipientName: string;
+            recipientPhone: string;
+            addressLine1: string;
+            addressLine2?: string;
+            area?: string;
+            district: string;
+            division: string;
+            postalCode?: string;
+            countryCode?: string;
+            isDefaultShipping?: boolean;
+            isDefaultBilling?: boolean;
+        };
+        AdminCustomerOrderSummary: {
+            id: components["schemas"]["Id"];
+            number: string;
+            status: components["schemas"]["OrderStatus"];
+            total: components["schemas"]["Money"];
+            /** Format: date-time */
+            createdAt: string;
         };
         AdminUserCreate: {
             /** Format: email */
@@ -1906,6 +2036,17 @@ export interface components {
                 quantity: number;
                 refundAmount: components["schemas"]["Money"];
             }[];
+            history: components["schemas"]["ReturnStatusHistory"][];
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ReturnStatusHistory: {
+            /** @enum {string} */
+            previousStatus?: "requested" | "approved" | "rejected" | "received" | "refunded" | "cancelled";
+            /** @enum {string} */
+            status: "requested" | "approved" | "rejected" | "received" | "refunded" | "cancelled";
+            actorAdminId?: components["schemas"]["Id"];
+            note?: string;
             /** Format: date-time */
             createdAt: string;
         };
@@ -1984,6 +2125,24 @@ export interface components {
         ShipmentInput: {
             orderId: components["schemas"]["Id"];
             codAmount: components["schemas"]["Money"];
+        };
+        ShippingParcelRequest: {
+            orderId: components["schemas"]["Id"];
+            customerName: string;
+            customerPhone: string;
+            customerAddress: string;
+            customerCity: string;
+            codAmountPoisha: number;
+            itemName: string;
+            itemQuantity: number;
+            itemWeightGram?: number;
+        };
+        SteadfastWebhookRequest: {
+            tracking_number: string;
+            status: string;
+            /** Format: date-time */
+            occurred_at?: string;
+            note?: string;
         };
         Coupon: {
             id: components["schemas"]["Id"];
@@ -2141,6 +2300,9 @@ export interface components {
         };
         AdminUserPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["AdminUser"][];
+        };
+        AdminCustomerPage: components["schemas"]["PageMetadata"] & {
+            items: components["schemas"]["AdminCustomer"][];
         };
         RolePage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["Role"][];
@@ -2492,6 +2654,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listAdminCustomers: {
+        parameters: {
+            query?: {
+                /** @description One-based page number. Defaults to 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Number of records per page. Defaults to 20; maximum is 100. Larger values are rejected. */
+                pageSize?: components["parameters"]["PageSize"];
+                /** @description Case-insensitive search across customer name, email, and phone. A value must contain at least two characters. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated customer profiles matching the support query. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCustomerPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    getAdminCustomer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                customerId: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Customer support context. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCustomerDetail"];
                 };
             };
             default: components["responses"]["Problem"];
@@ -4396,6 +4609,56 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShipmentPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    createShippingParcel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShippingParcelRequest"];
+            };
+        };
+        responses: {
+            /** @description Parcel created and shipment booked. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shipment"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    receiveShippingWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SteadfastWebhookRequest"];
+            };
+        };
+        responses: {
+            /** @description Shipment status updated. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Shipment"];
                 };
             };
             default: components["responses"]["Problem"];

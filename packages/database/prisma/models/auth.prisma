@@ -134,17 +134,18 @@ model AdminRolePermission {
 }
 
 model AdminUser {
-  id            String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  roleId        String               @map("role_id") @db.Uuid
-  role          AdminRole            @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  email         String               @unique
-  passwordHash  String               @map("password_hash")
-  displayName   String               @map("display_name")
-  status        AdminUserStatus      @default(active)
-  lastLoginAt   DateTime?            @map("last_login_at") @db.Timestamptz(6)
-  createdAt     DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt     DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
-  statusChanges OrderStatusHistory[] @relation("OrderStatusChanges")
+  id                  String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  roleId              String                     @map("role_id") @db.Uuid
+  role                AdminRole                  @relation(fields: [roleId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  email               String                     @unique
+  passwordHash        String                     @map("password_hash")
+  displayName         String                     @map("display_name")
+  status              AdminUserStatus            @default(active)
+  lastLoginAt         DateTime?                  @map("last_login_at") @db.Timestamptz(6)
+  createdAt           DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  statusChanges       OrderStatusHistory[]       @relation("OrderStatusChanges")
+  returnStatusChanges OrderReturnStatusHistory[] @relation("OrderReturnStatusChanges")
 
   @@index([roleId])
   @@index([status])
@@ -152,12 +153,12 @@ model AdminUser {
 }
 
 model AuthSession {
-  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  identityType AuthIdentityType @map("identity_type")
-  subjectId    String           @map("subject_id") @db.Uuid
-  expiresAt    DateTime         @map("expires_at") @db.Timestamptz(6)
-  revokedAt    DateTime?        @map("revoked_at") @db.Timestamptz(6)
-  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identityType  AuthIdentityType   @map("identity_type")
+  subjectId     String             @map("subject_id") @db.Uuid
+  expiresAt     DateTime           @map("expires_at") @db.Timestamptz(6)
+  revokedAt     DateTime?          @map("revoked_at") @db.Timestamptz(6)
+  createdAt     DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
   refreshTokens AuthRefreshToken[]
 
   @@index([identityType, subjectId])

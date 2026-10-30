@@ -138,23 +138,40 @@ model OrderStatusHistory {
 }
 
 model OrderReturn {
-  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  orderId           String            @map("order_id") @db.Uuid
-  order             Order             @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
-  status            OrderReturnStatus @default(requested)
+  id                String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId           String                     @map("order_id") @db.Uuid
+  order             Order                      @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  status            OrderReturnStatus          @default(requested)
   reason            String
-  refundTotalPoisha Int               @default(0) @map("refund_total_poisha")
-  approvedAt        DateTime?         @map("approved_at") @db.Timestamptz(6)
-  receivedAt        DateTime?         @map("received_at") @db.Timestamptz(6)
-  refundedAt        DateTime?         @map("refunded_at") @db.Timestamptz(6)
-  cancelledAt       DateTime?         @map("cancelled_at") @db.Timestamptz(6)
-  createdAt         DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt         DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  refundTotalPoisha Int                        @default(0) @map("refund_total_poisha")
+  approvedAt        DateTime?                  @map("approved_at") @db.Timestamptz(6)
+  receivedAt        DateTime?                  @map("received_at") @db.Timestamptz(6)
+  refundedAt        DateTime?                  @map("refunded_at") @db.Timestamptz(6)
+  cancelledAt       DateTime?                  @map("cancelled_at") @db.Timestamptz(6)
+  createdAt         DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime                   @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   items             OrderReturnItem[]
+  statusHistory     OrderReturnStatusHistory[]
 
   @@index([orderId])
   @@index([status])
   @@map("order_returns")
+}
+
+model OrderReturnStatusHistory {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  returnId         String             @map("return_id") @db.Uuid
+  orderReturn      OrderReturn        @relation(fields: [returnId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  fromStatus       OrderReturnStatus? @map("from_status")
+  toStatus         OrderReturnStatus  @map("to_status")
+  changedByAdminId String?            @map("changed_by_admin_id") @db.Uuid
+  changedByAdmin   AdminUser?         @relation("OrderReturnStatusChanges", fields: [changedByAdminId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  note             String?
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([returnId, createdAt])
+  @@index([changedByAdminId])
+  @@map("order_return_status_history")
 }
 
 model OrderReturnItem {

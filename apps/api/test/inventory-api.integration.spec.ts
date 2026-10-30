@@ -23,7 +23,7 @@ describe('inventory HTTP API', () => {
       exp: Math.floor(Date.now() / 1000) + 900,
     })),
   };
-  let permissions = ['inventory_read'];
+  let permissions = ['inventory.read'];
   const prisma = {
     adminUser: {
       findUnique: vi.fn(async () => ({
@@ -130,7 +130,7 @@ describe('inventory HTTP API', () => {
   });
 
   it('validates adjustment and reservation bodies and serves their routes', async () => {
-    permissions = ['inventory_read', 'inventory_manage'];
+    permissions = ['inventory.read', 'inventory.adjust'];
     const variantId = 'a65a44f6-0ed0-40b2-aea4-84a7e716862f';
     const invalidAdjustment = await fetch(`${baseUrl}/admin/inventory/${variantId}/adjustments`, {
       method: 'POST',
@@ -192,7 +192,7 @@ describe('inventory HTTP API', () => {
   });
 
   it('enforces authentication and distinct inventory read and adjustment permissions', async () => {
-    permissions = ['inventory_read'];
+    permissions = ['inventory.read'];
     const anonymous = await fetch(`${baseUrl}/admin/inventory`);
     expect(anonymous.status).toBe(401);
 
@@ -212,7 +212,7 @@ describe('inventory HTTP API', () => {
     });
     expect(deniedAdjustment.status).toBe(403);
 
-    permissions = ['inventory_read', 'inventory_manage'];
+    permissions = ['inventory.read', 'inventory.adjust'];
     const allowedAdjustment = await fetch(`${baseUrl}/admin/inventory/${variantId}/adjustments`, {
       method: 'POST',
       headers: {

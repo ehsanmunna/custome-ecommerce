@@ -33,7 +33,7 @@ describe('media HTTP API', () => {
   const rows: Row[] = [];
   const objects = new Map<string, { sizeBytes: number; mimeType: string }>();
   let configured = true;
-  let permissionKeys = new Set(['media_read', 'media_manage']);
+  let permissionKeys = new Set(['media.read', 'media.create', 'media.delete']);
   let scope = 'store';
   const logger = { log: vi.fn(), error: vi.fn() };
   const sessions = {
@@ -162,7 +162,7 @@ describe('media HTTP API', () => {
     rows.length = 0;
     objects.clear();
     configured = true;
-    permissionKeys = new Set(['media_read', 'media_manage']);
+    permissionKeys = new Set(['media.read', 'media.create', 'media.delete']);
     scope = 'store';
   });
 
@@ -178,7 +178,7 @@ describe('media HTTP API', () => {
   });
 
   it('enforces persisted permissions and store scope on each route', async () => {
-    permissionKeys = new Set(['media_read']);
+    permissionKeys = new Set(['media.read']);
     const list = await fetch(`${baseUrl}/admin/media`, { headers: authHeaders });
     expect(list.status).toBe(200);
 
@@ -189,7 +189,7 @@ describe('media HTTP API', () => {
     });
     expect(create.status).toBe(403);
 
-    permissionKeys = new Set(['media_read', 'media_manage']);
+    permissionKeys = new Set(['media.read', 'media.create', 'media.delete']);
     scope = 'platform';
     const wrongScope = await fetch(`${baseUrl}/admin/media`, { headers: authHeaders });
     expect(wrongScope.status).toBe(403);

@@ -1,16 +1,29 @@
 import {
   Body,
   Controller,
+  Delete,
+  Get,
   Header,
   HttpCode,
   HttpStatus,
   Inject,
+  Param,
+  ParseUUIDPipe,
+  Patch,
   Post,
+  Put,
+  Query,
   Req,
 } from '@nestjs/common';
 import { AuthAccess } from '../auth/auth-access.decorator';
 import { ShippingService } from './shipping.service';
-import { parseCreateParcelInput } from './shipping.schemas';
+import {
+  parseCreateParcelInput,
+  parseShippingZoneInput,
+  shippingZoneInputSchema,
+  shippingZoneQuerySchema,
+  districtsInputSchema,
+} from './shipping.schemas';
 
 export interface RawBodyRequest {
   headers: { [key: string]: string | string[] | undefined };
@@ -29,6 +42,62 @@ export class ShippingController {
   })
   async createParcel(@Body() body: unknown) {
     return this.shipping.createParcel(parseCreateParcelInput(body));
+  }
+
+  @Get('zones')
+  @AuthAccess({
+    access: 'admin',
+    permission: 'shipping.zones.read',
+    scope: 'store',
+  })
+  listZones(@Query() query: Record<string, unknown>) {
+    return this.shipping.listShippingZones(parseShippingZoneInput(shippingZoneQuerySchema, query));
+  }
+
+  @Post('zones')
+  @AuthAccess({
+    access: 'admin',
+    permission: 'shipping.zones.create',
+    scope: 'store',
+  })
+  createZone(@Body() body: unknown) {
+    return this.shipping.createShippingZone(parseShippingZoneInput(shippingZoneInputSchema, body));
+  }
+
+  @Patch('zones/:zoneId')
+  @AuthAccess({
+    access: 'admin',
+    permission: 'shipping.zones.update',
+    scope: 'store',
+  })
+  updateZone(@Param('zoneId', ParseUUIDPipe) zoneId: string, @Body() body: unknown) {
+    return this.shipping.updateShippingZone(
+      zoneId,
+      parseShippingZoneInput(shippingZoneInputSchema, body),
+    );
+  }
+
+  @Delete('zones/:zoneId')
+  @AuthAccess({
+    access: 'admin',
+    permission: 'shipping.zones.delete',
+    scope: 'store',
+  })
+  deleteZone(@Param('zoneId', ParseUUIDPipe) zoneId: string) {
+    return this.shipping.deleteShippingZone(zoneId);
+  }
+
+  @Put('zones/:zoneId/districts')
+  @AuthAccess({
+    access: 'admin',
+    permission: 'shipping.zones.update',
+    scope: 'store',
+  })
+  setDistricts(@Param('zoneId', ParseUUIDPipe) zoneId: string, @Body() body: unknown) {
+    const districts = parseShippingZoneInput(districtsInputSchema, body) as {
+      districts: string[];
+    };
+    return this.shipping.setShippingZoneDistricts(zoneId, districts);
   }
 }
 

@@ -210,12 +210,14 @@ Returns a paginated list of all available permissions with `key`, `description`,
 
 | Role | Scope | Permissions |
 |------|-------|-------------|
-| **owner** | store | All 24 permissions |
-| **manager** | store | catalog_read/manage, media_read/manage, inventory_read/manage, orders_read/manage/change_status, customers_read/manage, settings_read/manage, roles_read |
-| **staff** | store | catalog_read, media_read, inventory_read, orders_read |
-| **support** | store | orders_read, customers_read |
+| **owner** | store | All seeded endpoint-level permissions |
+| **manager** | store | Catalog, media, inventory, order/return, customer-read, settings, shipping, coupons, CMS, notifications, and analytics operations; role read only |
+| **staff** | store | Admin session, catalog read, media read, inventory read, and order read |
+| **support** | store | Admin session, order read, and customer read |
 
-**Permission groups:** `catalog`, `media`, `inventory`, `orders`, `customers`, `settings`, `roles`.
+Permissions use the exact keys required by protected API operations (usually dotted keys such as `catalog.products.read`, `inventory.adjust`, and `admin.roles.read`). The seed translates legacy broad underscore grants to equivalent endpoint-level grants, reconciles those legacy grants on baseline system roles, and preserves custom-role grants.
+
+**Permission groups:** `admin-auth`, `admin-users`, `roles`, `catalog`, `media`, `inventory`, `orders`, `customers`, `shipping`, `promotions`, `settings`, `cms`, `notifications`, `analytics`.
 
 ---
 
@@ -230,6 +232,9 @@ Every other admin endpoint follows the same guard pattern:
 | Media | upload, list, delete | `admin.media.*` |
 | Inventory | reserve, release, adjust | `admin.inventory.*` |
 | Orders | status transitions, history | `admin.orders.*` |
+| Customer support | `GET /admin/customers`, `GET /admin/customers/{customerId}` | `customers.read` |
+
+Customer support lookup is read-only and returns only customer profile, address, and order-summary data. It never returns passwords, OTP data, or authentication tokens.
 
 ---
 

@@ -8,7 +8,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { AUTH_ACCESS_METADATA } from '../src/auth/auth-access.decorator';
 import { AuthenticationGuard } from '../src/auth/authentication.guard';
 import { MediaController } from '../src/media/media.controller';
-import { MEDIA_PERMISSION_MAP } from '../src/media/media.permissions';
 import type { AuthSessionService } from '../src/auth/auth-session.service';
 import type { PrismaService } from '../src/platform/database/prisma.service';
 
@@ -18,37 +17,45 @@ const document = parse(readFileSync(resolve(process.cwd(), 'openapi/openapi.yaml
 };
 
 const routeRequirements = [
-  { method: 'get', path: '/admin/media', handler: MediaController.prototype.list },
-  { method: 'post', path: '/admin/media', handler: MediaController.prototype.create },
+  {
+    method: 'get',
+    path: '/admin/media',
+    permission: 'media.read',
+    handler: MediaController.prototype.list,
+  },
+  {
+    method: 'post',
+    path: '/admin/media',
+    permission: 'media.create',
+    handler: MediaController.prototype.create,
+  },
   {
     method: 'post',
     path: '/admin/media/{mediaId}/complete',
+    permission: 'media.create',
     handler: MediaController.prototype.complete,
   },
-  { method: 'delete', path: '/admin/media/{mediaId}', handler: MediaController.prototype.remove },
+  {
+    method: 'delete',
+    path: '/admin/media/{mediaId}',
+    permission: 'media.delete',
+    handler: MediaController.prototype.remove,
+  },
 ] as const;
 
-describe('media permission mapping', () => {
-  it('maps every contract media permission to a persisted permission and applies it to routes', () => {
+describe('media permission contract', () => {
+  it('uses the exact contract permission key for every implemented route', () => {
     for (const route of routeRequirements) {
       const operation = document.paths[route.path]?.[route.method];
-      const contractPermission = operation?.['x-required-permission'];
-      expect(contractPermission).toBeDefined();
-      expect(MEDIA_PERMISSION_MAP).toHaveProperty(contractPermission!);
+      expect(operation?.['x-required-permission']).toBe(route.permission);
 
       const requirement = Reflect.getMetadata(AUTH_ACCESS_METADATA, route.handler);
       expect(requirement).toEqual({
         access: 'admin',
-        permission: MEDIA_PERMISSION_MAP[contractPermission as keyof typeof MEDIA_PERMISSION_MAP],
+        permission: route.permission,
         scope: 'store',
       });
     }
-
-    expect(MEDIA_PERMISSION_MAP).toEqual({
-      'media.read': 'media_read',
-      'media.create': 'media_manage',
-      'media.delete': 'media_manage',
-    });
   });
 
   it('keeps media operations in the implemented-operations list', () => {
@@ -59,7 +66,9 @@ describe('media permission mapping', () => {
     }
   });
 
-  it('enforces the persisted media permission and store scope in the guard', async () => {
+  it('enforces the canonical media permission and store scope in the guard', async () => {
+    let permissionKeys = ['media.read'];
+    let scope = 'store';
     const sessions = {
       validateAccessToken: vi.fn(async () => ({
         sub: 'admin-id',
@@ -72,7 +81,10 @@ describe('media permission mapping', () => {
         findUnique: vi.fn(async () => ({
           id: 'admin-id',
           status: 'active',
-          role: { scope: 'store', permissions: [{ permission: { key: 'media_read' } }] },
+          role: {
+            scope,
+            permissions: permissionKeys.map((key) => ({ permission: { key } })),
+          },
         })),
       },
     };
@@ -82,24 +94,23 @@ describe('media permission mapping', () => {
       prisma as unknown as PrismaService,
     );
     const listContext = contextFor(MediaController.prototype.list);
+    const createContext = contextFor(MediaController.prototype.create);
     const deleteContext = contextFor(MediaController.prototype.remove);
 
     await expect(guard.canActivate(listContext)).resolves.toBe(true);
+    await expect(guard.canActivate(createContext)).rejects.toBeInstanceOf(ForbiddenException);
     await expect(guard.canActivate(deleteContext)).rejects.toBeInstanceOf(ForbiddenException);
 
-    prisma.adminUser.findUnique.mockResolvedValueOnce({
-      id: 'admin-id',
-      status: 'active',
-      role: { scope: 'platform', permissions: [{ permission: { key: 'media_manage' } }] },
-    } as never);
-    await expect(guard.canActivate(deleteContext)).rejects.toBeInstanceOf(ForbiddenException);
-
-    prisma.adminUser.findUnique.mockResolvedValueOnce({
-      id: 'admin-id',
-      status: 'active',
-      role: { scope: 'store', permissions: [{ permission: { key: 'media_manage' } }] },
-    } as never);
+    permissionKeys = ['media.create', 'media.delete'];
+    await expect(guard.canActivate(createContext)).resolves.toBe(true);
     await expect(guard.canActivate(deleteContext)).resolves.toBe(true);
+
+    permissionKeys = ['media_read', 'media_manage'];
+    await expect(guard.canActivate(listContext)).rejects.toBeInstanceOf(ForbiddenException);
+
+    permissionKeys = ['media.delete'];
+    scope = 'platform';
+    await expect(guard.canActivate(deleteContext)).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
 

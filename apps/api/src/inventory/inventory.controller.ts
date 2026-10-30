@@ -10,7 +10,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthAccess } from '../auth/auth-access.decorator';
-import { INVENTORY_PERMISSION_MAP } from './inventory.permissions';
 import {
   inventoryAdjustmentSchema,
   inventoryQuerySchema,
@@ -28,7 +27,7 @@ export class InventoryController {
   @Get()
   @AuthAccess({
     access: 'admin',
-    permission: INVENTORY_PERMISSION_MAP['inventory.read'],
+    permission: 'inventory.read',
     scope: 'store',
   })
   list(@Query() query: Record<string, unknown>) {
@@ -38,7 +37,7 @@ export class InventoryController {
   @Post(':variantId/adjustments')
   @AuthAccess({
     access: 'admin',
-    permission: INVENTORY_PERMISSION_MAP['inventory.adjust'],
+    permission: 'inventory.adjust',
     scope: 'store',
   })
   adjust(@Param('variantId', ParseUUIDPipe) variantId: string, @Body() body: unknown) {
@@ -51,7 +50,7 @@ export class InventoryController {
   @Get('reservations')
   @AuthAccess({
     access: 'admin',
-    permission: INVENTORY_PERMISSION_MAP['inventory.read'],
+    permission: 'inventory.read',
     scope: 'store',
   })
   reservations(@Query() query: Record<string, unknown>) {
@@ -61,7 +60,7 @@ export class InventoryController {
   @Post('reservations')
   @AuthAccess({
     access: 'admin',
-    permission: INVENTORY_PERMISSION_MAP['inventory.adjust'],
+    permission: 'inventory.adjust',
     scope: 'store',
   })
   createReservation(@Body() body: unknown) {
@@ -71,7 +70,7 @@ export class InventoryController {
   @Patch('reservations/:reservationId/status')
   @AuthAccess({
     access: 'admin',
-    permission: INVENTORY_PERMISSION_MAP['inventory.adjust'],
+    permission: 'inventory.adjust',
     scope: 'store',
   })
   updateReservationStatus(
