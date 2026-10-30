@@ -12,6 +12,11 @@ import { InventoryListComponent } from './inventory/inventory-list.component';
 import { InventoryAdjustmentComponent } from './inventory/inventory-adjustment.component';
 import { InventoryReservationComponent } from './inventory/inventory-reservation.component';
 import { StockMovementsComponent } from './inventory/stock-movements.component';
+import { OrderListComponent } from './orders/order-list.component';
+import { OrderDetailComponent } from './orders/order-detail.component';
+import { OrderStatusComponent } from './orders/order-status.component';
+import { ReturnListComponent } from './returns/return-list.component';
+import { ReturnStatusComponent } from './returns/return-status.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -32,6 +37,11 @@ export const routes: Routes = [
       { path: 'inventory/adjust', component: InventoryAdjustmentComponent },
       { path: 'inventory/reservations', component: InventoryReservationComponent },
       { path: 'inventory/movements', component: StockMovementsComponent },
+      { path: 'orders', component: OrderListComponent },
+      { path: 'orders/:orderId', component: OrderDetailComponent },
+      { path: 'orders/:orderId/status', component: OrderStatusComponent },
+      { path: 'returns', component: ReturnListComponent },
+      { path: 'returns/:returnId/status', component: ReturnStatusComponent },
       { path: 'profile', loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent) },
     ],
   },
