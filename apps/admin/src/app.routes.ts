@@ -17,6 +17,10 @@ import { OrderDetailComponent } from './orders/order-detail.component';
 import { OrderStatusComponent } from './orders/order-status.component';
 import { ReturnListComponent } from './returns/return-list.component';
 import { ReturnStatusComponent } from './returns/return-status.component';
+import { ShippingZoneListComponent } from './settings/shipping-zone-list.component';
+import { CouponListComponent } from './settings/coupon-list.component';
+import { PageListComponent } from './cms/page-list.component';
+import { BannerListComponent } from './cms/banner-list.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -42,6 +46,10 @@ export const routes: Routes = [
       { path: 'orders/:orderId/status', component: OrderStatusComponent },
       { path: 'returns', component: ReturnListComponent },
       { path: 'returns/:returnId/status', component: ReturnStatusComponent },
+      { path: 'settings/shipping-zones', component: ShippingZoneListComponent },
+      { path: 'settings/coupons', component: CouponListComponent },
+      { path: 'cms/pages', component: PageListComponent },
+      { path: 'cms/banners', component: BannerListComponent },
       { path: 'profile', loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent) },
     ],
   },
