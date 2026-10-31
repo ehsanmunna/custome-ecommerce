@@ -18,7 +18,10 @@ import {
   isShippingAdapterError,
   SHIPPING_ADAPTER,
 } from './shipping-adapter';
-import { parseCreateParcelInput, parseSteadfastWebhook } from './shipping.schemas';
+import {
+  parseCreateParcelInput,
+  parseSteadfastWebhook,
+} from './shipping.schemas';
 
 export type VerifyWebhookSignature = (
   payload: string | Buffer,
@@ -182,6 +185,104 @@ export class ShippingService {
     });
 
     return this.mapShipment(updated);
+  }
+
+  async listShippingZones(input: { page: number; pageSize: number }) {
+    const [zones, total] = await Promise.all([
+      this.prisma.shippingZone.findMany({
+        orderBy: [{ code: 'asc' }],
+        skip: (input.page - 1) * input.pageSize,
+        take: input.pageSize,
+        include: { districts: { select: { district: true } } },
+      }),
+      this.prisma.shippingZone.count(),
+    ]);
+
+    return {
+      items: zones.map((zone) => ({
+        id: zone.id,
+        code: zone.code,
+        name: zone.name,
+        fee: zone.deliveryFeePoisha,
+        active: zone.isActive,
+        districts: zone.districts.map((d) => d.district),
+      })),
+      total,
+      page: input.page,
+      pageSize: input.pageSize,
+    };
+  }
+
+  async createShippingZone(input: { code: string; name: string; fee: number; active: boolean }) {
+    const zone = await this.prisma.shippingZone.create({
+      data: {
+        code: input.code,
+        name: input.name,
+        deliveryFeePoisha: input.fee,
+        isActive: input.active,
+      },
+      include: { districts: { select: { district: true } } },
+    });
+
+    return {
+      id: zone.id,
+      code: zone.code,
+      name: zone.name,
+      fee: zone.deliveryFeePoisha,
+      active: zone.isActive,
+      districts: zone.districts.map((d) => d.district),
+    };
+  }
+
+  async updateShippingZone(zoneId: string, input: { code: string; name: string; fee: number; active: boolean }) {
+    const zone = await this.prisma.shippingZone.update({
+      where: { id: zoneId },
+      data: {
+        code: input.code,
+        name: input.name,
+        deliveryFeePoisha: input.fee,
+        isActive: input.active,
+      },
+      include: { districts: { select: { district: true } } },
+    });
+
+    return {
+      id: zone.id,
+      code: zone.code,
+      name: zone.name,
+      fee: zone.deliveryFeePoisha,
+      active: zone.isActive,
+      districts: zone.districts.map((d) => d.district),
+    };
+  }
+
+  async deleteShippingZone(zoneId: string): Promise<void> {
+    await this.prisma.shippingZone.delete({ where: { id: zoneId } });
+  }
+
+  async setShippingZoneDistricts(zoneId: string, input: { districts: string[] }) {
+    await this.prisma.shippingZoneDistrict.deleteMany({ where: { zoneId } });
+
+    if (input.districts.length > 0) {
+      await this.prisma.shippingZoneDistrict.createMany({
+        data: input.districts.map((district) => ({ zoneId, district })),
+      });
+    }
+
+    const zone = await this.prisma.shippingZone.findUnique({
+      where: { id: zoneId },
+      include: { districts: { select: { district: true } } },
+    });
+    if (!zone) throw new NotFoundException('Shipping zone not found');
+
+    return {
+      id: zone.id,
+      code: zone.code,
+      name: zone.name,
+      fee: zone.deliveryFeePoisha,
+      active: zone.isActive,
+      districts: zone.districts.map((d) => d.district),
+    };
   }
 
   private logAdapterError(error: unknown): void {

@@ -12,7 +12,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthAccess } from '../auth/auth-access.decorator';
-import { MEDIA_PERMISSION_MAP } from './media.permissions';
 import {
   parseMediaInput,
   mediaCompleteInputSchema,
@@ -28,7 +27,7 @@ export class MediaController {
   @Get()
   @AuthAccess({
     access: 'admin',
-    permission: MEDIA_PERMISSION_MAP['media.read'],
+    permission: 'media.read',
     scope: 'store',
   })
   list(@Query() query: Record<string, unknown>) {
@@ -38,7 +37,7 @@ export class MediaController {
   @Post()
   @AuthAccess({
     access: 'admin',
-    permission: MEDIA_PERMISSION_MAP['media.create'],
+    permission: 'media.create',
     scope: 'store',
   })
   create(@Body() body: unknown) {
@@ -49,7 +48,7 @@ export class MediaController {
   @HttpCode(HttpStatus.OK)
   @AuthAccess({
     access: 'admin',
-    permission: MEDIA_PERMISSION_MAP['media.create'],
+    permission: 'media.create',
     scope: 'store',
   })
   complete(@Param('mediaId', ParseUUIDPipe) mediaId: string, @Body() body: unknown) {
@@ -60,7 +59,7 @@ export class MediaController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @AuthAccess({
     access: 'admin',
-    permission: MEDIA_PERMISSION_MAP['media.delete'],
+    permission: 'media.delete',
     scope: 'store',
   })
   async remove(@Param('mediaId', ParseUUIDPipe) mediaId: string): Promise<void> {

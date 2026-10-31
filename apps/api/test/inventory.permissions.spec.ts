@@ -5,7 +5,6 @@ import { parse } from 'yaml';
 import { describe, expect, it } from 'vitest';
 import { AUTH_ACCESS_METADATA } from '../src/auth/auth-access.decorator';
 import { InventoryController } from '../src/inventory/inventory.controller';
-import { INVENTORY_PERMISSION_MAP } from '../src/inventory/inventory.permissions';
 
 const document = parse(readFileSync(resolve(process.cwd(), 'openapi/openapi.yaml'), 'utf8')) as {
   paths: Record<string, Record<string, { 'x-required-permission'?: string }>>;
@@ -45,8 +44,8 @@ const routeRequirements = [
   },
 ] as const;
 
-describe('inventory permission mapping', () => {
-  it('maps contract permissions to persisted role permissions on every route', () => {
+describe('inventory permission contract', () => {
+  it('uses the exact contract permission key for every implemented route', () => {
     for (const route of routeRequirements) {
       const operation = document.paths[route.path]?.[route.method];
       expect(operation?.['x-required-permission']).toBe(route.permission);
@@ -57,14 +56,9 @@ describe('inventory permission mapping', () => {
       const requirement = Reflect.getMetadata(AUTH_ACCESS_METADATA, route.handler);
       expect(requirement).toEqual({
         access: 'admin',
-        permission: INVENTORY_PERMISSION_MAP[route.permission],
+        permission: route.permission,
         scope: 'store',
       });
     }
-
-    expect(INVENTORY_PERMISSION_MAP).toEqual({
-      'inventory.read': 'inventory_read',
-      'inventory.adjust': 'inventory_manage',
-    });
   });
 });

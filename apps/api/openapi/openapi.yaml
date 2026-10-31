@@ -72,10 +72,39 @@ x-implemented-operations:
   - POST /storefront/carts/{cartId}/checkout
   - POST /admin/shipping/parcels
   - POST /webhooks/shipping/steadfast
+  - GET /admin/orders
+  - GET /admin/orders/{orderId}
+  - PATCH /admin/orders/{orderId}/status
+  - GET /admin/returns
+  - PATCH /admin/returns/{returnId}/status
+  - GET /admin/settings
+  - PATCH /admin/settings
+  - GET /admin/shipping/zones
+  - POST /admin/shipping/zones
+  - PATCH /admin/shipping/zones/{zoneId}
+  - DELETE /admin/shipping/zones/{zoneId}
+  - PUT /admin/shipping/zones/{zoneId}/districts
+  - GET /admin/coupons
+  - POST /admin/coupons
+  - PATCH /admin/coupons/{couponId}
+  - DELETE /admin/coupons/{couponId}
+  - GET /admin/pages
+  - POST /admin/pages
+  - PATCH /admin/pages/{pageId}
+  - DELETE /admin/pages/{pageId}
+  - GET /admin/banners
+  - POST /admin/banners
+  - PATCH /admin/banners/{bannerId}
+  - DELETE /admin/banners/{bannerId}
+  - GET /admin/customers
+  - GET /admin/customers/{customerId}
+  - GET /admin/analytics/overview
+  - GET /admin/analytics/sales
 tags:
   - name: Health
   - name: Admin authentication
   - name: Admin users
+  - name: Admin customers
   - name: Roles and permissions
   - name: Media
   - name: Storefront catalog
@@ -312,6 +341,61 @@ paths:
       responses:
         '204':
           description: Administrator deleted.
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/customers:
+    get:
+      operationId: listAdminCustomers
+      tags: [Admin customers]
+      summary: Search customers for store support
+      description: Returns a limited customer profile; never returns passwords, OTP data, or authentication tokens.
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: q
+          in: query
+          required: false
+          description: Case-insensitive search across customer name, email, and phone. A value must contain at least two characters.
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 200
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: customers.read
+      responses:
+        '200':
+          description: Paginated customer profiles matching the support query.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCustomerPage'
+        default:
+          $ref: '#/components/responses/Problem'
+  /admin/customers/{customerId}:
+    parameters:
+      - name: customerId
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/Id'
+    get:
+      operationId: getAdminCustomer
+      tags: [Admin customers]
+      summary: Get customer support context
+      description: Returns the limited profile, addresses, and order summaries without authentication secrets or OTP data.
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: customers.read
+      responses:
+        '200':
+          description: Customer support context.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminCustomerDetail'
         default:
           $ref: '#/components/responses/Problem'
   /admin/roles:
@@ -1532,6 +1616,7 @@ paths:
       operationId: listAdminOrders
       tags: [Admin orders]
       summary: List orders
+      description: Returns store-scoped order snapshots and lifecycle history.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -1590,6 +1675,10 @@ paths:
       operationId: updateOrderStatus
       tags: [Admin orders]
       summary: Change an order lifecycle status
+      description: >
+        Allowed transitions are pending to confirmed or cancelled, confirmed to processing or
+        cancelled, processing to shipped or cancelled, shipped to delivered or partially_delivered,
+        partially_delivered to delivered, and delivered to returned.
       parameters:
         - $ref: '#/components/parameters/OrderId'
       security:
@@ -1680,6 +1769,7 @@ paths:
       operationId: listReturns
       tags: [Returns]
       summary: List return requests
+      description: Returns store-scoped return requests with append-only lifecycle history.
       parameters:
         - $ref: '#/components/parameters/Page'
         - $ref: '#/components/parameters/PageSize'
@@ -1701,6 +1791,9 @@ paths:
       operationId: updateReturnStatus
       tags: [Returns]
       summary: Update a return request status
+      description: >
+        Allowed transitions are requested to approved, rejected, or cancelled, approved to received
+        or cancelled, and received to refunded. Rejected, cancelled, and refunded are terminal.
       parameters:
         - $ref: '#/components/parameters/ReturnId'
       security:
@@ -2805,6 +2898,87 @@ components:
           type: array
           items:
             type: string
+    AdminCustomer:
+      type: object
+      required: [id, status, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          pattern: '^\\+[1-9][0-9]{7,14}$'
+        firstName:
+          type: string
+        lastName:
+          type: string
+        status:
+          type: string
+          enum: [active, blocked]
+        createdAt:
+          type: string
+          format: date-time
+    AdminCustomerDetail:
+      allOf:
+        - $ref: '#/components/schemas/AdminCustomer'
+        - type: object
+          required: [addresses, orders]
+          properties:
+            addresses:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminCustomerAddress'
+            orders:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminCustomerOrderSummary'
+    AdminCustomerAddress:
+      type: object
+      required: [id, recipientName, recipientPhone, addressLine1, district, division]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        label:
+          type: string
+        recipientName:
+          type: string
+        recipientPhone:
+          type: string
+        addressLine1:
+          type: string
+        addressLine2:
+          type: string
+        area:
+          type: string
+        district:
+          type: string
+        division:
+          type: string
+        postalCode:
+          type: string
+        countryCode:
+          type: string
+        isDefaultShipping:
+          type: boolean
+        isDefaultBilling:
+          type: boolean
+    AdminCustomerOrderSummary:
+      type: object
+      required: [id, number, status, total, createdAt]
+      properties:
+        id:
+          $ref: '#/components/schemas/Id'
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        total:
+          $ref: '#/components/schemas/Money'
+        createdAt:
+          type: string
+          format: date-time
     AdminUserCreate:
       type: object
       required: [email, password, displayName, roleId]
@@ -3673,7 +3847,7 @@ components:
           format: date-time
     Return:
       type: object
-      required: [id, orderId, status, reason, refundTotal, items, createdAt]
+      required: [id, orderId, status, reason, refundTotal, items, history, createdAt]
       properties:
         id:
           $ref: '#/components/schemas/Id'
@@ -3699,6 +3873,27 @@ components:
                 minimum: 1
               refundAmount:
                 $ref: '#/components/schemas/Money'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReturnStatusHistory'
+        createdAt:
+          type: string
+          format: date-time
+    ReturnStatusHistory:
+      type: object
+      required: [status, createdAt]
+      properties:
+        previousStatus:
+          type: string
+          enum: [requested, approved, rejected, received, refunded, cancelled]
+        status:
+          type: string
+          enum: [requested, approved, rejected, received, refunded, cancelled]
+        actorAdminId:
+          $ref: '#/components/schemas/Id'
+        note:
+          type: string
         createdAt:
           type: string
           format: date-time
@@ -3848,7 +4043,17 @@ components:
           $ref: '#/components/schemas/Money'
     ShippingParcelRequest:
       type: object
-      required: [orderId, codAmountPoisha, customerName, customerPhone, customerAddress, customerCity, itemName, itemQuantity]
+      required:
+        [
+          orderId,
+          codAmountPoisha,
+          customerName,
+          customerPhone,
+          customerAddress,
+          customerCity,
+          itemName,
+          itemQuantity,
+        ]
       properties:
         orderId:
           $ref: '#/components/schemas/Id'
@@ -4259,6 +4464,16 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/AdminUser'
+    AdminCustomerPage:
+      allOf:
+        - $ref: '#/components/schemas/PageMetadata'
+        - type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AdminCustomer'
     RolePage:
       allOf:
         - $ref: '#/components/schemas/PageMetadata'

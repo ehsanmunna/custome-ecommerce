@@ -4,5 +4,8 @@ export interface AdminBootstrapConfig {
   apiBaseUrl: string;
 }
 
-export const adminPlaceholder = (config: AdminBootstrapConfig): string =>
-  `${ADMIN_APP_NAME} placeholder (api: ${config.apiBaseUrl})`;
+export function bootstrapAdmin(config: AdminBootstrapConfig): void {
+  // Angular application is bootstrapped via main.ts
+  // This entry point is kept for compatibility with the workspace build
+  void config;
+}

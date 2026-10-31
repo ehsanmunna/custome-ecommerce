@@ -1,6 +1,11 @@
-import { PrismaClient } from '@prisma/client';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { parseBootstrapConfig, seedDatabase } from '../src/seed';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  ensureGrants,
+  parseBootstrapConfig,
+  seedDatabase,
+  SEEDED_ADMIN_PERMISSION_KEYS,
+} from '../src/seed';
 import { hasDatabase, resetDatabase, runMigrateCommand, runtimeUrl } from './helpers/database';
 
 const describeDatabase = hasDatabase ? describe : describe.skip;
@@ -48,6 +53,57 @@ describe('seed bootstrap configuration', () => {
   });
 });
 
+describe('admin role grant reconciliation', () => {
+  it('translates legacy grants, replaces them only on baseline roles, and preserves custom grants', async () => {
+    const legacyGrants = [
+      { roleId: 'manager-id', permissionId: 'legacy-catalog-read' },
+      { roleId: 'custom-role-id', permissionId: 'legacy-catalog-read' },
+    ];
+    const createdRows: Array<{ roleId: string; permissionId: string }> = [];
+    const deletedRoleIds: string[] = [];
+    const tx = {
+      adminPermission: {
+        findMany: vi.fn(async () => [{ id: 'legacy-catalog-read', key: 'catalog_read' }]),
+      },
+      adminRolePermission: {
+        findMany: vi.fn(async () => legacyGrants),
+        createMany: vi.fn(
+          async ({ data }: { data: Array<{ roleId: string; permissionId: string }> }) => {
+            createdRows.push(...data);
+            return { count: data.length };
+          },
+        ),
+        deleteMany: vi.fn(async ({ where }: { where: { roleId: string } }) => {
+          deletedRoleIds.push(where.roleId);
+          return { count: 1 };
+        }),
+      },
+    } as unknown as Prisma.TransactionClient;
+    const roleIds = new Map([
+      ['owner', 'owner-id'],
+      ['manager', 'manager-id'],
+      ['staff', 'staff-id'],
+      ['support', 'support-id'],
+    ]);
+    const permissionIds = new Map(
+      SEEDED_ADMIN_PERMISSION_KEYS.map((key) => [key, `canonical-${key}`]),
+    );
+
+    await ensureGrants(tx, roleIds, permissionIds);
+
+    expect(createdRows).toContainEqual({
+      roleId: 'custom-role-id',
+      permissionId: 'canonical-catalog.products.read',
+    });
+    expect(createdRows).toContainEqual({
+      roleId: 'manager-id',
+      permissionId: 'canonical-catalog.products.read',
+    });
+    expect(deletedRoleIds.sort()).toEqual(['manager-id', 'owner-id', 'staff-id', 'support-id']);
+    expect(deletedRoleIds).not.toContain('custom-role-id');
+  });
+});
+
 describeDatabase('database seed operation', () => {
   let client: PrismaClient;
 
@@ -88,34 +144,41 @@ describeDatabase('database seed operation', () => {
       ]),
     );
     const ownerPermissions = grants.owner as Set<string>;
-    expect(ownerPermissions.size).toBe(15);
-    expect(ownerPermissions.has('media_read')).toBe(true);
-    expect(ownerPermissions.has('media_manage')).toBe(true);
-    expect(grants.manager).toEqual(
+    expect(ownerPermissions.has('admin.roles.read')).toBe(true);
+    expect(ownerPermissions.has('catalog.products.update')).toBe(true);
+    expect(ownerPermissions.has('media.create')).toBe(true);
+    expect(ownerPermissions.has('inventory.adjust')).toBe(true);
+    expect(ownerPermissions.has('customers.read')).toBe(true);
+    expect(ownerPermissions.has('analytics.read')).toBe(true);
+    expect(ownerPermissions.size).toBe(await client.adminPermission.count());
+    const managerPermissions = grants.manager as Set<string>;
+    expect(managerPermissions.has('catalog.products.update')).toBe(true);
+    expect(managerPermissions.has('inventory.adjust')).toBe(true);
+    expect(managerPermissions.has('orders.status.update')).toBe(true);
+    expect(managerPermissions.has('customers.read')).toBe(true);
+    expect(managerPermissions.has('admin.roles.read')).toBe(true);
+    expect(managerPermissions.has('orders_manage')).toBe(true);
+    expect(managerPermissions.has('admin.roles.create')).toBe(false);
+    expect(managerPermissions.has('admin.users.create')).toBe(false);
+    expect(grants.staff).toEqual(
       new Set([
-        'catalog_read',
-        'catalog_manage',
-        'media_read',
-        'media_manage',
-        'inventory_read',
-        'inventory_manage',
-        'orders_read',
-        'orders_manage',
-        'orders_change_status',
-        'customers_read',
-        'customers_manage',
-        'settings_read',
-        'roles_read',
+        'admin.auth.logout',
+        'admin.auth.read',
+        'catalog.brands.read',
+        'catalog.categories.read',
+        'catalog.products.read',
+        'media.read',
+        'inventory.read',
+        'orders.read',
       ]),
     );
-    expect(grants.staff).toEqual(
-      new Set(['catalog_read', 'media_read', 'inventory_read', 'orders_read']),
+    expect(grants.support).toEqual(
+      new Set(['admin.auth.logout', 'admin.auth.read', 'orders.read', 'customers.read']),
     );
-    expect(grants.support).toEqual(new Set(['orders_read', 'customers_read']));
-    expect((grants.staff as Set<string>).has('orders_change_status')).toBe(false);
-    expect((grants.support as Set<string>).has('orders_change_status')).toBe(false);
-    expect((grants.manager as Set<string>).has('settings_manage')).toBe(false);
-    expect((grants.manager as Set<string>).has('roles_manage')).toBe(false);
+    expect((grants.staff as Set<string>).has('orders.status.update')).toBe(false);
+    expect((grants.support as Set<string>).has('orders.status.update')).toBe(false);
+    expect(managerPermissions.has('settings.update')).toBe(true);
+    expect(managerPermissions.has('admin.roles.delete')).toBe(false);
     expect(await client.adminRole.count({ where: { scope: 'platform' } })).toBe(0);
     expect(await client.adminUser.count()).toBe(0);
   });
@@ -164,16 +227,57 @@ describeDatabase('database seed operation', () => {
     await seedDatabase(client, null);
 
     expect(await client.adminRole.count()).toBe(4);
-    expect(await client.adminPermission.count()).toBe(15);
+    expect(await client.adminPermission.count()).toBeGreaterThan(15);
     expect(await client.storeSetting.count()).toBe(4);
     expect(await client.shippingZone.count()).toBe(2);
     expect(await client.storeSetting.findUnique({ where: { key: 'tax' } })).toMatchObject({
       value: { enabled: true, rateBasisPoints: 500 },
     });
+
     expect(await client.shippingZone.findUnique({ where: { code: 'dhaka' } })).toMatchObject({
       deliveryFeePoisha: 6000,
       isActive: true,
     });
+  });
+
+  it('replaces legacy broad grants on baseline roles and translates custom-role grants', async () => {
+    await seedDatabase(client, null);
+    const legacyPermission = await client.adminPermission.create({
+      data: { key: 'catalog_read', groupKey: 'catalog' },
+    });
+    const manager = await client.adminRole.findUniqueOrThrow({ where: { key: 'manager' } });
+    const customRole = await client.adminRole.create({
+      data: { key: 'custom-support', name: 'Custom support', scope: 'store' },
+    });
+    await client.adminRolePermission.createMany({
+      data: [
+        { roleId: manager.id, permissionId: legacyPermission.id },
+        { roleId: customRole.id, permissionId: legacyPermission.id },
+      ],
+    });
+
+    await seedDatabase(client, null);
+
+    const updatedManager = await client.adminRole.findUniqueOrThrow({
+      where: { key: 'manager' },
+      include: { permissions: { include: { permission: true } } },
+    });
+    const retainedCustomRole = await client.adminRole.findUniqueOrThrow({
+      where: { key: 'custom-support' },
+      include: { permissions: { include: { permission: true } } },
+    });
+    expect(updatedManager.permissions.map(({ permission }) => permission.key)).not.toContain(
+      'catalog_read',
+    );
+    expect(updatedManager.permissions.map(({ permission }) => permission.key)).toContain(
+      'catalog.products.read',
+    );
+    expect(retainedCustomRole.permissions.map(({ permission }) => permission.key)).toContain(
+      'catalog_read',
+    );
+    expect(retainedCustomRole.permissions.map(({ permission }) => permission.key)).toContain(
+      'catalog.products.read',
+    );
   });
 
   it('rejects incompatible baseline role records without committing partial defaults', async () => {
@@ -190,11 +294,11 @@ describeDatabase('database seed operation', () => {
 
   it('rejects incompatible permission groups and rolls back role creation', async () => {
     await client.adminPermission.create({
-      data: { key: 'catalog_read', groupKey: 'inventory' },
+      data: { key: 'catalog.brands.read', groupKey: 'inventory' },
     });
 
     await expect(seedDatabase(client, null)).rejects.toThrow(
-      'Baseline permission "catalog_read" exists in incompatible group "inventory".',
+      'Baseline permission "catalog.brands.read" exists in incompatible group "inventory".',
     );
     expect(await client.adminRole.count()).toBe(0);
     expect(await client.adminPermission.count()).toBe(1);
@@ -232,7 +336,8 @@ describeDatabase('database seed operation', () => {
       data: {
         roleId: owner.id,
         email: 'existing@example.com',
-        passwordHash: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        passwordHash:
+          'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         displayName: 'Existing Admin',
       },
     });
@@ -247,7 +352,8 @@ describeDatabase('database seed operation', () => {
     expect(await client.adminUser.findMany()).toMatchObject([
       {
         email: 'existing@example.com',
-        passwordHash: 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        passwordHash:
+          'deadbeefdeadbeefdeadbeefdeadbeefdeadbeef:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         displayName: 'Existing Admin',
       },
     ]);

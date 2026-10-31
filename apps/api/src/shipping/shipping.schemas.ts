@@ -1,3 +1,4 @@
+import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
 
 export const createParcelInputSchema = z.object({
@@ -33,6 +34,28 @@ export const steadfastWebhookSchema = z.object({
 
 export type SteadfastWebhookPayload = z.infer<typeof steadfastWebhookSchema>;
 
+export const shippingZoneQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    pageSize: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
+
+export const shippingZoneInputSchema = z
+  .object({
+    code: z.string().trim().min(1).max(50),
+    name: z.string().trim().min(1).max(100),
+    fee: z.number().int().min(0),
+    active: z.boolean(),
+  })
+  .strict();
+
+export const districtsInputSchema = z
+  .object({
+    districts: z.array(z.string().trim().min(1)),
+  })
+  .strict();
+
 export function parseCreateParcelInput(input: unknown): CreateParcelInput {
   return createParcelInputSchema.parse(input);
 }
@@ -40,3 +63,23 @@ export function parseCreateParcelInput(input: unknown): CreateParcelInput {
 export function parseSteadfastWebhook(input: unknown): SteadfastWebhookPayload {
   return steadfastWebhookSchema.parse(input);
 }
+
+export function parseShippingZoneInput<T>(schema: z.ZodType<T>, input: unknown): T {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) {
+    throw new BadRequestException({
+      message: 'Invalid shipping zone request',
+      errors: parsed.error.issues.map((issue) => ({
+        path: issue.path.join('.'),
+        code: issue.code,
+        message: issue.message,
+      })),
+    });
+  }
+
+  return parsed.data;
+}
+
+export type ShippingZoneQuery = z.infer<typeof shippingZoneQuerySchema>;
+export type ShippingZoneInput = z.infer<typeof shippingZoneInputSchema>;
+export type DistrictsInput = z.infer<typeof districtsInputSchema>;
