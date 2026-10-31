@@ -52,41 +52,41 @@ export interface AttributeDefinitionPage {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/products">Products</a> &gt; Variants
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/products" class="text-[var(--color-primary)] underline">Products</a> &gt; Variants
       </nav>
 
-      <h1>Variants for Product {{ productId }}</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Variants for Product {{ productId }}</h1>
 
-      <div class="toolbar">
-        <button class="primary" (click)="openCreateModal()" *ngIf="auth.hasPermission('catalog.products.update')">+ New Variant</button>
-        <a routerLink="/products" class="secondary">Back to Products</a>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('catalog.products.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Variant</button>
+        <a routerLink="/products" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">Back to Products</a>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="variants.length; else emptyState">
+      <table *ngIf="variants.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>SKU</th>
-            <th>Price</th>
-            <th>Status</th>
-            <th>Attributes</th>
-            <th>Actions</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">SKU</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Price</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Attributes</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let v of variants">
-            <td>{{ v.sku }}</td>
-            <td>{{ (v.price.amount / 100).toFixed(2) }} {{ v.price.currency }}</td>
-            <td><span class="status {{ v.status }}">{{ v.status }}</span></td>
-            <td>
-              <span *ngFor="let k of attributeKeys(v.attributes)">{{ k }}: {{ v.attributes[k] }}</span>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ v.sku }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ (v.price.amount / 100).toFixed(2) }} {{ v.price.currency }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left"><span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]">{{ v.status }}</span></td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <span *ngFor="let k of attributeKeys(v.attributes)" class="text-[var(--color-text-secondary)] text-xs">{{ k }}: {{ v.attributes[k] }}</span>
             </td>
-            <td>
-              <button (click)="openEditModal(v)" *ngIf="auth.hasPermission('catalog.products.update')">Edit</button>
-              <button class="danger" (click)="deleteVariant(v.id)" *ngIf="auth.hasPermission('catalog.products.update')">Delete</button>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <button (click)="openEditModal(v)" *ngIf="auth.hasPermission('catalog.products.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
+              <button (click)="deleteVariant(v.id)" *ngIf="auth.hasPermission('catalog.products.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
             </td>
           </tr>
         </tbody>
@@ -96,86 +96,60 @@ export interface AttributeDefinitionPage {
         <p>No variants found for this product.</p>
       </ng-template>
 
-      <div *ngIf="createModal" class="modal">
-        <div class="modal-content">
-          <h2>Create Variant</h2>
+      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Variant</h2>
           <form [formGroup]="createForm" (ngSubmit)="createVariant()">
-            <div class="field">
-              <label>SKU</label>
-              <input formControlName="sku" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">SKU</label>
+              <input formControlName="sku" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Price (BDT)</label>
-              <input type="number" formControlName="price" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Price (BDT)</label>
+              <input type="number" formControlName="price" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Status</label>
-              <select formControlName="status">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
+              <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
-            <div class="field" *ngFor="let attr of attributeDefs">
-              <label>{{ attr.key }} ({{ attr.valueType }}){{ attr.required ? ' *' : '' }}</label>
-              <input [formControlName]="'attr_' + attr.key" [placeholder]="attr.options?.join(', ')" />
+            <div class="mb-3" *ngFor="let attr of attributeDefs">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">{{ attr.key }} ({{ attr.valueType }}){{ attr.required ? ' *' : '' }}</label>
+              <input [formControlName]="'attr_' + attr.key" [placeholder]="attr.options?.join(', ')" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="createForm.invalid || creating">Create</button>
-            <button type="button" (click)="closeCreateModal()">Cancel</button>
+            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
 
-      <div *ngIf="editModal && editingVariant" class="modal">
-        <div class="modal-content">
-          <h2>Edit Variant</h2>
+      <div *ngIf="editModal && editingVariant" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Variant</h2>
           <form [formGroup]="editForm" (ngSubmit)="updateVariant()">
-            <div class="field">
-              <label>SKU</label>
-              <input formControlName="sku" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">SKU</label>
+              <input formControlName="sku" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Price (BDT)</label>
-              <input type="number" formControlName="price" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Price (BDT)</label>
+              <input type="number" formControlName="price" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Status</label>
-              <select formControlName="status">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
+              <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
-            <button type="submit" [disabled]="editForm.invalid || updating">Save</button>
-            <button type="button" (click)="closeEditModal()">Cancel</button>
+            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
+            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    .secondary { background: transparent; color: #007bff; border: 1px solid #007bff; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    button.danger { background: #dc3545; color: white; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .status { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 3px; background: #e9ecef; color: #495057; }
-    .status.active { background: #d4edda; color: #155724; }
-    .status.archived { background: #f8d7da; color: #721c24; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; }
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
-    .field input, .field select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .modal-content button { margin-right: 0.5rem; }
-    .modal-content button[type="submit"] { background: #007bff; color: white; }
   `,
 })
 export class VariantListComponent implements OnInit {

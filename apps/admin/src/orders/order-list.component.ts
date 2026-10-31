@@ -62,15 +62,15 @@ const ORDER_STATUSES = [
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Orders
+    <div class="p-4 max-w-[1200px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Orders
       </nav>
 
-      <h1>Orders</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Orders</h1>
 
-      <div class="toolbar">
-        <select [(ngModel)]="statusFilter">
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <select [(ngModel)]="statusFilter" class="w-auto p-2 border border-[var(--color-border)] rounded-md">
           <option value="">All statuses</option>
           <option *ngFor="let s of orderStatuses">{{ s }}</option>
         </select>
@@ -78,69 +78,46 @@ const ORDER_STATUSES = [
           type="datetime-local"
           [(ngModel)]="createdFrom"
           placeholder="From"
-        />
+          class="w-auto p-2 border border-[var(--color-border)] rounded-md" />
         <input
           type="datetime-local"
           [(ngModel)]="createdTo"
           placeholder="To"
-        />
-        <button (click)="loadOrders()">Filter</button>
+          class="w-auto p-2 border border-[var(--color-border)] rounded-md" />
+        <button (click)="loadOrders()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Filter</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="orders.length; else emptyState">
+      <table *ngIf="orders.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Order #</th>
-            <th>Customer</th>
-            <th>Status</th>
-            <th>Total</th>
-            <th>Date</th>
-            <th>Actions</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Order #</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Customer</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Total</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Date</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let o of orders">
-            <td>{{ o.number }}</td>
-            <td>{{ o.contactName }}</td>
-            <td><span class="status {{ o.status }}">{{ o.status }}</span></td>
-            <td>{{ (o.total.amount / 100).toFixed(2) }} {{ o.total.currency }}</td>
-            <td>{{ o.createdAt }}</td>
-            <td>
-              <a [routerLink]="['/orders', o.id]" *ngIf="auth.hasPermission('orders.read')">View</a>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ o.number }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ o.contactName }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left"><span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]">{{ o.status }}</span></td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ (o.total.amount / 100).toFixed(2) }} {{ o.total.currency }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ o.createdAt }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <a [routerLink]="['/orders', o.id]" *ngIf="auth.hasPermission('orders.read')" class="text-[var(--color-primary)] underline">View</a>
             </td>
           </tr>
         </tbody>
       </table>
 
       <ng-template #emptyState>
-        <p>No orders found.</p>
+        <p class="text-[var(--color-text-muted)]">No orders found.</p>
       </ng-template>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    .toolbar select, .toolbar input { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .status { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 3px; }
-    .status.pending { background: #e2e3e5; color: #383d41; }
-    .status.confirmed { background: #cce5ff; color: #004085; }
-    .status.processing { background: #fff3cd; color: #856404; }
-    .status.shipped { background: #e2e3e5; color: #383d41; }
-    .status.delivered { background: #d4edda; color: #155724; }
-    .status.cancelled { background: #f8d7da; color: #721c24; }
-    .status.returned { background: #f8d7da; color: #721c24; }
-    .status.partially_delivered { background: #e2e3e5; color: #383d41; }
   `,
 })
 export class OrderListComponent implements OnInit {

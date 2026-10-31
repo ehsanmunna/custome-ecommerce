@@ -35,163 +35,141 @@ export interface CouponPage {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Coupons
+    <div class="p-4 max-w-[1200px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Coupons
       </nav>
 
-      <h1>Coupons</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Coupons</h1>
 
-      <div class="toolbar">
-        <button class="primary" (click)="openCreateModal()" *ngIf="auth.hasPermission('promotions.coupons.create')">+ New Coupon</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('promotions.coupons.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Coupon</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="coupons.length; else emptyState">
+      <table *ngIf="coupons.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Type</th>
-            <th>Value</th>
-            <th>Min Order (BDT)</th>
-            <th>Starts At</th>
-            <th>Expires At</th>
-            <th>Active</th>
-            <th>Actions</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Code</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Type</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Value</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Min Order (BDT)</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Starts At</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Expires At</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Active</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let c of coupons">
-            <td>{{ c.code }}</td>
-            <td>{{ c.discountType }}</td>
-            <td>{{ c.discountValue }}</td>
-            <td>{{ (c.minimumOrder / 100).toFixed(2) }}</td>
-            <td>{{ c.startsAt }}</td>
-            <td>{{ c.expiresAt }}</td>
-            <td>{{ c.active ? 'Yes' : 'No' }}</td>
-            <td>
-              <button (click)="openEditModal(c)" *ngIf="auth.hasPermission('promotions.coupons.update')">Edit</button>
-              <button class="danger" (click)="deleteCoupon(c.id)" *ngIf="auth.hasPermission('promotions.coupons.delete')">Delete</button>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ c.code }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ c.discountType }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ c.discountValue }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ (c.minimumOrder / 100).toFixed(2) }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ c.startsAt }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ c.expiresAt }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ c.active ? 'Yes' : 'No' }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <button (click)="openEditModal(c)" *ngIf="auth.hasPermission('promotions.coupons.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
+              <button (click)="deleteCoupon(c.id)" *ngIf="auth.hasPermission('promotions.coupons.delete')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
             </td>
           </tr>
         </tbody>
       </table>
 
       <ng-template #emptyState>
-        <p>No coupons found.</p>
+        <p class="text-[var(--color-text-muted)]">No coupons found.</p>
       </ng-template>
 
-      <div *ngIf="createModal" class="modal">
-        <div class="modal-content">
-          <h2>Create Coupon</h2>
+      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Coupon</h2>
           <form [formGroup]="createForm" (ngSubmit)="createCoupon()">
-            <div class="field">
-              <label>Code</label>
-              <input formControlName="code" placeholder="e.g. SAVE10" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Code</label>
+              <input formControlName="code" placeholder="e.g. SAVE10" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Discount Type</label>
-              <select formControlName="discountType">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Discount Type</label>
+              <select formControlName="discountType" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="percentage">Percentage</option>
                 <option value="fixed">Fixed</option>
               </select>
             </div>
-            <div class="field">
-              <label>Discount Value</label>
-              <input type="number" formControlName="discountValue" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Discount Value</label>
+              <input type="number" formControlName="discountValue" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Minimum Order (BDT)</label>
-              <input type="number" formControlName="minimumOrder" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Minimum Order (BDT)</label>
+              <input type="number" formControlName="minimumOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Starts At</label>
-              <input type="datetime-local" formControlName="startsAt" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Starts At</label>
+              <input type="datetime-local" formControlName="startsAt" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Expires At</label>
-              <input type="datetime-local" formControlName="expiresAt" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Expires At</label>
+              <input type="datetime-local" formControlName="expiresAt" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Active</label>
-              <select formControlName="active">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
+              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             </div>
-            <button type="submit" [disabled]="createForm.invalid || creating">Create</button>
-            <button type="button" (click)="closeCreateModal()">Cancel</button>
+            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
 
-      <div *ngIf="editModal && editingCoupon" class="modal">
-        <div class="modal-content">
-          <h2>Edit Coupon</h2>
+      <div *ngIf="editModal && editingCoupon" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Coupon</h2>
           <form [formGroup]="editForm" (ngSubmit)="updateCoupon()">
-            <div class="field">
-              <label>Code</label>
-              <input formControlName="code" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Code</label>
+              <input formControlName="code" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Discount Type</label>
-              <select formControlName="discountType">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Discount Type</label>
+              <select formControlName="discountType" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="percentage">Percentage</option>
                 <option value="fixed">Fixed</option>
               </select>
             </div>
-            <div class="field">
-              <label>Discount Value</label>
-              <input type="number" formControlName="discountValue" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Discount Value</label>
+              <input type="number" formControlName="discountValue" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Minimum Order (BDT)</label>
-              <input type="number" formControlName="minimumOrder" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Minimum Order (BDT)</label>
+              <input type="number" formControlName="minimumOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Starts At</label>
-              <input type="datetime-local" formControlName="startsAt" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Starts At</label>
+              <input type="datetime-local" formControlName="startsAt" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Expires At</label>
-              <input type="datetime-local" formControlName="expiresAt" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Expires At</label>
+              <input type="datetime-local" formControlName="expiresAt" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Active</label>
-              <select formControlName="active">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
+              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             </div>
-            <button type="submit" [disabled]="editForm.invalid || updating">Save</button>
-            <button type="button" (click)="closeEditModal()">Cancel</button>
+            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
+            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1200px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    button.danger { background: #dc3545; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 8px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; }
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
-    .field input, .field select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .modal-content button { margin-right: 0.5rem; }
-    .modal-content button[type="submit"] { background: #007bff; color: white; }
   `,
 })
 export class CouponListComponent implements OnInit {

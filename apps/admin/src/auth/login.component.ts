@@ -13,43 +13,31 @@ import { AuthService } from './auth.service';
   standalone: true,
   imports: [ReactiveFormsModule],
   template: `
-    <div class="login-page">
-      <div class="login-card">
-        <h1>Sign in</h1>
+    <div class="flex items-center justify-center min-h-screen bg-[var(--color-surface-secondary)]">
+      <div class="bg-[var(--color-surface)] p-8 rounded-lg shadow-sm w-full max-w-md">
+        <h1 class="mt-0 text-xl font-semibold text-[var(--color-text)]">Sign in</h1>
         <form [formGroup]="form" (ngSubmit)="onSubmit()">
-          <div class="form-field">
-            <label for="email">Email</label>
-            <input id="email" type="email" formControlName="email" />
+          <div class="mb-4">
+            <label for="email" class="block mb-2 font-medium text-[var(--color-text-secondary)]">Email</label>
+            <input id="email" type="email" formControlName="email" class="w-full p-2 border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-primary)]" />
             @if (form.get('email')?.invalid && form.get('email')?.touched) {
-              <p class="error">Valid email is required</p>
+              <p class="text-[var(--color-danger)] text-sm mt-1">Valid email is required</p>
             }
           </div>
-          <div class="form-field">
-            <label for="password">Password</label>
-            <input id="password" type="password" formControlName="password" />
+          <div class="mb-4">
+            <label for="password" class="block mb-2 font-medium text-[var(--color-text-secondary)]">Password</label>
+            <input id="password" type="password" formControlName="password" class="w-full p-2 border border-[var(--color-border)] rounded-md focus:outline-none focus:border-[var(--color-primary)]" />
             @if (form.get('password')?.invalid && form.get('password')?.touched) {
-              <p class="error">Password is required</p>
+              <p class="text-[var(--color-danger)] text-sm mt-1">Password is required</p>
             }
           </div>
           @if (error) {
-            <p class="error">{{ error }}</p>
+            <p class="text-[var(--color-danger)] text-sm mt-1">{{ error }}</p>
           }
-          <button type="submit" [disabled]="loading">{{ loading ? 'Signing in...' : 'Sign in' }}</button>
+          <button type="submit" [disabled]="loading" class="w-full p-2 bg-[var(--color-primary)] text-[var(--color-primary-foreground)] border-none rounded-md text-base cursor-pointer opacity-60:cursor-not-allowed">{{ loading ? 'Signing in...' : 'Sign in' }}</button>
         </form>
       </div>
     </div>
-  `,
-  styles: `
-    .login-page { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #f5f5f5; }
-    .login-card { background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-    .login-card h1 { margin-top: 0; font-size: 1.5rem; }
-    .form-field { margin-bottom: 1rem; }
-    .form-field label { display: block; margin-bottom: 0.5rem; font-weight: 500; }
-    .form-field input { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .form-field input:focus { outline: none; border-color: #007bff; }
-    .error { color: #dc3545; font-size: 0.875rem; margin-top: 0.25rem; }
-    button { width: 100%; padding: 0.6rem; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 1rem; cursor: pointer; }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
   `,
 })
 export class LoginComponent {
@@ -91,7 +79,6 @@ export class LoginComponent {
     try {
       await this.auth.login(email, password);
     } catch {
-      // If login fails due to expired session, try refresh once
       await this.auth.refresh();
       await this.auth.login(email, password);
     }

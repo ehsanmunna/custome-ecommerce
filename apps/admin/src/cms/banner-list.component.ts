@@ -44,175 +44,153 @@ function localeBannerTitle(banner: Banner): string {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Banners
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Banners
       </nav>
 
-      <h1>Banners</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Banners</h1>
 
-      <div class="toolbar">
-        <button class="primary" (click)="openCreateModal()" *ngIf="auth.hasPermission('cms.banners.create')">+ New Banner</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('cms.banners.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Banner</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="banners.length; else emptyState">
+      <table *ngIf="banners.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Placement</th>
-            <th>Title</th>
-            <th>Sort Order</th>
-            <th>Active</th>
-            <th>Actions</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Placement</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Title</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Sort Order</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Active</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let b of banners">
-            <td>{{ b.placement }}</td>
-            <td>{{ localeBannerTitle(b) }}</td>
-            <td>{{ b.sortOrder }}</td>
-            <td>{{ b.active ? 'Yes' : 'No' }}</td>
-            <td>
-              <button (click)="openEditModal(b)" *ngIf="auth.hasPermission('cms.banners.update')">Edit</button>
-              <button class="danger" (click)="deleteBanner(b.id)" *ngIf="auth.hasPermission('cms.banners.delete')">Delete</button>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ b.placement }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ localeBannerTitle(b) }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ b.sortOrder }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ b.active ? 'Yes' : 'No' }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <button (click)="openEditModal(b)" *ngIf="auth.hasPermission('cms.banners.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
+              <button (click)="deleteBanner(b.id)" *ngIf="auth.hasPermission('cms.banners.delete')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
             </td>
           </tr>
         </tbody>
       </table>
 
       <ng-template #emptyState>
-        <p>No banners found.</p>
+        <p class="text-[var(--color-text-muted)]">No banners found.</p>
       </ng-template>
 
-      <div *ngIf="createModal" class="modal">
-        <div class="modal-content">
-          <h2>Create Banner</h2>
+      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Banner</h2>
           <form [formGroup]="createForm" (ngSubmit)="createBanner()">
-            <div class="field">
-              <label>Placement</label>
-              <input formControlName="placement" placeholder="e.g. homepage-hero" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Placement</label>
+              <input formControlName="placement" placeholder="e.g. homepage-hero" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Sort Order</label>
-              <input type="number" formControlName="sortOrder" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
+              <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Media ID</label>
-              <input formControlName="mediaId" placeholder="optional" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Media ID</label>
+              <input formControlName="mediaId" placeholder="optional" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Active</label>
-              <select formControlName="active">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
+              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             </div>
-            <div class="field">
-              <label>Title (en)</label>
-              <input formControlName="titleEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (en)</label>
+              <input formControlName="titleEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Body (en)</label>
-              <input formControlName="bodyEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (en)</label>
+              <input formControlName="bodyEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Destination URL (en)</label>
-              <input formControlName="destinationUrlEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (en)</label>
+              <input formControlName="destinationUrlEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Title (bn)</label>
-              <input formControlName="titleBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (bn)</label>
+              <input formControlName="titleBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Body (bn)</label>
-              <input formControlName="bodyBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (bn)</label>
+              <input formControlName="bodyBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Destination URL (bn)</label>
-              <input formControlName="destinationUrlBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (bn)</label>
+              <input formControlName="destinationUrlBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="createForm.invalid || creating">Create</button>
-            <button type="button" (click)="closeCreateModal()">Cancel</button>
+            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
 
-      <div *ngIf="editModal && editingBanner" class="modal">
-        <div class="modal-content">
-          <h2>Edit Banner</h2>
+      <div *ngIf="editModal && editingBanner" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Banner</h2>
           <form [formGroup]="editForm" (ngSubmit)="updateBanner()">
-            <div class="field">
-              <label>Placement</label>
-              <input formControlName="placement" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Placement</label>
+              <input formControlName="placement" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Sort Order</label>
-              <input type="number" formControlName="sortOrder" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
+              <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Media ID</label>
-              <input formControlName="mediaId" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Media ID</label>
+              <input formControlName="mediaId" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Active</label>
-              <select formControlName="active">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
+              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             </div>
-            <div class="field">
-              <label>Title (en)</label>
-              <input formControlName="titleEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (en)</label>
+              <input formControlName="titleEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Body (en)</label>
-              <input formControlName="bodyEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (en)</label>
+              <input formControlName="bodyEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Destination URL (en)</label>
-              <input formControlName="destinationUrlEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (en)</label>
+              <input formControlName="destinationUrlEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Title (bn)</label>
-              <input formControlName="titleBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (bn)</label>
+              <input formControlName="titleBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Body (bn)</label>
-              <input formControlName="bodyBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (bn)</label>
+              <input formControlName="bodyBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Destination URL (bn)</label>
-              <input formControlName="destinationUrlBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (bn)</label>
+              <input formControlName="destinationUrlBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="editForm.invalid || updating">Save</button>
-            <button type="button" (click)="closeEditModal()">Cancel</button>
+            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
+            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    button.danger { background: #dc3545; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 8px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; }
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
-    .field input, .field select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .modal-content button { margin-right: 0.5rem; }
-    .modal-content button[type="submit"] { background: #007bff; color: white; }
   `,
 })
 export class BannerListComponent implements OnInit {

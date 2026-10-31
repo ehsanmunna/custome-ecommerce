@@ -41,42 +41,42 @@ export interface VariantPage {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Inventory
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Inventory
       </nav>
 
-      <h1>Inventory</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Inventory</h1>
 
-      <div class="toolbar">
-        <label>
-          <input type="checkbox" [(ngModel)]="lowStockFilter" /> Low stock only
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <label class="flex items-center gap-1">
+          <input type="checkbox" [(ngModel)]="lowStockFilter" class="rounded border-[var(--color-border)]" /> Low stock only
         </label>
-        <button (click)="loadInventory()">Refresh</button>
+        <button (click)="loadInventory()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Refresh</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="inventory.length; else emptyState">
+      <table *ngIf="inventory.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Variant SKU</th>
-            <th>On Hand</th>
-            <th>Reserved</th>
-            <th>Available</th>
-            <th>Low Stock Threshold</th>
-            <th>Status</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant SKU</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">On Hand</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reserved</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Available</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Low Stock Threshold</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of inventory" [class.low-stock]="item.lowStock">
-            <td>{{ variantSkus[item.variantId] || item.variantId }}</td>
-            <td>{{ item.onHand }}</td>
-            <td>{{ item.reserved }}</td>
-            <td>{{ item.available }}</td>
-            <td>{{ item.lowStockThreshold }}</td>
-            <td>
-              <span class="status {{ item.lowStock ? 'low-stock' : 'ok' }}">
+          <tr *ngFor="let item of inventory" [class.bg-red-50]="item.lowStock">
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ variantSkus[item.variantId] || item.variantId }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.onHand }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.reserved }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.available }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.lowStockThreshold }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]" [class.text-red-600]="item.lowStock" [class.border-red-200]="item.lowStock" [class.bg-red-50]="item.lowStock">
                 {{ item.lowStock ? 'LOW STOCK' : 'OK' }}
               </span>
             </td>
@@ -85,26 +85,9 @@ export interface VariantPage {
       </table>
 
       <ng-template #emptyState>
-        <p>No inventory items found.</p>
+        <p class="text-[var(--color-text-muted)]">No inventory items found.</p>
       </ng-template>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    .toolbar label { font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 0.25rem; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .status { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 3px; }
-    .status.low-stock { background: #f8d7da; color: #721c24; }
-    .status.ok { background: #d4edda; color: #155724; }
-    tr.low-stock { background: #fdecea; }
   `,
 })
 export class InventoryListComponent implements OnInit {

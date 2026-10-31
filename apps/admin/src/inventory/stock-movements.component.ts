@@ -37,73 +37,49 @@ export interface MovementLedgerEntry {
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/inventory">Inventory</a> &gt; Stock Movements
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/inventory" class="text-[var(--color-primary)] underline">Inventory</a> &gt; Stock Movements
       </nav>
 
-      <h1>Stock Movements Ledger</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Stock Movements Ledger</h1>
 
-      <div class="toolbar">
-        <button (click)="loadMovements()" class="secondary">Refresh</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="loadMovements()" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">Refresh</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <p class="note">
+      <p class="text-[var(--color-text-muted)] text-sm italic mb-4">
         Note: Stock adjustments (write-only via API) and reservation lifecycle events are shown here.
         A dedicated movements read endpoint is not yet available in the API contract.
       </p>
 
-      <table *ngIf="movements.length; else emptyState">
+      <table *ngIf="movements.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Variant ID</th>
-            <th>Type</th>
-            <th>Quantity</th>
-            <th>Status</th>
-            <th>Reason</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant ID</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Type</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Quantity</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reason</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let m of movements">
-            <td>{{ m.variantId }}</td>
-            <td><span class="type {{ m.type }}">{{ m.type }}</span></td>
-            <td>{{ m.quantity }}</td>
-            <td><span class="status {{ m.status }}">{{ m.status }}</span></td>
-            <td>{{ m.reason || '-' }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.variantId }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left"><span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)] uppercase">{{ m.type }}</span></td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.quantity }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left"><span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]">{{ m.status }}</span></td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.reason || '-' }}</td>
           </tr>
         </tbody>
       </table>
 
       <ng-template #emptyState>
-        <p>No stock movements found.</p>
+        <p class="text-[var(--color-text-muted)]">No stock movements found.</p>
       </ng-template>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    .secondary { background: transparent; color: #007bff; border: 1px solid #007bff; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    .note { color: #666; font-size: 0.85rem; margin-bottom: 1rem; font-style: italic; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .type { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 3px; text-transform: uppercase; }
-    .type.adjustment { background: #e2e3e5; color: #383d41; }
-    .type.reservation { background: #cce5ff; color: #004085; }
-    .type.release { background: #f8d7da; color: #721c24; }
-    .type.commit { background: #d4edda; color: #155724; }
-    .status { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 3px; }
-    .status.active { background: #d4edda; color: #155724; }
-    .status.released { background: #e2e3e5; color: #383d41; }
-    .status.committed { background: #cce5ff; color: #004085; }
-    .status.expired { background: #f8d7da; color: #721c24; }
   `,
 })
 export class StockMovementsComponent implements OnInit {

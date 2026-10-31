@@ -49,51 +49,52 @@ export interface InventoryAdjustmentResult {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/inventory">Inventory</a> &gt; Stock Adjustment
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/inventory" class="text-[var(--color-primary)] underline">Inventory</a> &gt; Stock Adjustment
       </nav>
 
-      <h1>Stock Adjustment</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Stock Adjustment</h1>
 
-      <div class="toolbar">
-        <button (click)="loadInventory()" class="secondary">Refresh</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="loadInventory()" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">Refresh</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
-      <div *ngIf="success" class="success">{{ success }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+      <div *ngIf="success" class="text-[var(--color-success)] bg-[var(--color-success-foreground)]/10 p-2 rounded mb-4 border border-[var(--color-success)]/20">{{ success }}</div>
 
-      <table *ngIf="inventory.length; else emptyState" [formGroup]="adjustmentForm">
+      <table *ngIf="inventory.length; else emptyState" [formGroup]="adjustmentForm" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Variant SKU</th>
-            <th>Available</th>
-            <th>Adjustment</th>
-            <th>Reason</th>
-            <th>Action</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant SKU</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Available</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Adjustment</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reason</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Action</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let item of inventory" [class.adjusting]="adjustingId === item.variantId">
-            <td>{{ item.sku }}</td>
-            <td>{{ item.available }}</td>
-            <td>
+          <tr *ngFor="let item of inventory" [class.bg-yellow-50]="adjustingId === item.variantId">
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.sku }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.available }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
               <input
                 type="number"
                 [formControlName]="'delta_' + item.variantId"
                 placeholder="e.g. +10 or -5"
-              />
+                class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </td>
-            <td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
               <input
                 [formControlName]="'reason_' + item.variantId"
                 placeholder="Reason for adjustment"
-              />
+                class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </td>
-            <td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
               <button
                 (click)="adjustStock(item.variantId)"
                 [disabled]="adjustingId === item.variantId || !canAdjust(item.variantId) || !auth.hasPermission('inventory.adjust')"
+                class="px-4 py-2 border-none rounded-md cursor-pointer opacity-60:cursor-not-allowed bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
               >
                 {{ adjustingId === item.variantId ? 'Applying...' : 'Adjust' }}
               </button>
@@ -103,26 +104,9 @@ export interface InventoryAdjustmentResult {
       </table>
 
       <ng-template #emptyState>
-        <p>No inventory items found.</p>
+        <p class="text-[var(--color-text-muted)]">No inventory items found.</p>
       </ng-template>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    .secondary { background: transparent; color: #007bff; border: 1px solid #007bff; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    .success { color: #155724; background: #d4edda; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    tr.adjusting { background: #fff3cd; }
-    input { padding: 0.375rem; border: 1px solid #ddd; border-radius: 4px; width: 100%; box-sizing: border-box; }
   `,
 })
 export class InventoryAdjustmentComponent implements OnInit {

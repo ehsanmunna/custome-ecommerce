@@ -51,40 +51,40 @@ export interface MediaUploadCompleteRequest {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Media
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Media
       </nav>
 
-      <h1>Media Library</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Media Library</h1>
 
-      <div class="toolbar">
-        <button class="primary" (click)="openCreateModal()" *ngIf="auth.hasPermission('media.create')">+ Upload Media</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('media.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ Upload Media</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <div *ngIf="media.length; else emptyState">
-        <table>
+      <div *ngIf="media.length; else emptyState" class="w-full border-collapse mb-4">
+        <table class="w-full border-collapse">
           <thead>
             <tr>
-              <th>File Name</th>
-              <th>MIME Type</th>
-              <th>Size</th>
-              <th>URL</th>
-              <th>Uploaded</th>
-              <th>Actions</th>
+              <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">File Name</th>
+              <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">MIME Type</th>
+              <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Size</th>
+              <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">URL</th>
+              <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Uploaded</th>
+              <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
             </tr>
           </thead>
           <tbody>
             <tr *ngFor="let m of media">
-              <td>{{ m.key }}</td>
-              <td>{{ m.mimeType }}</td>
-              <td>{{ (m.sizeBytes / 1024).toFixed(1) }} KB</td>
-              <td>{{ m.url || '-' }}</td>
-              <td>{{ m.createdAt }}</td>
-              <td>
-                <button class="danger" (click)="deleteMedia(m.id)" *ngIf="auth.hasPermission('media.delete')">Delete</button>
+              <td class="border border-[var(--color-border)] p-2 text-left">{{ m.key }}</td>
+              <td class="border border-[var(--color-border)] p-2 text-left">{{ m.mimeType }}</td>
+              <td class="border border-[var(--color-border)] p-2 text-left">{{ (m.sizeBytes / 1024).toFixed(1) }} KB</td>
+              <td class="border border-[var(--color-border)] p-2 text-left">{{ m.url || '-' }}</td>
+              <td class="border border-[var(--color-border)] p-2 text-left">{{ m.createdAt }}</td>
+              <td class="border border-[var(--color-border)] p-2 text-left">
+                <button class="danger" (click)="deleteMedia(m.id)" *ngIf="auth.hasPermission('media.delete')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
               </td>
             </tr>
           </tbody>
@@ -95,79 +95,56 @@ export interface MediaUploadCompleteRequest {
         <p>No media assets found.</p>
       </ng-template>
 
-      <div *ngIf="createModal" class="modal">
-        <div class="modal-content">
-          <h2>Upload Media</h2>
+      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Upload Media</h2>
           <form [formGroup]="createForm" (ngSubmit)="createMediaUpload()">
-            <div class="field">
-              <label>File Name</label>
-              <input formControlName="fileName" placeholder="image.jpg" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">File Name</label>
+              <input formControlName="fileName" placeholder="image.jpg" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>MIME Type</label>
-              <select formControlName="mimeType">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">MIME Type</label>
+              <select formControlName="mimeType" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="image/jpeg">image/jpeg</option>
                 <option value="image/png">image/png</option>
                 <option value="image/webp">image/webp</option>
               </select>
             </div>
-            <div class="field">
-              <label>Size (bytes)</label>
-              <input type="number" formControlName="sizeBytes" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Size (bytes)</label>
+              <input type="number" formControlName="sizeBytes" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Alt Text (en)</label>
-              <input formControlName="altEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Alt Text (en)</label>
+              <input formControlName="altEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="createForm.invalid || creating">Create Upload</button>
-            <button type="button" (click)="closeCreateModal()">Cancel</button>
+            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create Upload</button>
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
 
-      <div *ngIf="completeModal && pendingMedia" class="modal">
-        <div class="modal-content">
-          <h2>Complete Upload: {{ pendingMedia.key }}</h2>
-          <p>Upload URL: <a [href]="pendingMedia.upload?.url" target="_blank">{{ pendingMedia.upload?.url }}</a></p>
-          <p>Method: {{ pendingMedia.upload?.method }}</p>
+      <div *ngIf="completeModal && pendingMedia" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Complete Upload: {{ pendingMedia.key }}</h2>
+          <p class="mb-4">Upload URL: <a [href]="pendingMedia.upload?.url" target="_blank" class="text-[var(--color-primary)] underline">{{ pendingMedia.upload?.url }}</a></p>
+          <p class="mb-4">Method: {{ pendingMedia.upload?.method }}</p>
           <form [formGroup]="completeForm" (ngSubmit)="completeMediaUpload()">
-            <div class="field">
-              <label>Width (optional)</label>
-              <input type="number" formControlName="width" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Width (optional)</label>
+              <input type="number" formControlName="width" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Height (optional)</label>
-              <input type="number" formControlName="height" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Height (optional)</label>
+              <input type="number" formControlName="height" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="completing">Complete</button>
-            <button type="button" (click)="closeCompleteModal()">Cancel</button>
+            <button type="submit" [disabled]="completing" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Complete</button>
+            <button type="button" (click)="closeCompleteModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    button.danger { background: #dc3545; color: white; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; }
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
-    .field input, .field select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .modal-content button { margin-right: 0.5rem; }
-    .modal-content button[type="submit"] { background: #007bff; color: white; }
-    a { color: #007bff; word-break: break-all; }
   `,
 })
 export class MediaListComponent implements OnInit {

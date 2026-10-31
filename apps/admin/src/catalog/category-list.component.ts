@@ -33,32 +33,32 @@ export interface CategoryPage {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Categories
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Categories
       </nav>
 
-      <h1>Categories</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Categories</h1>
 
-      <div class="toolbar">
-        <button class="primary" (click)="openCreateModal()" *ngIf="auth.hasPermission('catalog.categories.create')">+ New Category</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('catalog.categories.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Category</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <ul *ngIf="rootCategories.length; else emptyState">
-        <li *ngFor="let c of rootCategories" class="category-item">
-          <div class="category-header">
+      <ul *ngIf="rootCategories.length; else emptyState" class="list-none p-0">
+        <li *ngFor="let c of rootCategories" class="border border-[var(--color-border)] rounded-md p-3 mb-2 bg-[var(--color-surface)]">
+          <div class="flex justify-between items-center">
             <span>{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</span>
-            <span class="status {{ c.status }}">{{ c.status }}</span>
-            <div class="actions">
-              <button (click)="openEditModal(c)" *ngIf="auth.hasPermission('catalog.categories.update')">Edit</button>
-              <button class="danger" (click)="deleteCategory(c.id)" *ngIf="auth.hasPermission('catalog.categories.delete')">Delete</button>
-              <button (click)="toggleChildren(c.id)">Children ({{ childCount(c.id) }})</button>
+            <span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]">{{ c.status }}</span>
+            <div class="flex gap-1">
+              <button (click)="openEditModal(c)" *ngIf="auth.hasPermission('catalog.categories.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
+              <button (click)="deleteCategory(c.id)" *ngIf="auth.hasPermission('catalog.categories.delete')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
+              <button (click)="toggleChildren(c.id)" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)]">Children ({{ childCount(c.id) }})</button>
             </div>
           </div>
-          <ul *ngIf="expanded[c.id]" class="children">
-            <li *ngFor="let child of childrenOf(c.id)">
+          <ul *ngIf="expanded[c.id]" class="ml-6 mt-2 pl-4 border-l-2 border-[var(--color-border)]">
+            <li *ngFor="let child of childrenOf(c.id)" class="py-1 text-[var(--color-text-muted)] text-sm">
               {{ child.content['en']?.name || child.content['bn']?.name || child.id }}
             </li>
           </ul>
@@ -69,115 +69,87 @@ export interface CategoryPage {
         <p>No categories found.</p>
       </ng-template>
 
-      <div *ngIf="createModal" class="modal">
-        <div class="modal-content">
-          <h2>Create Category</h2>
+      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Category</h2>
           <form [formGroup]="createForm" (ngSubmit)="createCategory()">
-            <div class="field">
-              <label>Parent Category</label>
-              <select formControlName="parentId">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Parent Category</label>
+              <select formControlName="parentId" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="">None (root)</option>
                 <option *ngFor="let c of categories" [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</option>
               </select>
             </div>
-            <div class="field">
-              <label>Status</label>
-              <select formControlName="status">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
+              <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
-            <div class="field">
-              <label>Sort Order</label>
-              <input type="number" formControlName="sortOrder" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
+              <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Name (en)</label>
-              <input formControlName="nameEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Name (en)</label>
+              <input formControlName="nameEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Slug (en)</label>
-              <input formControlName="slugEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Slug (en)</label>
+              <input formControlName="slugEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Name (bn)</label>
-              <input formControlName="nameBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Name (bn)</label>
+              <input formControlName="nameBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Slug (bn)</label>
-              <input formControlName="slugBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Slug (bn)</label>
+              <input formControlName="slugBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="createForm.invalid || creating">Create</button>
-            <button type="button" (click)="closeCreateModal()">Cancel</button>
+            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
 
-      <div *ngIf="editModal && editingCategory" class="modal">
-        <div class="modal-content">
-          <h2>Edit Category</h2>
+      <div *ngIf="editModal && editingCategory" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Category</h2>
           <form [formGroup]="editForm" (ngSubmit)="updateCategory()">
-            <div class="field">
-              <label>Status</label>
-              <select formControlName="status">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
+              <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="active">Active</option>
                 <option value="archived">Archived</option>
               </select>
             </div>
-            <div class="field">
-              <label>Sort Order</label>
-              <input type="number" formControlName="sortOrder" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
+              <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Name (en)</label>
-              <input formControlName="nameEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Name (en)</label>
+              <input formControlName="nameEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Slug (en)</label>
-              <input formControlName="slugEn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Slug (en)</label>
+              <input formControlName="slugEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Name (bn)</label>
-              <input formControlName="nameBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Name (bn)</label>
+              <input formControlName="nameBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Slug (bn)</label>
-              <input formControlName="slugBn" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Slug (bn)</label>
+              <input formControlName="slugBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <button type="submit" [disabled]="editForm.invalid || updating">Save</button>
-            <button type="button" (click)="closeEditModal()">Cancel</button>
+            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
+            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    button.danger { background: #dc3545; color: white; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    ul { list-style: none; padding: 0; }
-    .category-item { border: 1px solid #ddd; border-radius: 4px; padding: 0.75rem; margin-bottom: 0.5rem; background: #fff; }
-    .category-header { display: flex; justify-content: space-between; align-items: center; }
-    .status { font-size: 0.75rem; padding: 0.125rem 0.5rem; border-radius: 3px; background: #e9ecef; color: #495057; }
-    .status.active { background: #d4edda; color: #155724; }
-    .status.archived { background: #f8d7da; color: #721c24; }
-    .actions { display: flex; gap: 0.25rem; }
-    .children { margin-left: 1.5rem; margin-top: 0.5rem; padding-left: 1rem; border-left: 2px solid #ddd; }
-    .children li { padding: 0.25rem 0; color: #666; font-size: 0.9rem; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; }
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
-    .field input, .field select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .modal-content button { margin-right: 0.5rem; }
-    .modal-content button[type="submit"] { background: #007bff; color: white; }
   `,
 })
 export class CategoryListComponent implements OnInit {

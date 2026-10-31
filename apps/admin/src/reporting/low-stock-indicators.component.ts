@@ -26,62 +26,50 @@ export interface InventoryPage {
   standalone: true,
   imports: [CommonModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Low Stock
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Low Stock
       </nav>
 
-      <h1>Low Stock Indicators</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Low Stock Indicators</h1>
 
-      <div *ngIf="!auth.hasPermission('inventory.read')" class="error">
+      <div *ngIf="!auth.hasPermission('inventory.read')" class="text-[var(--color-danger)] mb-4">
         You do not have permission to view low-stock indicators.
       </div>
 
-      <div *ngIf="auth.hasPermission('inventory.read')" class="toolbar">
-        <button (click)="loadLowStock()">Refresh</button>
+      <div *ngIf="auth.hasPermission('inventory.read')" class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="loadLowStock()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Refresh</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="lowStockItems.length; else emptyState">
+      <table *ngIf="lowStockItems.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Variant ID</th>
-            <th>On Hand</th>
-            <th>Reserved</th>
-            <th>Available</th>
-            <th>Low Stock Threshold</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant ID</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">On Hand</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reserved</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Available</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Low Stock Threshold</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let item of lowStockItems">
-            <td>{{ item.variantId }}</td>
-            <td>{{ item.onHand }}</td>
-            <td>{{ item.reserved }}</td>
-            <td>{{ item.available }}</td>
-            <td>{{ item.lowStockThreshold }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.variantId }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.onHand }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.reserved }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.available }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.lowStockThreshold }}</td>
           </tr>
         </tbody>
       </table>
 
       <ng-template #emptyState>
-        <p>No low-stock variants found.</p>
+        <p class="text-[var(--color-text-muted)]">No low-stock variants found.</p>
       </ng-template>
 
-      <div *ngIf="loading">Loading...</div>
+      <div *ngIf="loading" class="text-[var(--color-text-muted)]">Loading...</div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
   `,
 })
 export class LowStockIndicatorsComponent implements OnInit {

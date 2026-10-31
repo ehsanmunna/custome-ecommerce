@@ -17,64 +17,48 @@ export interface AnalyticsOverview {
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Sales Metrics
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Sales Metrics
       </nav>
 
-      <h1>Sales Metrics</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Sales Metrics</h1>
 
-      <div *ngIf="!auth.hasPermission('analytics.read')" class="error">
+      <div *ngIf="!auth.hasPermission('analytics.read')" class="text-[var(--color-danger)] mb-4">
         You do not have permission to view sales metrics.
       </div>
 
-      <div *ngIf="auth.hasPermission('analytics.read')" class="toolbar">
-        <label>
-          From
-          <input type="datetime-local" [(ngModel)]="from" />
+      <div *ngIf="auth.hasPermission('analytics.read')" class="flex gap-2 mb-4 items-center flex-wrap">
+        <label class="flex items-center gap-1">
+          <span class="text-sm font-medium text-[var(--color-text-secondary)]">From</span>
+          <input type="datetime-local" [(ngModel)]="from" class="w-auto p-2 border border-[var(--color-border)] rounded-md ml-1" />
         </label>
-        <label>
-          To
-          <input type="datetime-local" [(ngModel)]="to" />
+        <label class="flex items-center gap-1">
+          <span class="text-sm font-medium text-[var(--color-text-secondary)]">To</span>
+          <input type="datetime-local" [(ngModel)]="to" class="w-auto p-2 border border-[var(--color-border)] rounded-md ml-1" />
         </label>
-        <button (click)="loadOverview()">Load</button>
+        <button (click)="loadOverview()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Load</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <div *ngIf="overview" class="metrics-grid">
-        <div class="metric-card">
-          <div class="metric-label">Total Orders</div>
-          <div class="metric-value">{{ overview.orderCount }}</div>
+      <div *ngIf="overview" class="flex gap-4">
+        <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-secondary)] flex-1">
+          <div class="text-[var(--color-text-muted)] text-xs font-medium mb-1">Total Orders</div>
+          <div class="text-xl font-semibold text-[var(--color-text)]">{{ overview.orderCount }}</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-label">Revenue</div>
-          <div class="metric-value">{{ (overview.revenue.amount / 100).toFixed(2) }} {{ overview.revenue.currency }}</div>
+        <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-secondary)] flex-1">
+          <div class="text-[var(--color-text-muted)] text-xs font-medium mb-1">Revenue</div>
+          <div class="text-xl font-semibold text-[var(--color-text)]">{{ (overview.revenue.amount / 100).toFixed(2) }} {{ overview.revenue.currency }}</div>
         </div>
-        <div class="metric-card">
-          <div class="metric-label">Average Order Value</div>
-          <div class="metric-value">{{ (overview.averageOrderValue.amount / 100).toFixed(2) }} {{ overview.averageOrderValue.currency }}</div>
+        <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-secondary)] flex-1">
+          <div class="text-[var(--color-text-muted)] text-xs font-medium mb-1">Average Order Value</div>
+          <div class="text-xl font-semibold text-[var(--color-text)]">{{ (overview.averageOrderValue.amount / 100).toFixed(2) }} {{ overview.averageOrderValue.currency }}</div>
         </div>
       </div>
 
-      <div *ngIf="loading">Loading...</div>
+      <div *ngIf="loading" class="text-[var(--color-text-muted)]">Loading...</div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    .toolbar label { font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 0.25rem; }
-    .toolbar input { padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    .metrics-grid { display: flex; gap: 1rem; }
-    .metric-card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; flex: 1; background: #fafafa; }
-    .metric-label { font-size: 0.85rem; color: #666; margin-bottom: 0.5rem; }
-    .metric-value { font-size: 1.5rem; font-weight: 600; color: #333; }
   `,
 })
 export class SalesMetricsComponent implements OnInit {

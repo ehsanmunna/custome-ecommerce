@@ -33,129 +33,107 @@ export interface ShippingZonePage {
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="page">
-      <nav class="navbar">
-        <a routerLink="/">Dashboard</a> &gt; Shipping Zones
+    <div class="p-4 max-w-[1000px] mx-auto">
+      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Shipping Zones
       </nav>
 
-      <h1>Shipping Zones</h1>
+      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Shipping Zones</h1>
 
-      <div class="toolbar">
-        <button class="primary" (click)="openCreateModal()" *ngIf="auth.hasPermission('shipping.zones.create')">+ New Zone</button>
+      <div class="flex gap-2 mb-4 items-center flex-wrap">
+        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('shipping.zones.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Zone</button>
       </div>
 
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
 
-      <table *ngIf="zones.length; else emptyState">
+      <table *ngIf="zones.length; else emptyState" class="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th>Code</th>
-            <th>Name</th>
-            <th>Fee (BDT)</th>
-            <th>Active</th>
-            <th>Districts</th>
-            <th>Actions</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Code</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Name</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Fee (BDT)</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Active</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Districts</th>
+            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let z of zones">
-            <td>{{ z.code }}</td>
-            <td>{{ z.name }}</td>
-            <td>{{ (z.fee / 100).toFixed(2) }}</td>
-            <td>{{ z.active ? 'Yes' : 'No' }}</td>
-            <td>{{ z.districts.join(', ') || '-' }}</td>
-            <td>
-              <button (click)="openEditModal(z)" *ngIf="auth.hasPermission('shipping.zones.update')">Edit</button>
-              <button class="danger" (click)="deleteZone(z.id)" *ngIf="auth.hasPermission('shipping.zones.delete')">Delete</button>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ z.code }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ z.name }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ (z.fee / 100).toFixed(2) }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ z.active ? 'Yes' : 'No' }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ z.districts.join(', ') || '-' }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <button (click)="openEditModal(z)" *ngIf="auth.hasPermission('shipping.zones.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
+              <button (click)="deleteZone(z.id)" *ngIf="auth.hasPermission('shipping.zones.delete')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
             </td>
           </tr>
         </tbody>
       </table>
 
       <ng-template #emptyState>
-        <p>No shipping zones found.</p>
+        <p class="text-[var(--color-text-muted)]">No shipping zones found.</p>
       </ng-template>
 
-      <div *ngIf="createModal" class="modal">
-        <div class="modal-content">
-          <h2>Create Shipping Zone</h2>
+      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Shipping Zone</h2>
           <form [formGroup]="createForm" (ngSubmit)="createZone()">
-            <div class="field">
-              <label>Code</label>
-              <input formControlName="code" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Code</label>
+              <input formControlName="code" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Name</label>
-              <input formControlName="name" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Name</label>
+              <input formControlName="name" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Fee (BDT)</label>
-              <input type="number" formControlName="fee" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Fee (BDT)</label>
+              <input type="number" formControlName="fee" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Active</label>
-              <select formControlName="active">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
+              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             </div>
-            <button type="submit" [disabled]="createForm.invalid || creating">Create</button>
-            <button type="button" (click)="closeCreateModal()">Cancel</button>
+            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
+            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
 
-      <div *ngIf="editModal && editingZone" class="modal">
-        <div class="modal-content">
-          <h2>Edit Shipping Zone</h2>
+      <div *ngIf="editModal && editingZone" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Shipping Zone</h2>
           <form [formGroup]="editForm" (ngSubmit)="updateZone()">
-            <div class="field">
-              <label>Code</label>
-              <input formControlName="code" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Code</label>
+              <input formControlName="code" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Name</label>
-              <input formControlName="name" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Name</label>
+              <input formControlName="name" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Fee (BDT)</label>
-              <input type="number" formControlName="fee" />
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Fee (BDT)</label>
+              <input type="number" formControlName="fee" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
             </div>
-            <div class="field">
-              <label>Active</label>
-              <select formControlName="active">
+            <div class="mb-3">
+              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
+              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
                 <option value="true">Yes</option>
                 <option value="false">No</option>
               </select>
             </div>
-            <button type="submit" [disabled]="editForm.invalid || updating">Save</button>
-            <button type="button" (click)="closeEditModal()">Cancel</button>
+            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
+            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
           </form>
         </div>
       </div>
     </div>
-  `,
-  styles: `
-    .page { padding: 1rem; max-width: 1000px; margin: 0 auto; }
-    .navbar { margin-bottom: 1rem; font-size: 0.9rem; color: #666; }
-    .navbar a { color: #007bff; text-decoration: none; }
-    h1 { margin-top: 0; }
-    .toolbar { display: flex; gap: 0.5rem; margin-bottom: 1rem; align-items: center; flex-wrap: wrap; }
-    button { padding: 0.5rem 1rem; border: none; border-radius: 4px; cursor: pointer; }
-    button.primary { background: #007bff; color: white; }
-    button.danger { background: #dc3545; color: white; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
-    th, td { border: 1px solid #ddd; padding: 0.5rem; text-align: left; }
-    th { background: #f5f5f5; }
-    .error { color: #dc3545; margin-bottom: 1rem; }
-    .modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 1.5rem; border-radius: 8px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; }
-    .modal-content h2 { margin-top: 0; }
-    .field { margin-bottom: 0.75rem; }
-    .field label { display: block; margin-bottom: 0.25rem; font-weight: 500; font-size: 0.9rem; }
-    .field input, .field select { width: 100%; padding: 0.5rem; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
-    .modal-content button { margin-right: 0.5rem; }
-    .modal-content button[type="submit"] { background: #007bff; color: white; }
   `,
 })
 export class ShippingZoneListComponent implements OnInit {
