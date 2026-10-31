@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -108,9 +108,6 @@ export interface VariantPage {
   `,
 })
 export class InventoryListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly config: AdminAuthConfig;
 
   inventory: InventoryItem[] = [];
   variantSkus: Record<string, string> = {};
@@ -120,13 +117,10 @@ export class InventoryListComponent implements OnInit {
   error: string | null = null;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.config = configOrInjector;
   }
 
   async ngOnInit(): Promise<void> {
@@ -138,7 +132,7 @@ export class InventoryListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/admin/inventory`);
+      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
       if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
       const res = await this.http.get<InventoryPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
@@ -155,7 +149,7 @@ export class InventoryListComponent implements OnInit {
   async loadVariantSkus(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<VariantPage>(`${this.config.apiBaseUrl}/admin/products`, {
+      const res = await this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);

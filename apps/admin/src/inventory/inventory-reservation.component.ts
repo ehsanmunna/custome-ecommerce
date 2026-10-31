@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -144,10 +144,6 @@ export interface ReservationInput {
   `,
 })
 export class InventoryReservationComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   reservations: Reservation[] = [];
 
@@ -160,15 +156,11 @@ export class InventoryReservationComponent implements OnInit {
   createForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       variantId: ['', Validators.required],
       quantity: [1, [Validators.required, Validators.min(1)]],
@@ -186,7 +178,7 @@ export class InventoryReservationComponent implements OnInit {
     this.success = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/admin/inventory/reservations`, {
+      const res = await this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.reservations = res?.items ?? [];
@@ -213,7 +205,7 @@ export class InventoryReservationComponent implements OnInit {
         body.expiresAt = value.expiresAt;
       }
       await this.http.post(
-        `${this.config.apiBaseUrl}/admin/inventory/reservations`,
+        `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
@@ -242,7 +234,7 @@ export class InventoryReservationComponent implements OnInit {
     try {
       const token = this.auth.token;
       await this.http.patch(
-        `${this.config.apiBaseUrl}/admin/inventory/reservations/${reservationId}/status`,
+        `${this.config.apiBaseUrl}/v1/admin/inventory/reservations/${reservationId}/status`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();

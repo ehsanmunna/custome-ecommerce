@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -171,10 +171,6 @@ export interface MediaUploadCompleteRequest {
   `,
 })
 export class MediaListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   media: MediaAsset[] = [];
 
@@ -191,15 +187,11 @@ export class MediaListComponent implements OnInit {
   completeForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       fileName: ['', Validators.required],
       mimeType: ['image/jpeg', Validators.required],
@@ -221,7 +213,7 @@ export class MediaListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<MediaPage>(`${this.config.apiBaseUrl}/admin/media`, {
+      const res = await this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.media = res?.items ?? [];
@@ -257,7 +249,7 @@ export class MediaListComponent implements OnInit {
         body.alt = { en: value.altEn };
       }
       const res = await this.http.post<MediaAsset>(
-        `${this.config.apiBaseUrl}/admin/media`,
+        `${this.config.apiBaseUrl}/v1/admin/media`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
@@ -288,7 +280,7 @@ export class MediaListComponent implements OnInit {
       if (value.width) body.width = Number(value.width);
       if (value.height) body.height = Number(value.height);
       await this.http.post(
-        `${this.config.apiBaseUrl}/admin/media/${this.pendingMedia.id}/complete`,
+        `${this.config.apiBaseUrl}/v1/admin/media/${this.pendingMedia.id}/complete`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
@@ -306,7 +298,7 @@ export class MediaListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/media/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/media/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadMedia();

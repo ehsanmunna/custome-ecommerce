@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
@@ -85,9 +85,6 @@ export interface InventoryPage {
   `,
 })
 export class LowStockIndicatorsComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly config: { apiBaseUrl: string };
 
   lowStockItems: InventoryItem[] = [];
 
@@ -95,14 +92,10 @@ export class LowStockIndicatorsComponent implements OnInit {
   error: string | null = null;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    configOrInjector: { apiBaseUrl: string } = inject(ADMIN_AUTH_CONFIG),
-  ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.config = configOrInjector;
-  }
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
+  ) {}
 
   async ngOnInit(): Promise<void> {
     await this.loadLowStock();
@@ -113,7 +106,7 @@ export class LowStockIndicatorsComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/admin/inventory`);
+      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
       url.searchParams.set('lowStock', 'true');
       const res = await this.http.get<InventoryPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },

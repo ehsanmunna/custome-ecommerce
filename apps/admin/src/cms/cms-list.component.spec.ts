@@ -97,7 +97,7 @@ describe('PageListComponent', () => {
   });
 
   it('should load CMS pages successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/pages`, {
+    http.setResponse(`${baseUrl}/v1/admin/pages`, {
       items: [
         {
           id: 'page-1',
@@ -118,7 +118,7 @@ describe('PageListComponent', () => {
   });
 
   it('should create a CMS page successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/pages`, { id: 'page-new', content: { en: { slug: 'contact', title: 'Contact', status: 'draft' } } });
+    http.setResponse(`${baseUrl}/v1/admin/pages`, { id: 'page-new', content: { en: { slug: 'contact', title: 'Contact', status: 'draft' } } });
 
     component.createForm.setValue({
       titleEn: 'Contact',
@@ -131,14 +131,14 @@ describe('PageListComponent', () => {
     });
     await component.createPage();
 
-    const req = http.getLastRequest('POST', `${baseUrl}/admin/pages`);
+    const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/pages`);
     expect(req).toBeDefined();
     expect(req!.body.content.en.slug).toBe('contact');
     expect(component.error).toBeNull();
   });
 
   it('should reject CMS page with missing slug', async () => {
-    http.setError(`${baseUrl}/admin/pages`, new Error('Slug is required'));
+    http.setError(`${baseUrl}/v1/admin/pages`, new Error('Slug is required'));
 
     component.createForm.setValue({
       titleEn: 'No Slug',
@@ -156,7 +156,7 @@ describe('PageListComponent', () => {
   });
 
   it('should handle permission-denied page creation', async () => {
-    http.setError(`${baseUrl}/admin/pages`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/pages`, new Error('Forbidden: insufficient permissions'));
 
     component.createForm.setValue({
       titleEn: 'Restricted',
@@ -173,13 +173,13 @@ describe('PageListComponent', () => {
   });
 
   it('should delete a CMS page successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/pages`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/pages`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setResponse(`${baseUrl}/admin/pages/page-1`, null);
+    http.setResponse(`${baseUrl}/v1/admin/pages/page-1`, null);
     await component.deletePage('page-1');
 
-    const req = http.getLastRequest('DELETE', `${baseUrl}/admin/pages/page-1`);
+    const req = http.getLastRequest('DELETE', `${baseUrl}/v1/admin/pages/page-1`);
     expect(req).toBeDefined();
   });
 });
@@ -203,7 +203,7 @@ describe('BannerListComponent', () => {
   });
 
   it('should load banners successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/banners`, {
+    http.setResponse(`${baseUrl}/v1/admin/banners`, {
       items: [
         {
           id: 'banner-1',
@@ -225,7 +225,7 @@ describe('BannerListComponent', () => {
   });
 
   it('should create a banner successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/banners`, {
+    http.setResponse(`${baseUrl}/v1/admin/banners`, {
       id: 'banner-new',
       placement: 'sidebar',
       sortOrder: 2,
@@ -247,7 +247,7 @@ describe('BannerListComponent', () => {
     });
     await component.createBanner();
 
-    const req = http.getLastRequest('POST', `${baseUrl}/admin/banners`);
+    const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/banners`);
     expect(req).toBeDefined();
     expect(req!.body.placement).toBe('sidebar');
     expect(req!.body.content.en.title).toBe('Sidebar Promo');
@@ -255,7 +255,7 @@ describe('BannerListComponent', () => {
   });
 
   it('should reject banner with missing placement', async () => {
-    http.setError(`${baseUrl}/admin/banners`, new Error('Placement is required'));
+    http.setError(`${baseUrl}/v1/admin/banners`, new Error('Placement is required'));
 
     component.createForm.setValue({
       placement: '',
@@ -276,7 +276,7 @@ describe('BannerListComponent', () => {
   });
 
   it('should handle permission-denied banner creation', async () => {
-    http.setError(`${baseUrl}/admin/banners`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/banners`, new Error('Forbidden: insufficient permissions'));
 
     component.createForm.setValue({
       placement: 'restricted',
@@ -296,13 +296,13 @@ describe('BannerListComponent', () => {
   });
 
   it('should delete a banner successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/banners`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/banners`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setResponse(`${baseUrl}/admin/banners/banner-1`, null);
+    http.setResponse(`${baseUrl}/v1/admin/banners/banner-1`, null);
     await component.deleteBanner('banner-1');
 
-    const req = http.getLastRequest('DELETE', `${baseUrl}/admin/banners/banner-1`);
+    const req = http.getLastRequest('DELETE', `${baseUrl}/v1/admin/banners/banner-1`);
     expect(req).toBeDefined();
   });
 });

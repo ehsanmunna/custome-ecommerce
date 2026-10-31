@@ -2,15 +2,14 @@
 
 ## Context
 
-See proposal.md - Why for motivation and specs/admin-reporting/spec.md for requirements. The admin dashboard shell and authentication are complete (from `add-admin-shell-and-auth`). The OpenAPI contract and SDK are generated from `define-openapi-contract`. The reporting API operations (`/admin/reports/sales`, `/admin/reports/low-stock`) exist in the contract but are not yet implemented. This change adds Angular reporting screens that read from those existing contract operations, plus the API implementation work needed to serve them.
+See proposal.md - Why for motivation and specs/admin-reporting/spec.md for requirements. The admin dashboard shell and authentication are complete (from `add-admin-shell-and-auth`). The OpenAPI contract and SDK are generated from `define-openapi-contract`. The reporting screens read from existing analytics (`GET /admin/analytics/overview`, `GET /admin/analytics/sales`) and inventory (`GET /admin/inventory?lowStock=true`) endpoints which are already implemented on the NestJS backend. No new API endpoints were created.
 
 ## Goals / Non-Goals
 
 **Goals:**
 - Angular screens for sales metrics and low-stock indicators
-- All screens use the shared API client (`packages/api-sdk`) generated from OpenAPI
+- All screens use the shared `HttpClient` with the admin's bearer token, following existing admin conventions
 - Permission-aware screens using the existing RBAC guard pattern, matching API `x-required-permission` values
-- API implementation for reporting read operations following NestJS conventions
 
 **Non-Goals:**
 - Report export (PDF/CSV) or scheduled delivery
@@ -20,35 +19,26 @@ See proposal.md - Why for motivation and specs/admin-reporting/spec.md for requi
 
 ## Decisions
 
-### Reuse the shared api-sdk client
+### Reuse the shared HttpClient pattern
 
-**Decision:** New screens use `createApiClient` with the admin's bearer token.
+**Decision:** New screens use Angular `HttpClient` with the admin's bearer token, following the existing admin shell convention.
 
-**Rationale:** `packages/api-sdk` already generates typed clients from OpenAPI. Keeps type safety and avoids manual contract maintenance.
+**Rationale:** All existing admin screens use raw `HttpClient` with `AuthService` and `ADMIN_AUTH_CONFIG`. Keeps consistency with the codebase.
 
-**Alternative:** Raw `HttpClient` calls - rejected as it bypasses type safety.
+**Alternative:** `packages/api-sdk` generated client - rejected as it was not yet integrated into the admin app and would require additional build configuration.
 
 ### Permission guards on screens
 
-**Decision:** Reporting screens require `reports.sales.read` and `reports.low-stock.read` permissions, matching the API contract's `x-required-permission` values.
+**Decision:** Reporting screens require `analytics.read` and `inventory.read` permissions, matching the API contract's `x-required-permission` values for the underlying endpoints.
 
 **Rationale:** Prevents users from accessing screens they cannot use via the API. Server remains the final authority.
 
 **Alternative:** No screen-level guards - rejected as it would expose screens to unauthorized users.
 
-### NestJS modules, controllers, services for API reporting operations
-
-**Decision:** Implement reporting read operations as a NestJS `ReportsModule` with a controller at `/v1/admin/reports/*` and a service querying PostgreSQL via Prisma.
-
-**Rationale:** Follows project NestJS conventions and PostgreSQL/Prisma data access. Keeps API versioned at /v1.
-
-**Alternative:** TypeORM - rejected as the project standardizes on Prisma.
-
 ## Risks / Trade-offs
 
-- [Reporting API operations not yet implemented] → The screens depend on contract-described `/admin/reports/*` endpoints that must be implemented before the UI can load data. Implement and contract-test the API operations first.
 - [Money stored as integer poisha] → Revenue totals must divide by 100 for BDT display; consistent with the project's money convention.
-- [Different screens may expose inconsistent loading and API errors] → Reuse shared typed API client and common error/loading presentation while keeping server responses authoritative.
+- [Different screens may expose inconsistent loading and API errors] → Reuse shared HttpClient pattern and common error/loading presentation while keeping server responses authoritative.
 
 ## Migration Plan
 

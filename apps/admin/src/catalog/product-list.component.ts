@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -94,12 +94,12 @@ export interface BrandPage {
         </thead>
         <tbody>
           <tr *ngFor="let p of products">
-            <td>{{ p.content?.['en']?.name || p.content?.['bn']?.name }}</td>
-            <td>{{ p.variants?.[0]?.sku || '-' }}</td>
+            <td>{{ p.content['en']?.name || p.content['bn']?.name }}</td>
+            <td>{{ p.variants[0].sku || '-' }}</td>
             <td>{{ categoryNames[p.categoryId] || p.categoryId }}</td>
             <td>{{ brandNames[p.brandId || ''] || '-' }}</td>
             <td>{{ p.status }}</td>
-            <td>{{ p.variants?.[0]?.price?.toFixed(2) || '-' }}</td>
+            <td>{{ p.variants[0].price.toFixed(2) || '-' }}</td>
             <td>
               <button (click)="openEditModal(p)" *ngIf="auth.hasPermission('catalog.products.update')">Edit</button>
               <button class="danger" (click)="deleteProduct(p.id)" *ngIf="auth.hasPermission('catalog.products.delete')">Delete</button>
@@ -119,14 +119,14 @@ export interface BrandPage {
             <div class="field">
               <label>Category</label>
               <select formControlName="categoryId">
-                <option *ngFor="let c of categories" [value]="c.id">{{ c.content?.['en']?.name || c.content?.['bn']?.name }}</option>
+                <option *ngFor="let c of categories" [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name }}</option>
               </select>
             </div>
             <div class="field">
               <label>Brand</label>
               <select formControlName="brandId">
                 <option value="">None</option>
-                <option *ngFor="let b of brands" [value]="b.id">{{ b.content?.['en']?.name || b.content?.['bn']?.name }}</option>
+                <option *ngFor="let b of brands" [value]="b.id">{{ b.content['en']?.name || b.content['bn']?.name }}</option>
               </select>
             </div>
             <div class="field">
@@ -211,10 +211,6 @@ export interface BrandPage {
   `,
 })
 export class ProductListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   products: Product[] = [];
   categories: Category[] = [];
@@ -236,15 +232,11 @@ export class ProductListComponent implements OnInit {
   editForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       categoryId: ['', Validators.required],
       brandId: [''],
@@ -272,7 +264,7 @@ export class ProductListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/admin/products`);
+      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
       if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
       const res = await this.http.get<ProductPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
@@ -288,7 +280,7 @@ export class ProductListComponent implements OnInit {
   async loadCategories(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/admin/categories`, {
+      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.categories = res?.items ?? [];
@@ -304,7 +296,7 @@ export class ProductListComponent implements OnInit {
   async loadBrands(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/admin/brands`, {
+      const res = await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.brands = res?.items ?? [];
@@ -351,7 +343,7 @@ export class ProductListComponent implements OnInit {
           },
         ],
       };
-      await this.http.post(`${this.config.apiBaseUrl}/admin/products`, body, {
+      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/products`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeCreateModal();
@@ -394,7 +386,7 @@ export class ProductListComponent implements OnInit {
           },
         },
       };
-      await this.http.patch(`${this.config.apiBaseUrl}/admin/products/${this.editingProduct.id}`, body, {
+      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/products/${this.editingProduct.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeEditModal();
@@ -411,7 +403,7 @@ export class ProductListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/products/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadProducts();

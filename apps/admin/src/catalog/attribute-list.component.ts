@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -56,7 +56,7 @@ export interface AttributeDefinitionPage {
         <label>Category</label>
         <select [(ngModel)]="selectedCategoryId" (change)="loadAttributes()">
           <option value="">Select a category</option>
-          <option *ngFor="let c of categories" [value]="c.id">{{ c.content?.['en']?.name || c.content?.['bn']?.name || c.id }}</option>
+          <option *ngFor="let c of categories" [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</option>
         </select>
         <button class="primary" (click)="openCreateModal()" [disabled]="!selectedCategoryId" *ngIf="auth.hasPermission('catalog.attributes.create')">+ New Attribute</button>
       </div>
@@ -170,10 +170,6 @@ export interface AttributeDefinitionPage {
   `,
 })
 export class AttributeListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   categories: Category[] = [];
   attributes: AttributeDefinition[] = [];
@@ -188,15 +184,11 @@ export class AttributeListComponent implements OnInit {
   createForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       key: ['', [Validators.required, Validators.pattern('^[a-z][a-z0-9_]*$')]],
       valueType: ['text', Validators.required],
@@ -214,7 +206,7 @@ export class AttributeListComponent implements OnInit {
   async loadCategories(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/admin/categories`, {
+      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.categories = res?.items ?? [];
@@ -233,7 +225,7 @@ export class AttributeListComponent implements OnInit {
     try {
       const token = this.auth.token;
       const res = await this.http.get<AttributeDefinitionPage>(
-        `${this.config.apiBaseUrl}/admin/categories/${this.selectedCategoryId}/attributes`,
+        `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
       this.attributes = res?.items ?? [];
@@ -271,7 +263,7 @@ export class AttributeListComponent implements OnInit {
         body.options = value.options.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
       }
       await this.http.post(
-        `${this.config.apiBaseUrl}/admin/categories/${this.selectedCategoryId}/attributes`,
+        `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();

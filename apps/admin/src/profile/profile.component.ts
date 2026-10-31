@@ -1,9 +1,11 @@
 import { Component, inject, OnInit } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { AuthService } from '../auth/auth.service';
 
 @Component({
   selector: 'app-profile',
   standalone: true,
+  imports: [CommonModule],
   template: `
     <div class="profile" *ngIf="user; else loading">
       <h1>Profile</h1>
@@ -11,7 +13,7 @@ import { AuthService } from '../auth/auth.service';
       <p><strong>Display name:</strong> {{ user.displayName }}</p>
       <p><strong>Status:</strong> {{ user.status }}</p>
       <p><strong>Role:</strong> {{ user.role }}</p>
-      <p><strong>Permissions:</strong> {{ user.permissions.join(', ') }}</p>
+      <p><strong>Permissions:</strong> {{ (user.permissions || []).join(', ') }}</p>
       <button (click)="logout()">Sign out</button>
     </div>
     <ng-template #loading><p>Loading profile...</p></ng-template>

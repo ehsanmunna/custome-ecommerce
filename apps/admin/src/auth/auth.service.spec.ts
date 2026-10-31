@@ -80,10 +80,10 @@ describe('AuthService', () => {
   });
 
   afterEach(() => {
-    const lastLogin = http.getLastRequest('POST', `${baseUrl}/admin/auth/login`);
-    const lastRefresh = http.getLastRequest('POST', `${baseUrl}/admin/auth/refresh`);
-    const lastLogout = http.getLastRequest('POST', `${baseUrl}/admin/auth/logout`);
-    const lastMe = http.getLastRequest('GET', `${baseUrl}/admin/auth/me`);
+    const lastLogin = http.getLastRequest('POST', `${baseUrl}/v1/admin/auth/login`);
+    const lastRefresh = http.getLastRequest('POST', `${baseUrl}/v1/admin/auth/refresh`);
+    const lastLogout = http.getLastRequest('POST', `${baseUrl}/v1/admin/auth/logout`);
+    const lastMe = http.getLastRequest('GET', `${baseUrl}/v1/admin/auth/me`);
     if (lastLogin) expect(lastLogin.method).toBe('POST');
     if (lastRefresh) expect(lastRefresh.method).toBe('POST');
     if (lastLogout) expect(lastLogout.method).toBe('POST');
@@ -91,7 +91,7 @@ describe('AuthService', () => {
   });
 
   it('should login successfully and store tokens', async () => {
-    http.setResponse(`${baseUrl}/admin/auth/login`, {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
       accessToken: 'access-token-123',
       refreshToken: 'refresh-token-123',
       expiresIn: 3600,
@@ -117,7 +117,7 @@ describe('AuthService', () => {
 
   it('should refresh tokens successfully', async () => {
     // First login to set refresh token
-    http.setResponse(`${baseUrl}/admin/auth/login`, {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
       accessToken: 'access-token-1',
       refreshToken: 'refresh-token-1',
       expiresIn: 3600,
@@ -133,7 +133,7 @@ describe('AuthService', () => {
     await service.login('admin@example.com', 'password123');
 
     // Now refresh
-    http.setResponse(`${baseUrl}/admin/auth/refresh`, {
+    http.setResponse(`${baseUrl}/v1/admin/auth/refresh`, {
       accessToken: 'access-token-2',
       refreshToken: 'refresh-token-2',
       expiresIn: 3600,
@@ -147,7 +147,7 @@ describe('AuthService', () => {
 
   it('should load current user via me endpoint', async () => {
     // Login first
-    http.setResponse(`${baseUrl}/admin/auth/login`, {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
       accessToken: 'access-token-123',
       refreshToken: 'refresh-token-123',
       expiresIn: 3600,
@@ -163,7 +163,7 @@ describe('AuthService', () => {
     await service.login('admin@example.com', 'password123');
 
     // Call me
-    http.setResponse(`${baseUrl}/admin/auth/me`, {
+    http.setResponse(`${baseUrl}/v1/admin/auth/me`, {
       user: {
         id: 'user-1',
         email: 'admin@example.com',
@@ -181,7 +181,7 @@ describe('AuthService', () => {
 
   it('should clear tokens on logout', async () => {
     // Login first
-    http.setResponse(`${baseUrl}/admin/auth/login`, {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
       accessToken: 'access-token-123',
       refreshToken: 'refresh-token-123',
       expiresIn: 3600,
@@ -197,7 +197,7 @@ describe('AuthService', () => {
     await service.login('admin@example.com', 'password123');
 
     // Logout
-    http.setResponse(`${baseUrl}/admin/auth/logout`, null);
+    http.setResponse(`${baseUrl}/v1/admin/auth/logout`, null);
     await service.logout();
 
     expect(service.isAuthenticated).toBe(false);
@@ -214,7 +214,7 @@ describe('AuthService', () => {
   });
 
   it('should throw on login failure', async () => {
-    http.setResponse(`${baseUrl}/admin/auth/login`, new Error('Invalid credentials'));
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, new Error('Invalid credentials'));
 
     await expect(service.login('admin@example.com', 'wrong-password')).rejects.toThrow();
   });

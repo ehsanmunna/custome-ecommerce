@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -158,10 +158,6 @@ export interface OrderDetail {
   `,
 })
 export class OrderDetailComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly config: AdminAuthConfig;
-  private readonly route: ActivatedRoute;
 
   orderId = '';
   order: OrderDetail | null = null;
@@ -170,15 +166,11 @@ export class OrderDetailComponent implements OnInit {
   error: string | null = null;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
-    routeOrInjector: ActivatedRoute = inject(ActivatedRoute),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.config = configOrInjector;
-    this.route = routeOrInjector;
     this.orderId = this.route.snapshot.paramMap.get('orderId') || '';
   }
 
@@ -196,7 +188,7 @@ export class OrderDetailComponent implements OnInit {
     try {
       const token = this.auth.token;
       const res = await this.http.get<OrderDetail>(
-        `${this.config.apiBaseUrl}/admin/orders/${this.orderId}`,
+        `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
       this.order = res ?? null;

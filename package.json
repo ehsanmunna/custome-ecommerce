@@ -26,6 +26,7 @@
     "db:generate": "pnpm --filter database db:generate",
     "version:generate": "pnpm --filter database version:generate",
     "dev:api": "pnpm --filter api start:dev",
+    "dev:admin": "pnpm --filter admin start:dev",
     "contract:lint": "redocly lint apps/api/openapi/openapi.yaml",
     "contract:check": "node scripts/contract-check.mjs",
     "contract:test": "node --test scripts/contract-check.test.mjs"
