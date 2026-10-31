@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -195,10 +195,6 @@ export interface CouponPage {
   `,
 })
 export class CouponListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: { apiBaseUrl: string };
 
   coupons: Coupon[] = [];
 
@@ -215,15 +211,11 @@ export class CouponListComponent implements OnInit {
   editForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: { apiBaseUrl: string } = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       code: ['', Validators.required],
       discountType: ['percentage'],
@@ -253,7 +245,7 @@ export class CouponListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CouponPage>(`${this.config.apiBaseUrl}/admin/coupons`, {
+      const res = await this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.coupons = res?.items ?? [];
@@ -297,7 +289,7 @@ export class CouponListComponent implements OnInit {
         expiresAt: value.expiresAt,
         active: value.active === true || value.active === 'true',
       };
-      await this.http.post(`${this.config.apiBaseUrl}/admin/coupons`, body, {
+      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/coupons`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeCreateModal();
@@ -344,7 +336,7 @@ export class CouponListComponent implements OnInit {
         expiresAt: value.expiresAt,
         active: value.active === true || value.active === 'true',
       };
-      await this.http.patch(`${this.config.apiBaseUrl}/admin/coupons/${this.editingCoupon.id}`, body, {
+      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/coupons/${this.editingCoupon.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeEditModal();
@@ -361,7 +353,7 @@ export class CouponListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/coupons/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/coupons/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadCoupons();

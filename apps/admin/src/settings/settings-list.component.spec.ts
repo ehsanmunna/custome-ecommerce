@@ -98,7 +98,7 @@ describe('ShippingZoneListComponent', () => {
   });
 
   it('should load shipping zones successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/shipping/zones`, {
+    http.setResponse(`${baseUrl}/v1/admin/shipping/zones`, {
       items: [
         { id: 'zone-1', code: 'DHAKA', name: 'Dhaka Zone', fee: 10000, active: true, districts: ['Dhaka'] },
       ],
@@ -114,19 +114,19 @@ describe('ShippingZoneListComponent', () => {
   });
 
   it('should create a shipping zone successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/shipping/zones`, { id: 'zone-new', code: 'CTG', name: 'Chittagong', fee: 15000, active: true, districts: ['Ctg'] });
+    http.setResponse(`${baseUrl}/v1/admin/shipping/zones`, { id: 'zone-new', code: 'CTG', name: 'Chittagong', fee: 15000, active: true, districts: ['Ctg'] });
 
     component.createForm.setValue({ code: 'CTG', name: 'Chittagong', fee: 150, active: true });
     await component.createZone();
 
-    const req = http.getLastRequest('POST', `${baseUrl}/admin/shipping/zones`);
+    const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/shipping/zones`);
     expect(req).toBeDefined();
     expect(req!.body.fee).toBe(15000);
     expect(component.error).toBeNull();
   });
 
   it('should reject duplicate shipping zone code', async () => {
-    http.setError(`${baseUrl}/admin/shipping/zones`, new Error('Zone code already exists'));
+    http.setError(`${baseUrl}/v1/admin/shipping/zones`, new Error('Zone code already exists'));
 
     component.createForm.setValue({ code: 'DHAKA', name: 'Dhaka Zone', fee: 100, active: true });
     await component.createZone();
@@ -135,13 +135,13 @@ describe('ShippingZoneListComponent', () => {
   });
 
   it('should delete a shipping zone successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/shipping/zones`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/shipping/zones`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setResponse(`${baseUrl}/admin/shipping/zones/zone-1`, null);
+    http.setResponse(`${baseUrl}/v1/admin/shipping/zones/zone-1`, null);
     await component.deleteZone('zone-1');
 
-    const req = http.getLastRequest('DELETE', `${baseUrl}/admin/shipping/zones/zone-1`);
+    const req = http.getLastRequest('DELETE', `${baseUrl}/v1/admin/shipping/zones/zone-1`);
     expect(req).toBeDefined();
   });
 });
@@ -165,7 +165,7 @@ describe('CouponListComponent', () => {
   });
 
   it('should load coupons successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/coupons`, {
+    http.setResponse(`${baseUrl}/v1/admin/coupons`, {
       items: [
         {
           id: 'coupon-1',
@@ -190,7 +190,7 @@ describe('CouponListComponent', () => {
   });
 
   it('should create a coupon successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/coupons`, { id: 'coupon-new', code: 'WELCOME', discountType: 'fixed', discountValue: 50, minimumOrder: 50000, startsAt: '2026-01-01T00:00:00Z', expiresAt: '2026-12-31T23:59:59Z', active: true });
+    http.setResponse(`${baseUrl}/v1/admin/coupons`, { id: 'coupon-new', code: 'WELCOME', discountType: 'fixed', discountValue: 50, minimumOrder: 50000, startsAt: '2026-01-01T00:00:00Z', expiresAt: '2026-12-31T23:59:59Z', active: true });
 
     component.createForm.setValue({
       code: 'WELCOME',
@@ -203,14 +203,14 @@ describe('CouponListComponent', () => {
     });
     await component.createCoupon();
 
-    const req = http.getLastRequest('POST', `${baseUrl}/admin/coupons`);
+    const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/coupons`);
     expect(req).toBeDefined();
     expect(req!.body.minimumOrder).toBe(50000);
     expect(component.error).toBeNull();
   });
 
   it('should reject invalid coupon date range', async () => {
-    http.setError(`${baseUrl}/admin/coupons`, new Error('Expiry date must be later than start date'));
+    http.setError(`${baseUrl}/v1/admin/coupons`, new Error('Expiry date must be later than start date'));
 
     component.createForm.setValue({
       code: 'BAD',
@@ -227,7 +227,7 @@ describe('CouponListComponent', () => {
   });
 
   it('should handle permission-denied coupon creation', async () => {
-    http.setError(`${baseUrl}/admin/coupons`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/coupons`, new Error('Forbidden: insufficient permissions'));
 
     component.createForm.setValue({
       code: 'NOPE',
@@ -244,13 +244,13 @@ describe('CouponListComponent', () => {
   });
 
   it('should delete a coupon successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/coupons`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/coupons`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setResponse(`${baseUrl}/admin/coupons/coupon-1`, null);
+    http.setResponse(`${baseUrl}/v1/admin/coupons/coupon-1`, null);
     await component.deleteCoupon('coupon-1');
 
-    const req = http.getLastRequest('DELETE', `${baseUrl}/admin/coupons/coupon-1`);
+    const req = http.getLastRequest('DELETE', `${baseUrl}/v1/admin/coupons/coupon-1`);
     expect(req).toBeDefined();
   });
 });

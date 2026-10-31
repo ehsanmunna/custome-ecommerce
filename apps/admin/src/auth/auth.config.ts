@@ -14,12 +14,12 @@ export interface AdminAuthConfig {
 export const ADMIN_AUTH_CONFIG = new InjectionToken<AdminAuthConfig>('ADMIN_AUTH_CONFIG');
 
 export const defaultAdminAuthConfig: AdminAuthConfig = {
-  apiBaseUrl: '',
+  apiBaseUrl: 'http://localhost:3000',
   brandName: 'Admin',
-  loginPath: '/admin/auth/login',
-  logoutPath: '/admin/auth/logout',
-  refreshPath: '/admin/auth/refresh',
-  mePath: '/admin/auth/me',
+  loginPath: '/v1/admin/auth/login',
+  logoutPath: '/v1/admin/auth/logout',
+  refreshPath: '/v1/admin/auth/refresh',
+  mePath: '/v1/admin/auth/me',
   tokenStorageKey: 'admin_access_token',
   refreshStorageKey: 'admin_refresh_token',
 };

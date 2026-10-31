@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -144,9 +144,6 @@ const ORDER_STATUSES = [
   `,
 })
 export class OrderListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly config: AdminAuthConfig;
 
   orders: Order[] = [];
   orderStatuses = ORDER_STATUSES;
@@ -159,13 +156,10 @@ export class OrderListComponent implements OnInit {
   error: string | null = null;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.config = configOrInjector;
   }
 
   async ngOnInit(): Promise<void> {
@@ -177,7 +171,7 @@ export class OrderListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/admin/orders`);
+      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/orders`);
       if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
       if (this.createdFrom) url.searchParams.set('createdFrom', this.createdFrom);
       if (this.createdTo) url.searchParams.set('createdTo', this.createdTo);

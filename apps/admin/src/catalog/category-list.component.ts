@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -49,7 +49,7 @@ export interface CategoryPage {
       <ul *ngIf="rootCategories.length; else emptyState">
         <li *ngFor="let c of rootCategories" class="category-item">
           <div class="category-header">
-            <span>{{ c.content?.['en']?.name || c.content?.['bn']?.name || c.id }}</span>
+            <span>{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</span>
             <span class="status {{ c.status }}">{{ c.status }}</span>
             <div class="actions">
               <button (click)="openEditModal(c)" *ngIf="auth.hasPermission('catalog.categories.update')">Edit</button>
@@ -59,7 +59,7 @@ export interface CategoryPage {
           </div>
           <ul *ngIf="expanded[c.id]" class="children">
             <li *ngFor="let child of childrenOf(c.id)">
-              {{ child.content?.['en']?.name || child.content?.['bn']?.name || child.id }}
+              {{ child.content['en']?.name || child.content['bn']?.name || child.id }}
             </li>
           </ul>
         </li>
@@ -77,7 +77,7 @@ export interface CategoryPage {
               <label>Parent Category</label>
               <select formControlName="parentId">
                 <option value="">None (root)</option>
-                <option *ngFor="let c of categories" [value]="c.id">{{ c.content?.['en']?.name || c.content?.['bn']?.name || c.id }}</option>
+                <option *ngFor="let c of categories" [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</option>
               </select>
             </div>
             <div class="field">
@@ -181,10 +181,6 @@ export interface CategoryPage {
   `,
 })
 export class CategoryListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   categories: Category[] = [];
   rootCategories: Category[] = [];
@@ -203,15 +199,11 @@ export class CategoryListComponent implements OnInit {
   editForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       parentId: [''],
       status: ['active'],
@@ -240,7 +232,7 @@ export class CategoryListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/admin/categories`, {
+      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.categories = res?.items ?? [];
@@ -295,7 +287,7 @@ export class CategoryListComponent implements OnInit {
       if (value.nameBn || value.slugBn) {
         body.content.bn = { name: value.nameBn, slug: value.slugBn };
       }
-      await this.http.post(`${this.config.apiBaseUrl}/admin/categories`, body, {
+      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/categories`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeCreateModal();
@@ -342,7 +334,7 @@ export class CategoryListComponent implements OnInit {
       if (value.nameBn || value.slugBn) {
         body.content.bn = { name: value.nameBn, slug: value.slugBn };
       }
-      await this.http.patch(`${this.config.apiBaseUrl}/admin/categories/${this.editingCategory.id}`, body, {
+      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/categories/${this.editingCategory.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeEditModal();
@@ -359,7 +351,7 @@ export class CategoryListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/categories/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadCategories();

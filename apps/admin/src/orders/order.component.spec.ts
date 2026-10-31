@@ -91,7 +91,7 @@ describe('OrderListComponent', () => {
   });
 
   it('should load orders successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/orders`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders`, {
       items: [
         {
           id: 'order-1',
@@ -118,7 +118,7 @@ describe('OrderListComponent', () => {
   });
 
   it('should filter orders by status', async () => {
-    http.setResponse(`${baseUrl}/admin/orders`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders`, {
       items: [],
       total: 0,
       page: 1,
@@ -128,12 +128,12 @@ describe('OrderListComponent', () => {
     component.statusFilter = 'confirmed';
     await component.loadOrders();
 
-    const req = http.getLastRequest('GET', `${baseUrl}/admin/orders?status=confirmed`);
+    const req = http.getLastRequest('GET', `${baseUrl}/v1/admin/orders?status=confirmed`);
     expect(req).toBeDefined();
   });
 
   it('should handle load failure', async () => {
-    http.setError(`${baseUrl}/admin/orders`, new Error('Server error'));
+    http.setError(`${baseUrl}/v1/admin/orders`, new Error('Server error'));
 
     await component.loadOrders();
 
@@ -160,7 +160,7 @@ describe('OrderDetailComponent', () => {
   });
 
   it('should load order details successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/orders/order-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders/order-1`, {
       id: 'order-1',
       number: 'ORD-001',
       status: 'confirmed',
@@ -209,7 +209,7 @@ describe('OrderDetailComponent', () => {
   });
 
   it('should handle order detail load failure', async () => {
-    http.setError(`${baseUrl}/admin/orders/order-1`, new Error('Not found'));
+    http.setError(`${baseUrl}/v1/admin/orders/order-1`, new Error('Not found'));
 
     await component.loadOrder();
 
@@ -236,7 +236,7 @@ describe('OrderStatusComponent', () => {
   });
 
   it('should load order and compute allowed transitions', async () => {
-    http.setResponse(`${baseUrl}/admin/orders/order-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders/order-1`, {
       id: 'order-1',
       number: 'ORD-001',
       status: 'pending',
@@ -250,14 +250,14 @@ describe('OrderStatusComponent', () => {
   });
 
   it('should change order status successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/orders/order-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders/order-1`, {
       id: 'order-1',
       number: 'ORD-001',
       status: 'pending',
     });
     await component.loadOrder();
 
-    http.setResponse(`${baseUrl}/admin/orders/order-1/status`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders/order-1/status`, {
       id: 'order-1',
       number: 'ORD-001',
       status: 'confirmed',
@@ -266,7 +266,7 @@ describe('OrderStatusComponent', () => {
     component.statusForm.setValue({ status: 'confirmed', note: 'Payment confirmed' });
     await component.changeStatus();
 
-    const req = http.getLastRequest('PATCH', `${baseUrl}/admin/orders/order-1/status`);
+    const req = http.getLastRequest('PATCH', `${baseUrl}/v1/admin/orders/order-1/status`);
     expect(req).toBeDefined();
     expect(req!.body).toEqual({ status: 'confirmed', note: 'Payment confirmed' });
     expect(component.error).toBeNull();
@@ -274,14 +274,14 @@ describe('OrderStatusComponent', () => {
   });
 
   it('should handle status change failure', async () => {
-    http.setResponse(`${baseUrl}/admin/orders/order-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/orders/order-1`, {
       id: 'order-1',
       number: 'ORD-001',
       status: 'shipped',
     });
     await component.loadOrder();
 
-    http.setError(`${baseUrl}/admin/orders/order-1/status`, new Error('Invalid transition'));
+    http.setError(`${baseUrl}/v1/admin/orders/order-1/status`, new Error('Invalid transition'));
 
     component.statusForm.setValue({ status: 'returned', note: '' });
     await component.changeStatus();
@@ -292,7 +292,7 @@ describe('OrderStatusComponent', () => {
   it('should not call API when form is invalid', async () => {
     await component.changeStatus();
 
-    const req = http.getLastRequest('PATCH', `${baseUrl}/admin/orders/order-1/status`);
+    const req = http.getLastRequest('PATCH', `${baseUrl}/v1/admin/orders/order-1/status`);
     expect(req).toBeUndefined();
   });
 });
@@ -319,7 +319,7 @@ describe('ReturnListComponent', () => {
   });
 
   it('should load returns successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/returns`, {
+    http.setResponse(`${baseUrl}/v1/admin/returns`, {
       items: [
         {
           id: 'ret-1',
@@ -345,7 +345,7 @@ describe('ReturnListComponent', () => {
   });
 
   it('should filter returns by status', async () => {
-    http.setResponse(`${baseUrl}/admin/returns`, {
+    http.setResponse(`${baseUrl}/v1/admin/returns`, {
       items: [],
       total: 0,
       page: 1,
@@ -355,12 +355,12 @@ describe('ReturnListComponent', () => {
     component.statusFilter = 'approved';
     await component.loadReturns();
 
-    const req = http.getLastRequest('GET', `${baseUrl}/admin/returns?status=approved`);
+    const req = http.getLastRequest('GET', `${baseUrl}/v1/admin/returns?status=approved`);
     expect(req).toBeDefined();
   });
 
   it('should handle load failure', async () => {
-    http.setError(`${baseUrl}/admin/returns`, new Error('Server error'));
+    http.setError(`${baseUrl}/v1/admin/returns`, new Error('Server error'));
 
     await component.loadReturns();
 
@@ -387,7 +387,7 @@ describe('ReturnStatusComponent', () => {
   });
 
   it('should load return and compute allowed transitions', async () => {
-    http.setResponse(`${baseUrl}/admin/returns/ret-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/returns/ret-1`, {
       id: 'ret-1',
       orderId: 'order-1',
       status: 'requested',
@@ -402,14 +402,14 @@ describe('ReturnStatusComponent', () => {
   });
 
   it('should change return status successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/returns/ret-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/returns/ret-1`, {
       id: 'ret-1',
       orderId: 'order-1',
       status: 'requested',
     });
     await component.loadReturn();
 
-    http.setResponse(`${baseUrl}/admin/returns/ret-1/status`, {
+    http.setResponse(`${baseUrl}/v1/admin/returns/ret-1/status`, {
       id: 'ret-1',
       orderId: 'order-1',
       status: 'approved',
@@ -418,7 +418,7 @@ describe('ReturnStatusComponent', () => {
     component.statusForm.setValue({ status: 'approved', note: 'Verified defect' });
     await component.changeStatus();
 
-    const req = http.getLastRequest('PATCH', `${baseUrl}/admin/returns/ret-1/status`);
+    const req = http.getLastRequest('PATCH', `${baseUrl}/v1/admin/returns/ret-1/status`);
     expect(req).toBeDefined();
     expect(req!.body).toEqual({ status: 'approved', note: 'Verified defect' });
     expect(component.error).toBeNull();
@@ -426,14 +426,14 @@ describe('ReturnStatusComponent', () => {
   });
 
   it('should handle return status change failure', async () => {
-    http.setResponse(`${baseUrl}/admin/returns/ret-1`, {
+    http.setResponse(`${baseUrl}/v1/admin/returns/ret-1`, {
       id: 'ret-1',
       orderId: 'order-1',
       status: 'rejected',
     });
     await component.loadReturn();
 
-    http.setError(`${baseUrl}/admin/returns/ret-1/status`, new Error('Invalid transition'));
+    http.setError(`${baseUrl}/v1/admin/returns/ret-1/status`, new Error('Invalid transition'));
 
     component.statusForm.setValue({ status: 'refunded', note: '' });
     await component.changeStatus();
@@ -444,7 +444,7 @@ describe('ReturnStatusComponent', () => {
   it('should not call API when form is invalid', async () => {
     await component.changeStatus();
 
-    const req = http.getLastRequest('PATCH', `${baseUrl}/admin/returns/ret-1/status`);
+    const req = http.getLastRequest('PATCH', `${baseUrl}/v1/admin/returns/ret-1/status`);
     expect(req).toBeUndefined();
   });
 });

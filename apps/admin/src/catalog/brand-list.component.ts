@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -54,7 +54,7 @@ export interface BrandPage {
         </thead>
         <tbody>
           <tr *ngFor="let b of brands">
-            <td>{{ b.content?.['en']?.name || b.content?.['bn']?.name || b.id }}</td>
+            <td>{{ b.content['en']?.name || b.content['bn']?.name || b.id }}</td>
             <td><span class="status {{ b.status }}">{{ b.status }}</span></td>
             <td>
               <button (click)="openEditModal(b)" *ngIf="auth.hasPermission('catalog.brands.update')">Edit</button>
@@ -162,10 +162,6 @@ export interface BrandPage {
   `,
 })
 export class BrandListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   brands: Brand[] = [];
 
@@ -182,15 +178,11 @@ export class BrandListComponent implements OnInit {
   editForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       status: ['active'],
       nameEn: ['', Validators.required],
@@ -216,7 +208,7 @@ export class BrandListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/admin/brands`, {
+      const res = await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.brands = res?.items ?? [];
@@ -252,7 +244,7 @@ export class BrandListComponent implements OnInit {
       if (value.nameBn || value.slugBn) {
         body.content.bn = { name: value.nameBn, slug: value.slugBn };
       }
-      await this.http.post(`${this.config.apiBaseUrl}/admin/brands`, body, {
+      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/brands`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeCreateModal();
@@ -297,7 +289,7 @@ export class BrandListComponent implements OnInit {
       if (value.nameBn || value.slugBn) {
         body.content.bn = { name: value.nameBn, slug: value.slugBn };
       }
-      await this.http.patch(`${this.config.apiBaseUrl}/admin/brands/${this.editingBrand.id}`, body, {
+      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/brands/${this.editingBrand.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeEditModal();
@@ -314,7 +306,7 @@ export class BrandListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/brands/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/brands/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadBrands();

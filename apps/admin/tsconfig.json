@@ -10,7 +10,7 @@
     "moduleResolution": "bundler",
     "lib": ["es2022", "dom"],
     "module": "esnext",
-    "types": ["vitest/globals"]
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules"]

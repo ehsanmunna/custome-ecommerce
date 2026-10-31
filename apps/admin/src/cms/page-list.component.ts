@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -198,10 +198,6 @@ function localeSlug(page: CmsPage): string {
   `,
 })
 export class PageListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: { apiBaseUrl: string };
 
   pages: CmsPage[] = [];
 
@@ -221,15 +217,11 @@ export class PageListComponent implements OnInit {
   readonly localeSlug = localeSlug;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: { apiBaseUrl: string } = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.createForm = this.fb.group({
       titleEn: ['', Validators.required],
       slugEn: ['', Validators.required],
@@ -259,7 +251,7 @@ export class PageListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/admin/pages`, {
+      const res = await this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.pages = res?.items ?? [];
@@ -316,7 +308,7 @@ export class PageListComponent implements OnInit {
       const token = this.auth.token;
       const value = this.createForm.value;
       const body = { content: this.buildContent(value) };
-      await this.http.post(`${this.config.apiBaseUrl}/admin/pages`, body, {
+      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/pages`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeCreateModal();
@@ -356,7 +348,7 @@ export class PageListComponent implements OnInit {
       const token = this.auth.token;
       const value = this.editForm.value;
       const body = { content: this.buildContent(value) };
-      await this.http.patch(`${this.config.apiBaseUrl}/admin/pages/${this.editingPage.id}`, body, {
+      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/pages/${this.editingPage.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.closeEditModal();
@@ -373,7 +365,7 @@ export class PageListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/pages/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/pages/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadPages();

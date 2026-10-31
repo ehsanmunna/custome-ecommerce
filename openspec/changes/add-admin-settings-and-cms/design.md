@@ -2,7 +2,7 @@
 
 ## Context
 
-The admin dashboard shell and authentication are complete (from `add-admin-shell-and-auth`). The OpenAPI contract and SDK are generated from `define-openapi-contract`. Settings and CMS API endpoints already exist on the NestJS backend (`GET/PATCH /admin/settings`, `GET/POST/PATCH/DELETE /admin/coupons`, `GET/POST/PATCH/DELETE /admin/pages`, `GET/POST/PATCH/DELETE /admin/banners`) with permission checks. This change builds Angular screens on top of those existing APIs using the shared `api-sdk` client.
+The admin dashboard shell and authentication are complete (from `add-admin-shell-and-auth`). The OpenAPI contract and SDK are generated from `define-openapi-contract`. Settings and CMS API endpoints already exist on the NestJS backend (`GET/PATCH /admin/settings`, `GET/POST/PATCH/DELETE /admin/coupons`, `GET/POST/PATCH/DELETE /admin/pages`, `GET/POST/PATCH/DELETE /admin/banners`) with permission checks. This change builds Angular screens on top of those existing APIs using Angular `HttpClient` with `AuthService` and `ADMIN_AUTH_CONFIG`, following the existing admin shell convention.
 
 See `proposal.md` - Why for motivation and `specs/admin-settings/spec.md` + `specs/admin-cms/spec.md` for requirements.
 
@@ -10,7 +10,7 @@ See `proposal.md` - Why for motivation and `specs/admin-settings/spec.md` + `spe
 
 **Goals:**
 - Angular screens for shipping zone, coupon, page, and banner management
-- All screens use the shared API client (`packages/api-sdk`) generated from OpenAPI
+- All screens use Angular `HttpClient` with `AuthService` and `ADMIN_AUTH_CONFIG`, following existing admin conventions
 - Permission-aware screens using the existing RBAC guard pattern
 - UI tests for successful saves, API validation failures, and permission-denied scenarios
 
@@ -25,9 +25,9 @@ See `proposal.md` - Why for motivation and `specs/admin-settings/spec.md` + `spe
 - Rationale: The admin shell already uses standalone components and `provideRouter`. Adding new screens as standalone components keeps consistency.
 - Alternative: NgModules - rejected as it diverges from the existing shell architecture.
 
-**Reuse the shared api-sdk client**
-- Rationale: `packages/api-sdk` already generates typed clients from OpenAPI. New screens use `createApiClient` with the admin's bearer token.
-- Alternative: Raw `HttpClient` calls - rejected as it bypasses type safety and requires manual contract maintenance.
+**Reuse the shared HttpClient pattern**
+- Rationale: All existing admin screens use raw `HttpClient` with `AuthService` and `ADMIN_AUTH_CONFIG`. New screens follow the same pattern for consistency.
+- Alternative: `packages/api-sdk` generated client - rejected as it was not yet integrated into the admin app and would require additional build configuration.
 
 **Permission guards on screens**
 - Rationale: Settings screens require `settings.*`/`shipping.zones.*`/`promotions.coupons.*` permissions, CMS screens require `cms.*` permissions, matching the API contract's `x-required-permission` values.

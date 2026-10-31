@@ -8,7 +8,7 @@ Store operators can manage catalog, inventory, orders, settings, and CMS content
 
 - Add sales/order metrics screens showing revenue, order counts, and averages by date range.
 - Add low-stock indicator screens listing variants at or below their per-item threshold.
-- Wire all reporting screens through the shared API client with permission guards matching API `x-required-permission` values.
+- Wire all reporting screens through Angular `HttpClient` with `AuthService` and `ADMIN_AUTH_CONFIG`, with permission guards matching API `x-required-permission` values.
 - Add UI tests covering successful loads, permission denial, empty results, and API errors.
 
 ## Capabilities
@@ -24,7 +24,7 @@ Store operators can manage catalog, inventory, orders, settings, and CMS content
 ## Impact
 
 - Affected code: `apps/admin` (new Angular reporting screens).
-- Affected APIs: existing analytics/reporting read operations (`/admin/reports/*`), contract-described but not yet implemented.
+- Affected APIs: existing analytics (`GET /admin/analytics/overview`, `GET /admin/analytics/sales`) and inventory (`GET /admin/inventory?lowStock=true`) operations; contract-described but already implemented.
 - Depends on: `define-openapi-contract` (OpenAPI contract + SDK already generated), `add-admin-shell-and-auth` (admin shell + auth already built).
 - Non-goals: Storefront reporting, exporting reports, scheduled report delivery, custom report builder.
 

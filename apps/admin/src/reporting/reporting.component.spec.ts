@@ -96,7 +96,7 @@ describe('SalesMetricsComponent', () => {
   });
 
   it('should load sales metrics successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
+    http.setResponse(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
       orderCount: 25,
       revenue: { amount: 250000, currency: 'BDT' },
       averageOrderValue: { amount: 10000, currency: 'BDT' },
@@ -113,7 +113,7 @@ describe('SalesMetricsComponent', () => {
   });
 
   it('should show empty state when there are no orders', async () => {
-    http.setResponse(`${baseUrl}/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
+    http.setResponse(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
       orderCount: 0,
       revenue: { amount: 0, currency: 'BDT' },
       averageOrderValue: { amount: 0, currency: 'BDT' },
@@ -129,7 +129,7 @@ describe('SalesMetricsComponent', () => {
   });
 
   it('should handle API error for sales metrics', async () => {
-    http.setError(`${baseUrl}/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, new Error('Forbidden: insufficient permissions'));
 
     component.from = '2026-01-01T00:00:00.000Z';
     component.to = '2026-01-31T23:59:59.000Z';
@@ -139,7 +139,7 @@ describe('SalesMetricsComponent', () => {
   });
 
   it('should call analytics overview API with correct params', async () => {
-    http.setResponse(`${baseUrl}/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
+    http.setResponse(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
       orderCount: 1,
       revenue: { amount: 1000, currency: 'BDT' },
       averageOrderValue: { amount: 1000, currency: 'BDT' },
@@ -149,7 +149,7 @@ describe('SalesMetricsComponent', () => {
     component.to = '2026-01-31T23:59:59.000Z';
     await component.loadOverview();
 
-    const req = http.getLastRequest('GET', `${baseUrl}/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`);
+    const req = http.getLastRequest('GET', `${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`);
     expect(req).toBeDefined();
     expect(req!.headers!['Authorization']).toContain('Bearer');
   });
@@ -174,7 +174,7 @@ describe('LowStockIndicatorsComponent', () => {
   });
 
   it('should load low-stock indicators successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory?lowStock=true`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory?lowStock=true`, {
       items: [
         {
           variantId: 'var-1',
@@ -199,7 +199,7 @@ describe('LowStockIndicatorsComponent', () => {
   });
 
   it('should show empty state when no low-stock variants', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory?lowStock=true`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory?lowStock=true`, {
       items: [],
       total: 0,
       page: 1,
@@ -213,7 +213,7 @@ describe('LowStockIndicatorsComponent', () => {
   });
 
   it('should handle API error for low-stock indicators', async () => {
-    http.setError(`${baseUrl}/admin/inventory?lowStock=true`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/inventory?lowStock=true`, new Error('Forbidden: insufficient permissions'));
 
     await component.loadLowStock();
 
@@ -221,7 +221,7 @@ describe('LowStockIndicatorsComponent', () => {
   });
 
   it('should call inventory API with lowStock param', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory?lowStock=true`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory?lowStock=true`, {
       items: [],
       total: 0,
       page: 1,
@@ -230,7 +230,7 @@ describe('LowStockIndicatorsComponent', () => {
 
     await component.loadLowStock();
 
-    const req = http.getLastRequest('GET', `${baseUrl}/admin/inventory?lowStock=true`);
+    const req = http.getLastRequest('GET', `${baseUrl}/v1/admin/inventory?lowStock=true`);
     expect(req).toBeDefined();
     expect(req!.headers!['Authorization']).toContain('Bearer');
   });

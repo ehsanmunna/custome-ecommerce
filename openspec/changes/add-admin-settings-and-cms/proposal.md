@@ -8,7 +8,7 @@ The admin dashboard shell, authentication, catalog, inventory, orders, and retur
 
 - Build settings screens: shipping zone list/create/edit/delete, coupon list/create/edit/delete
 - Build CMS screens: page list/create/edit/delete, banner list/create/edit/delete
-- Wire all screens through the shared API client (`packages/api-sdk`) generated from OpenAPI
+- Wire all screens through Angular `HttpClient` with `AuthService` and `ADMIN_AUTH_CONFIG`, following existing admin conventions
 - Add permission-aware UI using the existing RBAC guard pattern, matching API `x-required-permission` values
 - Add UI tests for settings and CMS workflows covering successful saves, API validation failures, and permission-denied scenarios
 

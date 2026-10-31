@@ -1,6 +1,7 @@
-import { Inject, Injectable, Optional, inject } from '@angular/core';
+import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from './auth.config';
+import { ADMIN_AUTH_CONFIG } from './auth.config';
+import type { AdminAuthConfig } from './auth.config';
 
 export interface AuthTokens {
   accessToken: string;
@@ -26,8 +27,6 @@ export interface AuthSession {
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http: HttpClient;
-  private readonly config: AdminAuthConfig;
   private readonly storage = typeof window !== 'undefined' ? window.localStorage : null;
 
   private accessToken: string | null = null;
@@ -36,12 +35,9 @@ export class AuthService {
   private currentUser: AuthUser | null = null;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    configOrInjector?: AdminAuthConfig,
-    @Optional() @Inject(ADMIN_AUTH_CONFIG) configFromDi?: AdminAuthConfig,
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.config = configOrInjector ?? configFromDi ?? inject(ADMIN_AUTH_CONFIG);
     this.restoreFromStorage();
   }
 

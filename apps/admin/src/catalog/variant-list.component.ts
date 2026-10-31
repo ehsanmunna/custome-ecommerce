@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -179,15 +179,10 @@ export interface AttributeDefinitionPage {
   `,
 })
 export class VariantListComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
-  private readonly route: ActivatedRoute;
 
-  productId: string;
   variants: Variant[] = [];
   attributeDefs: AttributeDefinition[] = [];
+  productId!: string;
 
   loading = false;
   error: string | null = null;
@@ -202,18 +197,12 @@ export class VariantListComponent implements OnInit {
   editForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
-    routeOrInjector: ActivatedRoute = inject(ActivatedRoute),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
-    this.route = routeOrInjector;
-    this.productId = this.route.snapshot.paramMap.get('productId') || '';
     this.createForm = this.fb.group({
       sku: ['', Validators.required],
       price: [0, Validators.required],
@@ -245,7 +234,7 @@ export class VariantListComponent implements OnInit {
     try {
       const token = this.auth.token;
       const res = await this.http.get<{ items: Variant[] }>(
-        `${this.config.apiBaseUrl}/admin/products/${this.productId}/variants`,
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
       this.variants = res?.items ?? [];
@@ -263,13 +252,13 @@ export class VariantListComponent implements OnInit {
     try {
       const token = this.auth.token;
       const catRes = await this.http.get<{ items: any[] }>(
-        `${this.config.apiBaseUrl}/admin/categories`,
+        `${this.config.apiBaseUrl}/v1/admin/categories`,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
       const firstCat = catRes?.items?.[0];
       if (firstCat) {
         const attrRes = await this.http.get<AttributeDefinitionPage>(
-          `${this.config.apiBaseUrl}/admin/categories/${firstCat.id}/attributes`,
+          `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
           { headers: { Authorization: `Bearer ${token}` } },
         ).toPromise();
         this.attributeDefs = attrRes?.items ?? [];
@@ -313,7 +302,7 @@ export class VariantListComponent implements OnInit {
         attributes,
       };
       await this.http.post(
-        `${this.config.apiBaseUrl}/admin/products/${this.productId}/variants`,
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
@@ -355,7 +344,7 @@ export class VariantListComponent implements OnInit {
         attributes: this.editingVariant.attributes,
       };
       await this.http.patch(
-        `${this.config.apiBaseUrl}/admin/variants/${this.editingVariant.id}`,
+        `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
@@ -373,7 +362,7 @@ export class VariantListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/admin/variants/${id}`, {
+      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       await this.loadVariants();

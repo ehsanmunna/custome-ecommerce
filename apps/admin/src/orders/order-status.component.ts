@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -86,12 +86,6 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   `,
 })
 export class OrderStatusComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
-  private readonly route: ActivatedRoute;
-  private readonly router: Router;
 
   orderId = '';
   order: { id: string; number: string; status: string } | null = null;
@@ -105,19 +99,13 @@ export class OrderStatusComponent implements OnInit {
   success: string | null = null;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
-    routeOrInjector: ActivatedRoute = inject(ActivatedRoute),
-    routerOrInjector: Router = inject(Router),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
+    @Inject(Router) private readonly router: Router,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
-    this.route = routeOrInjector;
-    this.router = routerOrInjector;
     this.orderId = this.route.snapshot.paramMap.get('orderId') || '';
     this.statusForm = this.fb.group({
       status: ['', Validators.required],
@@ -141,7 +129,7 @@ export class OrderStatusComponent implements OnInit {
     try {
       const token = this.auth.token;
       const res = await this.http.get<{ id: string; number: string; status: string }>(
-        `${this.config.apiBaseUrl}/admin/orders/${this.orderId}`,
+        `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
       if (res) {
@@ -169,7 +157,7 @@ export class OrderStatusComponent implements OnInit {
       const body: { status: string; note?: string } = { status: value.status };
       if (value.note) body.note = value.note;
       await this.http.patch(
-        `${this.config.apiBaseUrl}/admin/orders/${this.orderId}/status`,
+        `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}/status`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();

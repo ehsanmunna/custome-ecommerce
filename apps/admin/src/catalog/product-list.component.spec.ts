@@ -98,7 +98,7 @@ describe('ProductListComponent', () => {
   });
 
   it('should load products successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/products`, {
+    http.setResponse(`${baseUrl}/v1/admin/products`, {
       items: [
         {
           id: 'prod-1',
@@ -114,8 +114,8 @@ describe('ProductListComponent', () => {
       page: 1,
       pageSize: 20,
     });
-    http.setResponse(`${baseUrl}/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
-    http.setResponse(`${baseUrl}/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
 
     await component.ngOnInit();
 
@@ -124,11 +124,11 @@ describe('ProductListComponent', () => {
   });
 
   it('should create a product successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
-    http.setResponse(`${baseUrl}/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setResponse(`${baseUrl}/admin/products`, { id: 'prod-new', categoryId: 'cat-1', status: 'draft', content: {}, variants: [], media: [] });
+    http.setResponse(`${baseUrl}/v1/admin/products`, { id: 'prod-new', categoryId: 'cat-1', status: 'draft', content: {}, variants: [], media: [] });
 
     component.createForm.setValue({
       categoryId: 'cat-1',
@@ -141,17 +141,17 @@ describe('ProductListComponent', () => {
     });
     await component.createProduct();
 
-    const req = http.getLastRequest('POST', `${baseUrl}/admin/products`);
+    const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/products`);
     expect(req).toBeDefined();
     expect(component.error).toBeNull();
   });
 
   it('should handle product creation failure', async () => {
-    http.setResponse(`${baseUrl}/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
-    http.setResponse(`${baseUrl}/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setError(`${baseUrl}/admin/products`, new Error('Validation failed'));
+    http.setError(`${baseUrl}/v1/admin/products`, new Error('Validation failed'));
 
     component.createForm.setValue({
       categoryId: 'cat-1',
@@ -168,16 +168,16 @@ describe('ProductListComponent', () => {
   });
 
   it('should delete a product successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
-    http.setResponse(`${baseUrl}/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
-    http.setResponse(`${baseUrl}/admin/products`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/categories`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
+    http.setResponse(`${baseUrl}/v1/admin/products`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setResponse(`${baseUrl}/admin/products/prod-1`, null);
+    http.setResponse(`${baseUrl}/v1/admin/products/prod-1`, null);
 
     await component.deleteProduct('prod-1');
 
-    const req = http.getLastRequest('DELETE', `${baseUrl}/admin/products/prod-1`);
+    const req = http.getLastRequest('DELETE', `${baseUrl}/v1/admin/products/prod-1`);
     expect(req).toBeDefined();
   });
 });
@@ -201,7 +201,7 @@ describe('MediaListComponent', () => {
   });
 
   it('should load media assets successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/media`, {
+    http.setResponse(`${baseUrl}/v1/admin/media`, {
       items: [
         {
           id: 'media-1',
@@ -225,7 +225,7 @@ describe('MediaListComponent', () => {
   });
 
   it('should handle media upload creation failure', async () => {
-    http.setError(`${baseUrl}/admin/media`, new Error('Upload failed'));
+    http.setError(`${baseUrl}/v1/admin/media`, new Error('Upload failed'));
 
     component.createForm.setValue({
       fileName: 'image.jpg',
@@ -239,7 +239,7 @@ describe('MediaListComponent', () => {
   });
 
   it('should handle media completion failure', async () => {
-    http.setResponse(`${baseUrl}/admin/media`, {
+    http.setResponse(`${baseUrl}/v1/admin/media`, {
       items: [],
       total: 0,
       page: 1,
@@ -247,7 +247,7 @@ describe('MediaListComponent', () => {
     });
     await component.loadMedia();
 
-    http.setResponse(`${baseUrl}/admin/media`, {
+    http.setResponse(`${baseUrl}/v1/admin/media`, {
       items: [
         {
           id: 'media-1',
@@ -271,7 +271,7 @@ describe('MediaListComponent', () => {
     await component.loadMedia();
 
     component.pendingMedia = component.media[0];
-    http.setError(`${baseUrl}/admin/media/media-1/complete`, new Error('Completion failed'));
+    http.setError(`${baseUrl}/v1/admin/media/media-1/complete`, new Error('Completion failed'));
 
     await component.completeMediaUpload();
 
@@ -303,7 +303,7 @@ describe('InventoryListComponent', () => {
   });
 
   it('should load inventory items successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory`, {
       items: [
         {
           variantId: 'var-1',
@@ -335,7 +335,7 @@ describe('InventoryListComponent', () => {
   });
 
   it('should filter to low stock items only', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory`, {
       items: [
         {
           variantId: 'var-1',
@@ -354,7 +354,7 @@ describe('InventoryListComponent', () => {
     component.lowStockFilter = true;
     await component.loadInventory();
 
-    const req = http.getLastRequest('GET', `${baseUrl}/admin/inventory?lowStock=true`);
+    const req = http.getLastRequest('GET', `${baseUrl}/v1/admin/inventory?lowStock=true`);
     expect(req).toBeDefined();
     expect(req!.url).toContain('lowStock=true');
   });
@@ -415,7 +415,7 @@ describe('InventoryAdjustmentComponent', () => {
       },
     ];
 
-    http.setResponse(`${baseUrl}/admin/inventory/var-1/adjustments`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory/var-1/adjustments`, {
       variantId: 'var-1',
       onHand: 15,
       reserved: 0,
@@ -450,7 +450,7 @@ describe('InventoryAdjustmentComponent', () => {
 
     await component.adjustStock('var-1');
 
-    const req = http.getLastRequest('POST', `${baseUrl}/admin/inventory/var-1/adjustments`);
+    const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/inventory/var-1/adjustments`);
     expect(req).toBeUndefined();
   });
 });
@@ -474,7 +474,7 @@ describe('InventoryReservationComponent', () => {
   });
 
   it('should load reservations successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory/reservations`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory/reservations`, {
       items: [
         {
           id: 'res-1',
@@ -496,7 +496,7 @@ describe('InventoryReservationComponent', () => {
   });
 
   it('should create a reservation successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory/reservations`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory/reservations`, {
       id: 'res-new',
       variantId: 'var-1',
       quantity: 3,
@@ -535,7 +535,7 @@ describe('StockMovementsComponent', () => {
   });
 
   it('should load movements from reservations successfully', async () => {
-    http.setResponse(`${baseUrl}/admin/inventory/reservations`, {
+    http.setResponse(`${baseUrl}/v1/admin/inventory/reservations`, {
       items: [
         {
           id: 'res-1',

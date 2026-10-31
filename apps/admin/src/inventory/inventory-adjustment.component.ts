@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -126,10 +126,6 @@ export interface InventoryAdjustmentResult {
   `,
 })
 export class InventoryAdjustmentComponent implements OnInit {
-  private readonly http: HttpClient;
-  private readonly auth: AuthService;
-  private readonly fb: FormBuilder;
-  private readonly config: AdminAuthConfig;
 
   inventory: InventoryItem[] = [];
 
@@ -141,15 +137,11 @@ export class InventoryAdjustmentComponent implements OnInit {
   adjustmentForm: FormGroup;
 
   constructor(
-    httpOrInjector: HttpClient = inject(HttpClient),
-    authOrInjector: AuthService = inject(AuthService),
-    fbOrInjector: FormBuilder = inject(FormBuilder),
-    configOrInjector: AdminAuthConfig = inject(ADMIN_AUTH_CONFIG),
+    @Inject(HttpClient) private readonly http: HttpClient,
+    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(FormBuilder) private readonly fb: FormBuilder,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
-    this.http = httpOrInjector;
-    this.auth = authOrInjector;
-    this.fb = fbOrInjector;
-    this.config = configOrInjector;
     this.adjustmentForm = this.fb.group({});
   }
 
@@ -163,7 +155,7 @@ export class InventoryAdjustmentComponent implements OnInit {
     this.success = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/admin/inventory`, {
+      const res = await this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
         headers: { Authorization: `Bearer ${token}` },
       }).toPromise();
       this.inventory = (res?.items ?? []).map((item: any) => ({
@@ -216,7 +208,7 @@ export class InventoryAdjustmentComponent implements OnInit {
         reason,
       };
       await this.http.post(
-        `${this.config.apiBaseUrl}/admin/inventory/${variantId}/adjustments`,
+        `${this.config.apiBaseUrl}/v1/admin/inventory/${variantId}/adjustments`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
       ).toPromise();
