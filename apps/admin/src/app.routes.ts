@@ -21,6 +21,8 @@ import { ShippingZoneListComponent } from './settings/shipping-zone-list.compone
 import { CouponListComponent } from './settings/coupon-list.component';
 import { PageListComponent } from './cms/page-list.component';
 import { BannerListComponent } from './cms/banner-list.component';
+import { SalesMetricsComponent } from './reporting/sales-metrics.component';
+import { LowStockIndicatorsComponent } from './reporting/low-stock-indicators.component';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
@@ -50,6 +52,8 @@ export const routes: Routes = [
       { path: 'settings/coupons', component: CouponListComponent },
       { path: 'cms/pages', component: PageListComponent },
       { path: 'cms/banners', component: BannerListComponent },
+      { path: 'reports/sales', component: SalesMetricsComponent },
+      { path: 'reports/low-stock', component: LowStockIndicatorsComponent },
       { path: 'profile', loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent) },
     ],
   },
