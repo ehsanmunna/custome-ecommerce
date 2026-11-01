@@ -23,38 +23,51 @@ import { PageListComponent } from './cms/page-list.component';
 import { BannerListComponent } from './cms/banner-list.component';
 import { SalesMetricsComponent } from './reporting/sales-metrics.component';
 import { LowStockIndicatorsComponent } from './reporting/low-stock-indicators.component';
+import { AdminShellComponent } from './shell/admin-shell.component';
 
+// The admin navigation menu is derived from this route table. Add
+// `data: { menu: { label, group } }` to a route to make it appear in the sidebar.
+// Routes without menu data (detail routes, redirects, login/logout) stay hidden.
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'logout', component: LogoutComponent },
   {
     path: '',
+    component: AdminShellComponent,
     canActivate: [authGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
-      { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent) },
-      { path: 'products', component: ProductListComponent },
-      { path: 'categories', component: CategoryListComponent },
-      { path: 'brands', component: BrandListComponent },
-      { path: 'attributes', component: AttributeListComponent },
+      {
+        path: 'dashboard',
+        data: { menu: { label: 'Dashboard' } },
+        loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
+      },
+      { path: 'products', component: ProductListComponent, data: { menu: { label: 'Products', group: 'Catalog' } } },
+      { path: 'categories', component: CategoryListComponent, data: { menu: { label: 'Categories', group: 'Catalog' } } },
+      { path: 'brands', component: BrandListComponent, data: { menu: { label: 'Brands', group: 'Catalog' } } },
+      { path: 'attributes', component: AttributeListComponent, data: { menu: { label: 'Attributes', group: 'Catalog' } } },
       { path: 'products/:productId/variants', component: VariantListComponent },
-      { path: 'media', component: MediaListComponent },
-      { path: 'inventory', component: InventoryListComponent },
-      { path: 'inventory/adjust', component: InventoryAdjustmentComponent },
-      { path: 'inventory/reservations', component: InventoryReservationComponent },
-      { path: 'inventory/movements', component: StockMovementsComponent },
-      { path: 'orders', component: OrderListComponent },
+      { path: 'media', component: MediaListComponent, data: { menu: { label: 'Media', group: 'Catalog' } } },
+      { path: 'inventory', component: InventoryListComponent, data: { menu: { label: 'Inventory', group: 'Inventory' } } },
+      { path: 'inventory/adjust', component: InventoryAdjustmentComponent, data: { menu: { label: 'Adjust stock', group: 'Inventory' } } },
+      { path: 'inventory/reservations', component: InventoryReservationComponent, data: { menu: { label: 'Reservations', group: 'Inventory' } } },
+      { path: 'inventory/movements', component: StockMovementsComponent, data: { menu: { label: 'Stock movements', group: 'Inventory' } } },
+      { path: 'orders', component: OrderListComponent, data: { menu: { label: 'Orders', group: 'Orders' } } },
       { path: 'orders/:orderId', component: OrderDetailComponent },
       { path: 'orders/:orderId/status', component: OrderStatusComponent },
-      { path: 'returns', component: ReturnListComponent },
+      { path: 'returns', component: ReturnListComponent, data: { menu: { label: 'Returns', group: 'Returns' } } },
       { path: 'returns/:returnId/status', component: ReturnStatusComponent },
-      { path: 'settings/shipping-zones', component: ShippingZoneListComponent },
-      { path: 'settings/coupons', component: CouponListComponent },
-      { path: 'cms/pages', component: PageListComponent },
-      { path: 'cms/banners', component: BannerListComponent },
-      { path: 'reports/sales', component: SalesMetricsComponent },
-      { path: 'reports/low-stock', component: LowStockIndicatorsComponent },
-      { path: 'profile', loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent) },
+      { path: 'settings/shipping-zones', component: ShippingZoneListComponent, data: { menu: { label: 'Shipping zones', group: 'Settings' } } },
+      { path: 'settings/coupons', component: CouponListComponent, data: { menu: { label: 'Coupons', group: 'Settings' } } },
+      { path: 'cms/pages', component: PageListComponent, data: { menu: { label: 'Pages', group: 'CMS' } } },
+      { path: 'cms/banners', component: BannerListComponent, data: { menu: { label: 'Banners', group: 'CMS' } } },
+      { path: 'reports/sales', component: SalesMetricsComponent, data: { menu: { label: 'Sales', group: 'Reports' } } },
+      { path: 'reports/low-stock', component: LowStockIndicatorsComponent, data: { menu: { label: 'Low stock', group: 'Reports' } } },
+      {
+        path: 'profile',
+        data: { menu: { label: 'Profile' } },
+        loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent),
+      },
     ],
   },
   { path: '**', redirectTo: 'login' },
