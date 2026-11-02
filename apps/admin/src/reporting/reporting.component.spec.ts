@@ -72,7 +72,14 @@ function authWithPermissions(auth: AuthService, permissions: string[]) {
     email: 'admin@example.com',
     displayName: 'Admin',
     status: 'active',
-    role: 'owner',
+    role: {
+      id: 'role-1',
+      key: 'owner',
+      name: 'Owner',
+      scope: 'store',
+      system: true,
+      permissions: ['*'],
+    },
     permissions,
   };
 }
@@ -98,8 +105,8 @@ describe('SalesMetricsComponent', () => {
   it('should load sales metrics successfully', async () => {
     http.setResponse(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
       orderCount: 25,
-      revenue: { amount: 250000, currency: 'BDT' },
-      averageOrderValue: { amount: 10000, currency: 'BDT' },
+      revenue: 250000,
+      averageOrderValue: 10000,
     });
 
     component.from = '2026-01-01T00:00:00.000Z';
@@ -108,15 +115,15 @@ describe('SalesMetricsComponent', () => {
 
     expect(component.overview).toBeDefined();
     expect(component.overview!.orderCount).toBe(25);
-    expect(component.overview!.revenue.amount).toBe(250000);
+    expect(component.overview!.revenue).toBe(250000);
     expect(component.error).toBeNull();
   });
 
   it('should show empty state when there are no orders', async () => {
     http.setResponse(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
       orderCount: 0,
-      revenue: { amount: 0, currency: 'BDT' },
-      averageOrderValue: { amount: 0, currency: 'BDT' },
+      revenue: 0,
+      averageOrderValue: 0,
     });
 
     component.from = '2026-01-01T00:00:00.000Z';
@@ -124,7 +131,7 @@ describe('SalesMetricsComponent', () => {
     await component.loadOverview();
 
     expect(component.overview!.orderCount).toBe(0);
-    expect(component.overview!.revenue.amount).toBe(0);
+    expect(component.overview!.revenue).toBe(0);
     expect(component.error).toBeNull();
   });
 
@@ -141,8 +148,8 @@ describe('SalesMetricsComponent', () => {
   it('should call analytics overview API with correct params', async () => {
     http.setResponse(`${baseUrl}/v1/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`, {
       orderCount: 1,
-      revenue: { amount: 1000, currency: 'BDT' },
-      averageOrderValue: { amount: 1000, currency: 'BDT' },
+      revenue: 1000,
+      averageOrderValue: 1000,
     });
 
     component.from = '2026-01-01T00:00:00.000Z';

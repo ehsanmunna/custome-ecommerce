@@ -41,21 +41,33 @@ describe('reporting API (existing contract endpoints)', () => {
   const analytics = {
     getOverview: vi.fn(async () => ({
       orderCount: 5,
-      revenue: { amount: 50000, currency: 'BDT' },
-      averageOrderValue: { amount: 10000, currency: 'BDT' },
+      revenue: 50000,
+      averageOrderValue: 10000,
     })),
-    getSales: vi.fn(async () => ({
-      series: [
-        {
-          periodStart: '2026-01-01T00:00:00.000Z',
-          orderCount: 3,
-          revenue: { amount: 30000, currency: 'BDT' },
-        },
-      ],
-    })),
+    getSales: vi.fn(async () => [
+      {
+        periodStart: '2026-01-01T00:00:00.000Z',
+        orderCount: 3,
+        revenue: 30000,
+      },
+    ]),
+  };
+  type InventoryRow = {
+    variantId: string;
+    onHand: number;
+    reserved: number;
+    available: number;
+    lowStockThreshold: number;
+    lowStock: boolean;
+  };
+  type InventoryPage = {
+    items: InventoryRow[];
+    total: number;
+    page: number;
+    pageSize: number;
   };
   const inventory = {
-    listInventory: vi.fn(async () => ({ items: [], total: 0, page: 1, pageSize: 20 })),
+    listInventory: vi.fn(async (): Promise<InventoryPage> => ({ items: [], total: 0, page: 1, pageSize: 20 })),
     listReservations: vi.fn(async () => ({ items: [], total: 0, page: 1, pageSize: 20 })),
     adjustInventory: vi.fn(async () => ({})),
     createReservation: vi.fn(async () => ({})),
@@ -102,11 +114,14 @@ describe('reporting API (existing contract endpoints)', () => {
       { headers: { authorization: 'Bearer test-token' } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = (await response.json()) as {
+      orderCount: number;
+      revenue: number;
+      averageOrderValue: number;
+    };
     expect(body.orderCount).toBe(5);
-    expect(body.revenue.amount).toBe(50000);
-    expect(body.revenue.currency).toBe('BDT');
-    expect(body.averageOrderValue.amount).toBe(10000);
+    expect(body.revenue).toBe(50000);
+    expect(body.averageOrderValue).toBe(10000);
     expect(analytics.getOverview).toHaveBeenCalledWith({
       from: '2026-01-01T00:00:00.000Z',
       to: '2026-01-31T23:59:59.000Z',
@@ -119,9 +134,14 @@ describe('reporting API (existing contract endpoints)', () => {
       { headers: { authorization: 'Bearer test-token' } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json();
-    expect(body.series.length).toBe(1);
-    expect(body.series[0].periodStart).toBe('2026-01-01T00:00:00.000Z');
+    const body = (await response.json()) as Array<{
+      periodStart: string;
+      orderCount: number;
+      revenue: number;
+    }>;
+    expect(body.length).toBe(1);
+    expect(body[0].periodStart).toBe('2026-01-01T00:00:00.000Z');
+    expect(body[0].revenue).toBe(30000);
     expect(analytics.getSales).toHaveBeenCalledWith({
       from: '2026-01-01T00:00:00.000Z',
       to: '2026-01-31T23:59:59.000Z',
@@ -132,19 +152,22 @@ describe('reporting API (existing contract endpoints)', () => {
   it('serves empty analytics results when there are no orders', async () => {
     analytics.getOverview.mockResolvedValueOnce({
       orderCount: 0,
-      revenue: { amount: 0, currency: 'BDT' },
-      averageOrderValue: { amount: 0, currency: 'BDT' },
+      revenue: 0,
+      averageOrderValue: 0,
     });
-    analytics.getSales.mockResolvedValueOnce({ series: [] });
+    analytics.getSales.mockResolvedValueOnce([]);
 
     const overview = await fetch(
       `${baseUrl}/admin/analytics/overview?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`,
       { headers: { authorization: 'Bearer test-token' } },
     );
-    const overviewBody = await overview.json();
+    const overviewBody = (await overview.json()) as {
+      orderCount: number;
+      revenue: number;
+    };
     expect(overview.status).toBe(200);
     expect(overviewBody.orderCount).toBe(0);
-    expect(overviewBody.revenue.amount).toBe(0);
+    expect(overviewBody.revenue).toBe(0);
 
     const sales = await fetch(
       `${baseUrl}/admin/analytics/sales?from=2026-01-01T00:00:00.000Z&to=2026-01-31T23:59:59.000Z`,
@@ -152,7 +175,7 @@ describe('reporting API (existing contract endpoints)', () => {
     );
     const salesBody = await sales.json();
     expect(sales.status).toBe(200);
-    expect(salesBody.series).toEqual([]);
+    expect(salesBody).toEqual([]);
   });
 
   it('serves low-stock inventory variants', async () => {
@@ -177,7 +200,7 @@ describe('reporting API (existing contract endpoints)', () => {
       { headers: { authorization: 'Bearer test-token' } },
     );
     expect(response.status).toBe(200);
-    const body = await response.json();
+    const body = (await response.json()) as InventoryPage;
     expect(body.total).toBe(1);
     expect(body.items[0].lowStock).toBe(true);
     expect(inventory.listInventory).toHaveBeenCalledWith({

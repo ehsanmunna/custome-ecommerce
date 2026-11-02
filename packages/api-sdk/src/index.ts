@@ -33,4 +33,4 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
   return Object.assign(client, { baseUrl });
 }
 
-export type { paths } from './generated/api';
+export type { components, paths } from './generated/api';

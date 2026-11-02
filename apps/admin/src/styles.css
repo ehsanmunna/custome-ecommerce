@@ -1,4 +1,37 @@
-@import './theme/theme.css';
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@layer theme, base, primeng, components, utilities;
+
+@import "tailwindcss";
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/hind-siliguri/400.css";
+@import "@fontsource/hind-siliguri/500.css";
+@import "@fontsource/hind-siliguri/600.css";
+@import "@fontsource/hind-siliguri/700.css";
+@import "primeicons/primeicons.css";
+@import "./theme/theme.css" layer(theme);
+
+@plugin "tailwindcss-primeui";
+
+/* Keep the PrimeNG layer in the compiled cascade even before components render. */
+@layer primeng {
+  :root {
+    --p-primeng-layer: 1;
+  }
+}
+
+@theme inline {
+  --color-primary: var(--p-primary-500);
+  --color-primary-contrast: var(--p-primary-contrast-color);
+  --color-surface: var(--p-surface-0);
+  --color-surface-alt: var(--p-surface-50);
+  --color-content: var(--p-text-color);
+  --color-muted: var(--p-text-muted-color);
+  --color-line: var(--p-content-border-color);
+  --color-success: var(--p-green-500);
+  --color-warning: var(--p-amber-500);
+  --color-danger: var(--p-red-500);
+  --color-info: var(--p-cyan-500);
+  --font-sans: 'Inter', 'Hind Siliguri', system-ui, sans-serif;
+}

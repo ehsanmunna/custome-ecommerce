@@ -1,7 +1,9 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './auth/login.component';
 import { LogoutComponent } from './auth/logout.component';
+import { ForbiddenComponent } from './auth/forbidden.component';
 import { authGuard } from './auth/auth.guard';
+import { roleGuard } from './core/auth/role.guard';
 import { ProductListComponent } from './catalog/product-list.component';
 import { CategoryListComponent } from './catalog/category-list.component';
 import { BrandListComponent } from './catalog/brand-list.component';
@@ -23,14 +25,22 @@ import { PageListComponent } from './cms/page-list.component';
 import { BannerListComponent } from './cms/banner-list.component';
 import { SalesMetricsComponent } from './reporting/sales-metrics.component';
 import { LowStockIndicatorsComponent } from './reporting/low-stock-indicators.component';
-import { AdminShellComponent } from './shell/admin-shell.component';
+import { AdminShellComponent } from './layout/shell/admin-shell.component';
 
-// The admin navigation menu is derived from this route table. Add
-// `data: { menu: { label, group } }` to a route to make it appear in the sidebar.
-// Routes without menu data (detail routes, redirects, login/logout) stay hidden.
+const ALL_ROLES = ['owner', 'manager', 'staff', 'support'];
+const CATALOG_ROLES = ['owner', 'manager', 'staff'];
+const ORDER_ROLES = ['owner', 'manager', 'staff', 'support'];
+const CUSTOMER_ROLES = ['owner', 'manager', 'support'];
+const INVENTORY_ROLES = ['owner', 'manager', 'staff'];
+const MANAGER_ROLES = ['owner', 'manager'];
+
+// Navigation labels, icons, and ordering live in
+// `layout/menu/admin-menu.config.ts`. Every protected route declares the same
+// `data.roles` list that `roleGuard` enforces at navigation time.
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
   { path: 'logout', component: LogoutComponent },
+  { path: 'forbidden', component: ForbiddenComponent },
   {
     path: '',
     component: AdminShellComponent,
@@ -39,33 +49,47 @@ export const routes: Routes = [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
       {
         path: 'dashboard',
-        data: { menu: { label: 'Dashboard' } },
+        data: { roles: ALL_ROLES },
+        canActivate: [roleGuard],
         loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
-      { path: 'products', component: ProductListComponent, data: { menu: { label: 'Products', group: 'Catalog' } } },
-      { path: 'categories', component: CategoryListComponent, data: { menu: { label: 'Categories', group: 'Catalog' } } },
-      { path: 'brands', component: BrandListComponent, data: { menu: { label: 'Brands', group: 'Catalog' } } },
-      { path: 'attributes', component: AttributeListComponent, data: { menu: { label: 'Attributes', group: 'Catalog' } } },
-      { path: 'products/:productId/variants', component: VariantListComponent },
-      { path: 'media', component: MediaListComponent, data: { menu: { label: 'Media', group: 'Catalog' } } },
-      { path: 'inventory', component: InventoryListComponent, data: { menu: { label: 'Inventory', group: 'Inventory' } } },
-      { path: 'inventory/adjust', component: InventoryAdjustmentComponent, data: { menu: { label: 'Adjust stock', group: 'Inventory' } } },
-      { path: 'inventory/reservations', component: InventoryReservationComponent, data: { menu: { label: 'Reservations', group: 'Inventory' } } },
-      { path: 'inventory/movements', component: StockMovementsComponent, data: { menu: { label: 'Stock movements', group: 'Inventory' } } },
-      { path: 'orders', component: OrderListComponent, data: { menu: { label: 'Orders', group: 'Orders' } } },
-      { path: 'orders/:orderId', component: OrderDetailComponent },
-      { path: 'orders/:orderId/status', component: OrderStatusComponent },
-      { path: 'returns', component: ReturnListComponent, data: { menu: { label: 'Returns', group: 'Returns' } } },
-      { path: 'returns/:returnId/status', component: ReturnStatusComponent },
-      { path: 'settings/shipping-zones', component: ShippingZoneListComponent, data: { menu: { label: 'Shipping zones', group: 'Settings' } } },
-      { path: 'settings/coupons', component: CouponListComponent, data: { menu: { label: 'Coupons', group: 'Settings' } } },
-      { path: 'cms/pages', component: PageListComponent, data: { menu: { label: 'Pages', group: 'CMS' } } },
-      { path: 'cms/banners', component: BannerListComponent, data: { menu: { label: 'Banners', group: 'CMS' } } },
-      { path: 'reports/sales', component: SalesMetricsComponent, data: { menu: { label: 'Sales', group: 'Reports' } } },
-      { path: 'reports/low-stock', component: LowStockIndicatorsComponent, data: { menu: { label: 'Low stock', group: 'Reports' } } },
+      {
+        path: 'customers',
+        data: { roles: CUSTOMER_ROLES },
+        canActivate: [roleGuard],
+        loadComponent: () => import('./customers/customers.component').then(m => m.CustomersComponent),
+      },
+      { path: 'products', component: ProductListComponent, data: { roles: CATALOG_ROLES }, canActivate: [roleGuard] },
+      { path: 'categories', component: CategoryListComponent, data: { roles: CATALOG_ROLES }, canActivate: [roleGuard] },
+      { path: 'brands', component: BrandListComponent, data: { roles: CATALOG_ROLES }, canActivate: [roleGuard] },
+      { path: 'attributes', component: AttributeListComponent, data: { roles: CATALOG_ROLES }, canActivate: [roleGuard] },
+      { path: 'products/:productId/variants', component: VariantListComponent, data: { roles: CATALOG_ROLES }, canActivate: [roleGuard] },
+      { path: 'media', component: MediaListComponent, data: { roles: CATALOG_ROLES }, canActivate: [roleGuard] },
+      { path: 'inventory', component: InventoryListComponent, data: { roles: INVENTORY_ROLES }, canActivate: [roleGuard] },
+      { path: 'inventory/adjust', component: InventoryAdjustmentComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'inventory/reservations', component: InventoryReservationComponent, data: { roles: INVENTORY_ROLES }, canActivate: [roleGuard] },
+      { path: 'inventory/movements', component: StockMovementsComponent, data: { roles: INVENTORY_ROLES }, canActivate: [roleGuard] },
+      { path: 'orders', component: OrderListComponent, data: { roles: ORDER_ROLES }, canActivate: [roleGuard] },
+      { path: 'orders/:orderId', component: OrderDetailComponent, data: { roles: ORDER_ROLES }, canActivate: [roleGuard] },
+      { path: 'orders/:orderId/status', component: OrderStatusComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'returns', component: ReturnListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'returns/:returnId/status', component: ReturnStatusComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      {
+        path: 'settings',
+        data: { roles: MANAGER_ROLES },
+        canActivate: [roleGuard],
+        loadComponent: () => import('./settings/settings-home.component').then(m => m.SettingsHomeComponent),
+      },
+      { path: 'settings/shipping-zones', component: ShippingZoneListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'settings/coupons', component: CouponListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'cms/pages', component: PageListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'cms/banners', component: BannerListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'reports/sales', component: SalesMetricsComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'reports/low-stock', component: LowStockIndicatorsComponent, data: { roles: INVENTORY_ROLES }, canActivate: [roleGuard] },
       {
         path: 'profile',
-        data: { menu: { label: 'Profile' } },
+        data: { roles: ALL_ROLES },
+        canActivate: [roleGuard],
         loadComponent: () => import('./profile/profile.component').then(m => m.ProfileComponent),
       },
     ],

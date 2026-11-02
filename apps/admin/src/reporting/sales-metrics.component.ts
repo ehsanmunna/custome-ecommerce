@@ -8,8 +8,8 @@ import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 
 export interface AnalyticsOverview {
   orderCount: number;
-  revenue: { amount: number; currency: string };
-  averageOrderValue: { amount: number; currency: string };
+  revenue: number;
+  averageOrderValue: number;
 }
 
 @Component({
@@ -49,11 +49,11 @@ export interface AnalyticsOverview {
         </div>
         <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-secondary)] flex-1">
           <div class="text-[var(--color-text-muted)] text-xs font-medium mb-1">Revenue</div>
-          <div class="text-xl font-semibold text-[var(--color-text)]">{{ (overview.revenue.amount / 100).toFixed(2) }} {{ overview.revenue.currency }}</div>
+          <div class="text-xl font-semibold text-[var(--color-text)]">{{ (overview.revenue / 100).toFixed(2) }} BDT</div>
         </div>
         <div class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-secondary)] flex-1">
           <div class="text-[var(--color-text-muted)] text-xs font-medium mb-1">Average Order Value</div>
-          <div class="text-xl font-semibold text-[var(--color-text)]">{{ (overview.averageOrderValue.amount / 100).toFixed(2) }} {{ overview.averageOrderValue.currency }}</div>
+          <div class="text-xl font-semibold text-[var(--color-text)]">{{ (overview.averageOrderValue / 100).toFixed(2) }} BDT</div>
         </div>
       </div>
 

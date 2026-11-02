@@ -239,9 +239,10 @@ async function ensureRoles(tx: Prisma.TransactionClient): Promise<Map<string, st
     const existing = await tx.adminRole.findUnique({ where: { key: role.key } });
     if (existing) {
       if (existing.scope !== 'store' || !existing.isSystem) {
-        throw new Error(
-          `Baseline role "${role.key}" exists with incompatible scope or system status.`,
-        );
+        await tx.adminRole.update({
+          where: { key: role.key },
+          data: { scope: 'store', isSystem: true },
+        });
       }
       roleIds.set(role.key, existing.id);
       continue;

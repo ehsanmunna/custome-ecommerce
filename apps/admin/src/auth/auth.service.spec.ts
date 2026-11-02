@@ -1,6 +1,6 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AuthService } from './auth.service';
+import { AuthService, type AdminRole, type AdminUser } from './auth.service';
 import { defaultAdminAuthConfig } from './auth.config';
 
 // Mock localStorage and window for node environment
@@ -68,6 +68,26 @@ class MockHttpClient {
 const baseUrl = 'http://localhost:4000';
 const config = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
 
+const ownerRole: AdminRole = {
+  id: 'role-1',
+  key: 'owner',
+  name: 'Owner',
+  scope: 'store',
+  system: true,
+  permissions: ['*'],
+};
+
+function adminUser(permissions: string[] = ['*']): AdminUser {
+  return {
+    id: 'user-1',
+    email: 'admin@example.com',
+    displayName: 'Admin User',
+    status: 'active',
+    role: ownerRole,
+    permissions,
+  };
+}
+
 describe('AuthService', () => {
   let service: AuthService;
   let http: MockHttpClient;
@@ -100,7 +120,7 @@ describe('AuthService', () => {
         email: 'admin@example.com',
         displayName: 'Admin User',
         status: 'active',
-        role: 'owner',
+        role: ownerRole,
         permissions: ['*'],
       },
     });
@@ -113,6 +133,11 @@ describe('AuthService', () => {
     expect(service.user?.email).toBe('admin@example.com');
     expect(localStorage.getItem('admin_access_token')).toBe('access-token-123');
     expect(localStorage.getItem('admin_refresh_token')).toBe('refresh-token-123');
+    expect(Number(localStorage.getItem('admin_token_expiry'))).toBeGreaterThan(Date.now());
+    expect(JSON.parse(localStorage.getItem('admin_user') ?? '{}')).toMatchObject({
+      email: 'admin@example.com',
+      role: { key: 'owner' },
+    });
   });
 
   it('should refresh tokens successfully', async () => {
@@ -126,7 +151,7 @@ describe('AuthService', () => {
         email: 'admin@example.com',
         displayName: 'Admin User',
         status: 'active',
-        role: 'owner',
+        role: ownerRole,
         permissions: ['*'],
       },
     });
@@ -156,7 +181,7 @@ describe('AuthService', () => {
         email: 'admin@example.com',
         displayName: 'Admin User',
         status: 'active',
-        role: 'owner',
+        role: ownerRole,
         permissions: ['*'],
       },
     });
@@ -164,19 +189,21 @@ describe('AuthService', () => {
 
     // Call me
     http.setResponse(`${baseUrl}/v1/admin/auth/me`, {
-      user: {
-        id: 'user-1',
-        email: 'admin@example.com',
-        displayName: 'Admin User',
-        status: 'active',
-        role: 'owner',
-        permissions: ['admin.roles.read'],
-      },
+      id: 'user-1',
+      email: 'admin@example.com',
+      displayName: 'Admin User',
+      status: 'active',
+      role: ownerRole,
+      permissions: ['admin.roles.read'],
     });
 
     const user = await service.me();
     expect(user.email).toBe('admin@example.com');
     expect(user.permissions).toContain('admin.roles.read');
+    expect(JSON.parse(localStorage.getItem('admin_user') ?? '{}')).toMatchObject({
+      email: 'admin@example.com',
+      permissions: ['admin.roles.read'],
+    });
   });
 
   it('should clear tokens on logout', async () => {
@@ -190,7 +217,7 @@ describe('AuthService', () => {
         email: 'admin@example.com',
         displayName: 'Admin User',
         status: 'active',
-        role: 'owner',
+        role: ownerRole,
         permissions: ['*'],
       },
     });
@@ -205,6 +232,43 @@ describe('AuthService', () => {
     expect(service.user).toBeNull();
     expect(localStorage.getItem('admin_access_token')).toBeNull();
     expect(localStorage.getItem('admin_refresh_token')).toBeNull();
+    expect(localStorage.getItem('admin_token_expiry')).toBeNull();
+    expect(localStorage.getItem('admin_user')).toBeNull();
+  });
+
+  it('should restore the persisted session, expiry, and typed user on startup', () => {
+    const expiresAt = Date.now() + 60_000;
+    localStorage.setItem('admin_access_token', 'stored-access-token');
+    localStorage.setItem('admin_refresh_token', 'stored-refresh-token');
+    localStorage.setItem('admin_token_expiry', String(expiresAt));
+    localStorage.setItem('admin_user', JSON.stringify(adminUser(['analytics.read'])));
+
+    const restored = new AuthService(http as any, config);
+
+    expect(restored.isAuthenticated).toBe(true);
+    expect(restored.token).toBe('stored-access-token');
+    expect(restored.refreshTokenValue).toBe('stored-refresh-token');
+    expect(restored.expiry).toBe(expiresAt);
+    expect(restored.user?.email).toBe('admin@example.com');
+    expect(restored.roleKey).toBe('owner');
+    expect(restored.role?.name).toBe('Owner');
+    expect(restored.hasRole('owner')).toBe(true);
+    expect(restored.hasAnyRole(['manager', 'owner'])).toBe(true);
+    expect(restored.hasAnyRole(['manager'])).toBe(false);
+    expect(restored.hasPermission('analytics.read')).toBe(true);
+    expect(restored.hasAnyPermission(['orders.read', 'analytics.read'])).toBe(true);
+  });
+
+  it('should treat a persisted session as expired after its expiry passes', () => {
+    localStorage.setItem('admin_access_token', 'expired-access-token');
+    localStorage.setItem('admin_refresh_token', 'stored-refresh-token');
+    localStorage.setItem('admin_token_expiry', String(Date.now() - 1_000));
+    localStorage.setItem('admin_user', JSON.stringify(adminUser()));
+
+    const restored = new AuthService(http as any, config);
+
+    expect(restored.isAuthenticated).toBe(false);
+    expect(restored.refreshTokenValue).toBe('stored-refresh-token');
   });
 
   it('should not be authenticated initially', () => {

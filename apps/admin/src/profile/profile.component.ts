@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, type AdminUser } from '../auth/auth.service';
 
 @Component({
   selector: 'app-profile',
@@ -12,7 +12,7 @@ import { AuthService } from '../auth/auth.service';
       <p><strong>Email:</strong> {{ user.email }}</p>
       <p><strong>Display name:</strong> {{ user.displayName }}</p>
       <p><strong>Status:</strong> {{ user.status }}</p>
-      <p><strong>Role:</strong> {{ user.role }}</p>
+      <p><strong>Role:</strong> {{ user.role.name }}</p>
       <p><strong>Permissions:</strong> {{ (user.permissions || []).join(', ') }}</p>
       <button (click)="logout()">Sign out</button>
     </div>
@@ -21,12 +21,12 @@ import { AuthService } from '../auth/auth.service';
   styles: `
     .profile { padding: 2rem; }
     .profile h1 { margin-top: 0; }
-    button { margin-top: 1rem; padding: 0.5rem 1rem; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    button { margin-top: 1rem; padding: 0.5rem 1rem; background: var(--color-danger); color: var(--color-danger-foreground); border: none; border-radius: 4px; cursor: pointer; }
   `,
 })
 export class ProfileComponent implements OnInit {
   private readonly auth = inject(AuthService);
-  user: { id: string; email: string; displayName: string; status: string; role: string; permissions: string[] } | null = null;
+  user: AdminUser | null = null;
 
   async ngOnInit(): Promise<void> {
     try {

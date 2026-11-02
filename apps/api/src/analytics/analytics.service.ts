@@ -3,10 +3,7 @@ import { Prisma } from 'database';
 import { PrismaService } from '../platform/database/prisma.service';
 import type { AnalyticsOverviewQuery, AnalyticsSalesQuery } from './analytics.schemas';
 
-export interface Money {
-  amount: number;
-  currency: string;
-}
+export type Money = number;
 
 export interface AnalyticsOverview {
   orderCount: number;
@@ -20,12 +17,8 @@ export interface SalesSeriesPoint {
   revenue: Money;
 }
 
-export interface SalesAnalytics {
-  series: SalesSeriesPoint[];
-}
-
 function toMoney(poisha: number | null): Money {
-  return { amount: poisha ?? 0, currency: 'BDT' };
+  return poisha ?? 0;
 }
 
 function periodStartFor(date: Date, interval: 'day' | 'week' | 'month'): string {
@@ -70,7 +63,7 @@ export class AnalyticsService {
     };
   }
 
-  async getSales(input: AnalyticsSalesQuery): Promise<SalesAnalytics> {
+  async getSales(input: AnalyticsSalesQuery): Promise<SalesSeriesPoint[]> {
     const from = new Date(input.from);
     const to = new Date(input.to);
 
@@ -103,6 +96,6 @@ export class AnalyticsService {
       }),
     );
 
-    return { series };
+    return series;
   }
 }

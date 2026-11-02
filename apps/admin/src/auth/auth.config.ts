@@ -9,6 +9,8 @@ export interface AdminAuthConfig {
   mePath: string;
   tokenStorageKey: string;
   refreshStorageKey: string;
+  expiryStorageKey: string;
+  userStorageKey: string;
 }
 
 export const ADMIN_AUTH_CONFIG = new InjectionToken<AdminAuthConfig>('ADMIN_AUTH_CONFIG');
@@ -22,4 +24,6 @@ export const defaultAdminAuthConfig: AdminAuthConfig = {
   mePath: '/v1/admin/auth/me',
   tokenStorageKey: 'admin_access_token',
   refreshStorageKey: 'admin_refresh_token',
+  expiryStorageKey: 'admin_token_expiry',
+  userStorageKey: 'admin_user',
 };
