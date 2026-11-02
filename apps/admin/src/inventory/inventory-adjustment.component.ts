@@ -122,7 +122,7 @@ export class InventoryAdjustmentComponent implements OnInit {
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
-    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
@@ -208,3 +208,4 @@ export class InventoryAdjustmentComponent implements OnInit {
     }
   }
 }
+

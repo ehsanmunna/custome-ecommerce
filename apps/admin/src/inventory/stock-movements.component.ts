@@ -91,7 +91,7 @@ export class StockMovementsComponent implements OnInit {
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
-    @Inject(AuthService) private readonly auth: AuthService,
+    @Inject(AuthService) readonly auth: AuthService,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
   ) {
   }
@@ -137,3 +137,4 @@ export class StockMovementsComponent implements OnInit {
     }
   }
 }
+
