@@ -139,9 +139,9 @@ export class InventoryAdjustmentComponent implements OnInit {
     this.success = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
+      const res = (await this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as InventoryPage;
       this.inventory = (res?.items ?? []).map((item: any) => ({
         ...item,
         sku: item.variantId, // Will be resolved from variant data
@@ -195,7 +195,7 @@ export class InventoryAdjustmentComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/inventory/${variantId}/adjustments`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
 
       deltaCtrl?.setValue('');
       reasonCtrl?.setValue('');

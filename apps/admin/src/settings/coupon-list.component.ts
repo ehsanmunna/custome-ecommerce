@@ -223,9 +223,9 @@ export class CouponListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
+      const res = (await this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as CouponPage;
       this.coupons = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load coupons';
@@ -269,7 +269,7 @@ export class CouponListComponent implements OnInit {
       };
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/coupons`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeCreateModal();
       await this.loadCoupons();
     } catch (err: any) {
@@ -316,7 +316,7 @@ export class CouponListComponent implements OnInit {
       };
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/coupons/${this.editingCoupon.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadCoupons();
     } catch (err: any) {
@@ -333,7 +333,7 @@ export class CouponListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/coupons/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadCoupons();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete coupon';

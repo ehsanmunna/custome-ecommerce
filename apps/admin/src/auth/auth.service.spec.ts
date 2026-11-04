@@ -1,6 +1,6 @@
 import '@angular/compiler';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { AuthService, type AdminRole, type AdminUser } from './auth.service';
+import { AuthService, type AdminRole, type AdminUser, type AuthSession } from './auth.service';
 import { defaultAdminAuthConfig } from './auth.config';
 
 // Mock localStorage and window for node environment
@@ -125,7 +125,7 @@ describe('AuthService', () => {
       },
     });
 
-    const session = await service.login('admin@example.com', 'password123');
+    const session = (await service.login('admin@example.com', 'password123')) as unknown as AuthSession;
 
     expect(session.accessToken).toBe('access-token-123');
     expect(service.isAuthenticated).toBe(true);
@@ -164,7 +164,7 @@ describe('AuthService', () => {
       expiresIn: 3600,
     });
 
-    const session = await service.refresh();
+    const session = (await service.refresh()) as unknown as AuthSession;
     expect(session.accessToken).toBe('access-token-2');
     expect(service.token).toBe('access-token-2');
     expect(localStorage.getItem('admin_access_token')).toBe('access-token-2');
@@ -197,7 +197,7 @@ describe('AuthService', () => {
       permissions: ['admin.roles.read'],
     });
 
-    const user = await service.me();
+    const user = (await service.me()) as unknown as AdminUser;
     expect(user.email).toBe('admin@example.com');
     expect(user.permissions).toContain('admin.roles.read');
     expect(JSON.parse(localStorage.getItem('admin_user') ?? '{}')).toMatchObject({

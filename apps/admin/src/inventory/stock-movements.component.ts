@@ -105,11 +105,10 @@ export class StockMovementsComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<{ items: Reservation[] }>(
+      const res = (await this.http.get<{ items: Reservation[] }>(
         `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
-
+      )) as unknown as { items: Reservation[] };
       const reservations = res?.items ?? [];
       this.movements = reservations.map((r) => ({
         id: r.id,

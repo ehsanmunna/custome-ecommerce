@@ -92,9 +92,9 @@ export class SalesMetricsComponent implements OnInit {
     try {
       const token = this.auth.token;
       const url = `${this.config.apiBaseUrl}/v1/admin/analytics/overview?from=${this.from}&to=${this.to}`;
-      const res = await this.http.get<AnalyticsOverview>(url, {
+      const res = (await this.http.get<AnalyticsOverview>(url, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as AnalyticsOverview;
       this.overview = res ?? null;
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load sales metrics';

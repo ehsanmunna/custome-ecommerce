@@ -83,14 +83,16 @@ export interface DashboardOverview {
   lowStockAlerts: AsyncState<LowStockAlert[]>;
 }
 
+import { Observable } from 'rxjs';
+
 export type DashboardDataSource = {
-  getOverviewToday(): Promise<{ orderCount: number; revenue: number }>;
-  getOverviewYesterday(): Promise<{ orderCount: number; revenue: number }>;
-  getSales(range: DashboardRange): Promise<RevenuePoint[]>;
-  getRecentOrders(limit?: number): Promise<RecentOrder[]>;
-  getLowStockCount(): Promise<number>;
-  getOrderStatusCounts(): Promise<OrderStatusCount[]>;
-  getLowStockAlerts(limit?: number): Promise<LowStockAlert[]>;
-  getNewCustomers(): Promise<number>;
-  getTopSellingProducts(): Promise<TopProduct[]>;
+  getOverviewToday(): Observable<{ orderCount: number; revenue: number }>;
+  getOverviewYesterday(): Observable<{ orderCount: number; revenue: number }>;
+  getSales(range: DashboardRange): Observable<RevenuePoint[]>;
+  getRecentOrders(limit?: number): Observable<RecentOrder[]>;
+  getLowStockCount(): Observable<number>;
+  getOrderStatusCounts(): Observable<OrderStatusCount[]>;
+  getLowStockAlerts(limit?: number): Observable<LowStockAlert[]>;
+  getNewCustomers(): Observable<number>;
+  getTopSellingProducts(): Observable<TopProduct[]>;
 };

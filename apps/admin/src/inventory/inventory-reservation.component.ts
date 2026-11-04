@@ -155,9 +155,9 @@ export class InventoryReservationComponent implements OnInit {
     this.success = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+      const res = (await this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as ReservationPage;
       this.reservations = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load reservations';
@@ -185,7 +185,7 @@ export class InventoryReservationComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
 
       this.createForm.reset({ variantId: '', quantity: 1, expiresAt: '' });
       await this.loadReservations();
@@ -214,7 +214,7 @@ export class InventoryReservationComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/inventory/reservations/${reservationId}/status`,
         { status },
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.success = `Reservation ${status}`;
       await this.loadReservations();
     } catch (err: any) {

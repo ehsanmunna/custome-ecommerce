@@ -202,18 +202,13 @@ export class CategoryListComponent implements OnInit {
   async loadCategories(): Promise<void> {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
-      this.categories = res?.items ?? [];
-      this.buildTree();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load categories';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    const res = (await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })) as unknown as CategoryPage;
+    this.categories = res?.items ?? [];
+    this.buildTree();
+    this.loading = false;
   }
 
   buildTree(): void {
@@ -261,7 +256,7 @@ export class CategoryListComponent implements OnInit {
       }
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/categories`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeCreateModal();
       await this.loadCategories();
     } catch (err: any) {
@@ -308,7 +303,7 @@ export class CategoryListComponent implements OnInit {
       }
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/categories/${this.editingCategory.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadCategories();
     } catch (err: any) {
@@ -325,7 +320,7 @@ export class CategoryListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadCategories();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete category';

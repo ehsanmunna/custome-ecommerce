@@ -183,9 +183,9 @@ export class BrandListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
+      const res = (await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as BrandPage;
       this.brands = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load brands';
@@ -221,7 +221,7 @@ export class BrandListComponent implements OnInit {
       }
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/brands`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeCreateModal();
       await this.loadBrands();
     } catch (err: any) {
@@ -266,7 +266,7 @@ export class BrandListComponent implements OnInit {
       }
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/brands/${this.editingBrand.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadBrands();
     } catch (err: any) {
@@ -283,7 +283,7 @@ export class BrandListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/brands/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadBrands();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete brand';

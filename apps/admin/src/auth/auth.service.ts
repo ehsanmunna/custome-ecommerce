@@ -1,8 +1,9 @@
 import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Observable, throwError, of } from 'rxjs';
 import type { components } from 'api-sdk';
-import { ADMIN_AUTH_CONFIG } from './auth.config';
-import type { AdminAuthConfig } from './auth.config';
+import { ADMIN_AUTH_CONFIG, type AdminAuthConfig } from './auth.config';
+import { catchError } from 'rxjs';
 
 export type AdminRole = components['schemas']['Role'];
 export type AdminUser = components['schemas']['AdminUser'];
@@ -126,70 +127,56 @@ export class AuthService {
     return permissions.some((permission) => this.hasPermission(permission));
   }
 
-  async login(email: string, password: string): Promise<AuthSession> {
-    const response = await this.http
-      .post<AuthSession>(`${this.config.apiBaseUrl}${this.config.loginPath}`, { email, password })
-      .toPromise();
-
-    if (!response) {
-      throw new Error('Login failed: empty response');
-    }
-
-    this.applySession(response);
-    return response;
+  login(email: string, password: string): Observable<AuthSession> {
+    return this.http.post<AuthSession>(`${this.config.apiBaseUrl}${this.config.loginPath}`, { email, password }).pipe(
+      catchError((error) => {
+        throw new Error('Login failed: ' + (error instanceof Error ? error.message : String(error)));
+      })
+    );
   }
 
-  async refresh(): Promise<AuthSession> {
+  refresh(): Observable<AuthSession> {
     if (!this.refreshToken) {
-      throw new Error('No refresh token available');
+      return throwError(() => new Error('No refresh token available'));
     }
 
-    const response = await this.http
-      .post<AuthSession>(`${this.config.apiBaseUrl}${this.config.refreshPath}`, {
-        refreshToken: this.refreshToken,
+    return this.http.post<AuthSession>(`${this.config.apiBaseUrl}${this.config.refreshPath}`, {
+      refreshToken: this.refreshToken,
+    }).pipe(
+      catchError((error) => {
+        throw new Error('Refresh failed: ' + (error instanceof Error ? error.message : String(error)));
       })
-      .toPromise();
-
-    if (!response) {
-      throw new Error('Refresh failed: empty response');
-    }
-
-    this.applySession(response, this.refreshToken);
-    return response;
+    );
   }
 
-  async me(): Promise<AdminUser> {
+  me(): Observable<AdminUser> {
     if (!this.accessToken) {
-      throw new Error('No access token available');
+      return throwError(() => new Error('No access token available'));
     }
 
-    const response = await this.http
-      .get<AdminUser>(`${this.config.apiBaseUrl}${this.config.mePath}`, {
-        headers: { Authorization: `Bearer ${this.accessToken}` },
+    return this.http.get<AdminUser>(`${this.config.apiBaseUrl}${this.config.mePath}`, {
+      headers: { Authorization: `Bearer ${this.accessToken}` },
+    }).pipe(
+      catchError((error) => {
+        throw new Error('Failed to load current user: ' + (error instanceof Error ? error.message : String(error)));
       })
-      .toPromise();
-
-    if (!response) {
-      throw new Error('Failed to load current user');
-    }
-
-    this.currentUser = response;
-    this.persistToStorage();
-    return response;
+    );
   }
 
-  async logout(): Promise<void> {
-    try {
-      if (this.accessToken) {
-        await this.http
-          .post(`${this.config.apiBaseUrl}${this.config.logoutPath}`, {}, {
-            headers: { Authorization: `Bearer ${this.accessToken}` },
-          })
-          .toPromise();
-      }
-    } finally {
-      this.clear();
+  logout(): Observable<void> {
+    if (!this.accessToken) {
+      return of(void 0);
     }
+
+    return this.http.post<void>(`${this.config.apiBaseUrl}${this.config.logoutPath}`, {}, {
+      headers: { Authorization: `Bearer ${this.accessToken}` },
+    }).pipe(
+      catchError((error) => {
+        // Still clear local state even if server fails
+        this.clear();
+        throw new Error('Logout failed: ' + (error instanceof Error ? error.message : String(error)));
+      })
+    );
   }
 
   clear(): void {

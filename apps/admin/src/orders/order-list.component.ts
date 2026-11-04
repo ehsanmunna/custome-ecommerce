@@ -152,9 +152,9 @@ export class OrderListComponent implements OnInit {
       if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
       if (this.createdFrom) url.searchParams.set('createdFrom', this.createdFrom);
       if (this.createdTo) url.searchParams.set('createdTo', this.createdTo);
-      const res = await this.http.get<OrderPage>(url.toString(), {
+      const res = (await this.http.get<OrderPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as OrderPage;
       this.orders = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load orders';

@@ -105,10 +105,10 @@ export class OrderStatusComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<{ id: string; number: string; status: string }>(
+      const res = (await this.http.get<{ id: string; number: string; status: string }>(
         `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as { id: string; number: string; status: string };
       if (res) {
         this.order = res;
         this.orderNumber = res.number;
@@ -137,7 +137,7 @@ export class OrderStatusComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}/status`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.success = `Order status updated to ${value.status}`;
       await this.loadOrder();
     } catch (err: any) {

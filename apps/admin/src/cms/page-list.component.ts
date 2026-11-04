@@ -229,9 +229,9 @@ export class PageListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
+      const res = (await this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as CmsPagePage;
       this.pages = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load CMS pages';
@@ -288,7 +288,7 @@ export class PageListComponent implements OnInit {
       const body = { content: this.buildContent(value) };
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/pages`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeCreateModal();
       await this.loadPages();
     } catch (err: any) {
@@ -328,7 +328,7 @@ export class PageListComponent implements OnInit {
       const body = { content: this.buildContent(value) };
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/pages/${this.editingPage.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadPages();
     } catch (err: any) {
@@ -345,7 +345,7 @@ export class PageListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/pages/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadPages();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete CMS page';

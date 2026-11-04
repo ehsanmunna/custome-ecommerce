@@ -96,9 +96,9 @@ export class LowStockIndicatorsComponent implements OnInit {
       const token = this.auth.token;
       const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
       url.searchParams.set('lowStock', 'true');
-      const res = await this.http.get<InventoryPage>(url.toString(), {
+      const res = (await this.http.get<InventoryPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as InventoryPage;
       this.lowStockItems = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load low-stock indicators';

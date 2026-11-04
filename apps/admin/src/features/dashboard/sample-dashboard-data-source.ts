@@ -1,4 +1,5 @@
 import { Injectable } from '@angular/core';
+import { Observable, of } from 'rxjs';
 import type { DashboardDataSource, DashboardRange, LowStockAlert, OrderStatusCount, RevenuePoint, TopProduct, RecentOrder, OrderStatus } from './dashboard.models';
 
 const SAMPLE_NEW_CUSTOMERS = 12;
@@ -24,39 +25,39 @@ const ORDER_STATUSES: string[] = [
 
 @Injectable({ providedIn: 'root' })
 export class SampleDashboardDataSource implements DashboardDataSource {
-  async getOverviewToday(): Promise<{ orderCount: number; revenue: number }> {
-    return { orderCount: 0, revenue: 0 };
+  getOverviewToday(): Observable<{ orderCount: number; revenue: number }> {
+    return of({ orderCount: 0, revenue: 0 });
   }
 
-  async getOverviewYesterday(): Promise<{ orderCount: number; revenue: number }> {
-    return { orderCount: 0, revenue: 0 };
+  getOverviewYesterday(): Observable<{ orderCount: number; revenue: number }> {
+    return of({ orderCount: 0, revenue: 0 });
   }
 
-  async getSales(_range: DashboardRange): Promise<RevenuePoint[]> {
-    return [];
+  getSales(_range: DashboardRange): Observable<RevenuePoint[]> {
+    return of([]);
   }
 
-  async getRecentOrders(_limit?: number): Promise<RecentOrder[]> {
-    return [];
+  getRecentOrders(_limit?: number): Observable<RecentOrder[]> {
+    return of([]);
   }
 
-  async getLowStockCount(): Promise<number> {
-    return 0;
+  getLowStockCount(): Observable<number> {
+    return of(0);
   }
 
-  async getOrderStatusCounts(): Promise<OrderStatusCount[]> {
-    return ORDER_STATUSES.map((status) => ({ status: status as OrderStatus, count: 0 }));
+  getOrderStatusCounts(): Observable<OrderStatusCount[]> {
+    return of(ORDER_STATUSES.map((status) => ({ status: status as OrderStatus, count: 0 })));
   }
 
-  async getLowStockAlerts(_limit = 5): Promise<LowStockAlert[]> {
-    return [];
+  getLowStockAlerts(_limit = 5): Observable<LowStockAlert[]> {
+    return of([]);
   }
 
-  async getNewCustomers(): Promise<number> {
-    return SAMPLE_NEW_CUSTOMERS;
+  getNewCustomers(): Observable<number> {
+    return of(SAMPLE_NEW_CUSTOMERS);
   }
 
-  async getTopSellingProducts(): Promise<TopProduct[]> {
-    return [...SAMPLE_TOP_PRODUCTS];
+  getTopSellingProducts(): Observable<TopProduct[]> {
+    return of([...SAMPLE_TOP_PRODUCTS]);
   }
 }

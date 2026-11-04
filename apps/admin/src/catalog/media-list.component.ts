@@ -190,9 +190,9 @@ export class MediaListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+      const res = (await this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as MediaPage;
       this.media = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load media';
@@ -225,11 +225,11 @@ export class MediaListComponent implements OnInit {
       if (value.altEn) {
         body.alt = { en: value.altEn };
       }
-      const res = await this.http.post<MediaAsset>(
+      const res = (await this.http.post<MediaAsset>(
         `${this.config.apiBaseUrl}/v1/admin/media`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as MediaAsset;
       this.pendingMedia = res ?? null;
       this.closeCreateModal();
       this.completeModal = true;
@@ -260,7 +260,7 @@ export class MediaListComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/media/${this.pendingMedia.id}/complete`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.closeCompleteModal();
       await this.loadMedia();
     } catch (err: any) {
@@ -277,7 +277,7 @@ export class MediaListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/media/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadMedia();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete media';

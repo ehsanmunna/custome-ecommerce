@@ -102,10 +102,10 @@ export class ReturnStatusComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<{ id: string; orderId: string; status: string }>(
+      const res = (await this.http.get<{ id: string; orderId: string; status: string }>(
         `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as { id: string; orderId: string; status: string };
       if (res) {
         this.ret = res;
         const currentStatus = res.status;
@@ -133,7 +133,7 @@ export class ReturnStatusComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}/status`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.success = `Return status updated to ${value.status}`;
       await this.loadReturn();
     } catch (err: any) {

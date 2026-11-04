@@ -180,9 +180,9 @@ export class AttributeListComponent implements OnInit {
   async loadCategories(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+      const res = (await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as CategoryPage;
       this.categories = res?.items ?? [];
     } catch {
       this.categories = [];
@@ -198,10 +198,10 @@ export class AttributeListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<AttributeDefinitionPage>(
+      const res = (await this.http.get<AttributeDefinitionPage>(
         `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as AttributeDefinitionPage;
       this.attributes = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load attributes';
@@ -240,7 +240,7 @@ export class AttributeListComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.closeCreateModal();
       await this.loadAttributes();
     } catch (err: any) {

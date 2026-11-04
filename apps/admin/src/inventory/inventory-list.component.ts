@@ -117,9 +117,9 @@ export class InventoryListComponent implements OnInit {
       const token = this.auth.token;
       const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
       if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
-      const res = await this.http.get<InventoryPage>(url.toString(), {
+      const res = (await this.http.get<InventoryPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as InventoryPage;
       this.inventory = res?.items ?? [];
       await this.loadVariantSkus();
     } catch (err: any) {
@@ -132,9 +132,9 @@ export class InventoryListComponent implements OnInit {
   async loadVariantSkus(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
+      const res = (await this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as VariantPage;
       const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);
       this.variantSkus = {};
       for (const v of variants) {

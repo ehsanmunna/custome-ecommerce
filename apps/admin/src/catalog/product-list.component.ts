@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, DestroyRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -9,9 +9,11 @@ import {
 } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { catchError } from 'rxjs/operators';
+import { EMPTY } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
-import { AdminAuthConfig } from '../auth/auth.config';
-import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 
 export interface Product {
   id: string;
@@ -243,9 +245,9 @@ export class ProductListComponent implements OnInit {
       const token = this.auth.token;
       const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
       if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
-      const res = await this.http.get<ProductPage>(url.toString(), {
+      const res = (await this.http.get<ProductPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as ProductPage;
       this.products = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load products';
@@ -257,9 +259,9 @@ export class ProductListComponent implements OnInit {
   async loadCategories(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+      const res = (await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as CategoryPage;
       this.categories = res?.items ?? [];
       this.categoryNames = {};
       for (const c of this.categories) {
@@ -273,9 +275,9 @@ export class ProductListComponent implements OnInit {
   async loadBrands(): Promise<void> {
     try {
       const token = this.auth.token;
-      const res = await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
+      const res = (await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as BrandPage;
       this.brands = res?.items ?? [];
       this.brandNames = {};
       for (const b of this.brands) {
@@ -322,7 +324,7 @@ export class ProductListComponent implements OnInit {
       };
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/products`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeCreateModal();
       await this.loadProducts();
     } catch (err: any) {
@@ -365,7 +367,7 @@ export class ProductListComponent implements OnInit {
       };
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/products/${this.editingProduct.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadProducts();
     } catch (err: any) {
@@ -382,7 +384,7 @@ export class ProductListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/products/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadProducts();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete product';

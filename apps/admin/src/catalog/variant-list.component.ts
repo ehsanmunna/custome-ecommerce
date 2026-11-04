@@ -207,10 +207,10 @@ export class VariantListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<{ items: Variant[] }>(
+      const res = (await this.http.get<{ items: Variant[] }>(
         `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as { items: Variant[] };
       this.variants = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load variants';
@@ -225,16 +225,16 @@ export class VariantListComponent implements OnInit {
     // In a full implementation, we'd get the category from the product detail.
     try {
       const token = this.auth.token;
-      const catRes = await this.http.get<{ items: any[] }>(
+      const catRes = (await this.http.get<{ items: any[] }>(
         `${this.config.apiBaseUrl}/v1/admin/categories`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as { items: any[] };
       const firstCat = catRes?.items?.[0];
       if (firstCat) {
-        const attrRes = await this.http.get<AttributeDefinitionPage>(
+        const attrRes = (await this.http.get<AttributeDefinitionPage>(
           `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
           { headers: { Authorization: `Bearer ${token}` } },
-        ).toPromise();
+        )) as unknown as AttributeDefinitionPage;
         this.attributeDefs = attrRes?.items ?? [];
         // Add dynamic form controls for each attribute
         for (const attr of this.attributeDefs) {
@@ -279,7 +279,7 @@ export class VariantListComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.closeCreateModal();
       await this.loadVariants();
     } catch (err: any) {
@@ -321,7 +321,7 @@ export class VariantListComponent implements OnInit {
         `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
         body,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      );
       this.closeEditModal();
       await this.loadVariants();
     } catch (err: any) {
@@ -338,7 +338,7 @@ export class VariantListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadVariants();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete variant';

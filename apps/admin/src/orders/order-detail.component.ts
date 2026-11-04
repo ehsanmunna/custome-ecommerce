@@ -164,10 +164,10 @@ export class OrderDetailComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<OrderDetail>(
+      const res = (await this.http.get<OrderDetail>(
         `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
         { headers: { Authorization: `Bearer ${token}` } },
-      ).toPromise();
+      )) as unknown as OrderDetail;
       this.order = res ?? null;
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load order';

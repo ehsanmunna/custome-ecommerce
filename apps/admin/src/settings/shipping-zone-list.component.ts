@@ -181,9 +181,9 @@ export class ShippingZoneListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
+      const res = (await this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as ShippingZonePage;
       this.zones = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load shipping zones';
@@ -216,7 +216,7 @@ export class ShippingZoneListComponent implements OnInit {
       };
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeCreateModal();
       await this.loadZones();
     } catch (err: any) {
@@ -257,7 +257,7 @@ export class ShippingZoneListComponent implements OnInit {
       };
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${this.editingZone.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadZones();
     } catch (err: any) {
@@ -274,7 +274,7 @@ export class ShippingZoneListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadZones();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete shipping zone';

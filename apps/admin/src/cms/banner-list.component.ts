@@ -252,9 +252,9 @@ export class BannerListComponent implements OnInit {
     this.error = null;
     try {
       const token = this.auth.token;
-      const res = await this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
+      const res = (await this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      })) as unknown as BannerPage;
       this.banners = res?.items ?? [];
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to load banners';
@@ -294,7 +294,7 @@ export class BannerListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createBanner(): Promise<void> {
+async createBanner(): Promise<void> {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
@@ -310,8 +310,7 @@ export class BannerListComponent implements OnInit {
       };
       await this.http.post(`${this.config.apiBaseUrl}/v1/admin/banners`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
-      this.closeCreateModal();
+      });
       await this.loadBanners();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to create banner';
@@ -359,7 +358,7 @@ export class BannerListComponent implements OnInit {
       };
       await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/banners/${this.editingBanner.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       this.closeEditModal();
       await this.loadBanners();
     } catch (err: any) {
@@ -376,7 +375,7 @@ export class BannerListComponent implements OnInit {
       const token = this.auth.token;
       await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/banners/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      }).toPromise();
+      });
       await this.loadBanners();
     } catch (err: any) {
       this.error = err?.message ?? 'Failed to delete banner';

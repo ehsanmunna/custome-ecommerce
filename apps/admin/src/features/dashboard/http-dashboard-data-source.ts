@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { AdminApiService } from '../../core/api/admin-api.service';
+import { Observable, of, forkJoin, map, catchError } from 'rxjs';
 import type { DashboardDataSource, DashboardRange, OrderStatusCount, RecentOrder, RevenuePoint, TopProduct, LowStockAlert, OrderStatus } from './dashboard.models';
 
 const DHAKA_OFFSET = 6 * 60;
@@ -30,49 +31,74 @@ function yesterdayInDhaka(): string {
 export class HttpDashboardDataSource implements DashboardDataSource {
   private readonly api = inject(AdminApiService);
 
-  async getOverviewToday(): Promise<{ orderCount: number; revenue: number }> {
-    const res = await this.api.getAnalyticsOverview({ date: todayInDhaka() } as never).toPromise();
-    return {
-      orderCount: res.orderCount,
-      revenue: res.revenue,
-    };
+  getOverviewToday(): Observable<{ orderCount: number; revenue: number }> {
+    return this.api.getAnalyticsOverview({ date: todayInDhaka() } as never).pipe(
+      map((res: any) => ({
+        orderCount: res.orderCount,
+        revenue: res.revenue,
+      })),
+      catchError((error) => {
+        console.error('Failed to load overview today:', error);
+        return of({ orderCount: 0, revenue: 0 });
+      })
+    );
   }
 
-  async getOverviewYesterday(): Promise<{ orderCount: number; revenue: number }> {
-    const res = await this.api.getAnalyticsOverview({ date: yesterdayInDhaka() } as never).toPromise();
-    return {
-      orderCount: res.orderCount,
-      revenue: res.revenue,
-    };
+  getOverviewYesterday(): Observable<{ orderCount: number; revenue: number }> {
+    return this.api.getAnalyticsOverview({ date: yesterdayInDhaka() } as never).pipe(
+      map((res: any) => ({
+        orderCount: res.orderCount,
+        revenue: res.revenue,
+      })),
+      catchError((error) => {
+        console.error('Failed to load overview yesterday:', error);
+        return of({ orderCount: 0, revenue: 0 });
+      })
+    );
   }
 
-  async getSales(range: DashboardRange): Promise<RevenuePoint[]> {
-    const res = await this.api.getSales({ range, interval: 'day' } as never).toPromise();
-    return res.map((p: { periodStart: string; orderCount: number; revenue: number }) => ({
-      periodStart: p.periodStart,
-      orderCount: p.orderCount,
-      revenue: p.revenue,
-    }));
+  getSales(range: DashboardRange): Observable<RevenuePoint[]> {
+    return this.api.getSales({ range, interval: 'day' } as never).pipe(
+      map((res: any) => res.map((p: { periodStart: string; orderCount: number; revenue: number }) => ({
+        periodStart: p.periodStart,
+        orderCount: p.orderCount,
+        revenue: p.revenue,
+      }))),
+      catchError((error) => {
+        console.error('Failed to load sales:', error);
+        return of([]);
+      })
+    );
   }
 
-  async getRecentOrders(limit = 8): Promise<RecentOrder[]> {
-    const res = await this.api.getOrders({ pageSize: String(limit) } as never).toPromise();
-    return res.items.map((o: { id: string; number: string; contactName: string; status: string; total: number; createdAt?: string }) => ({
-      id: o.id,
-      number: o.number,
-      customerName: o.contactName,
-      status: o.status as OrderStatus,
-      total: o.total,
-      createdAt: o.createdAt ?? '',
-    }));
+  getRecentOrders(limit = 8): Observable<RecentOrder[]> {
+    return this.api.getOrders({ pageSize: String(limit) } as never).pipe(
+      map((res: any) => res.items.map((o: { id: string; number: string; contactName: string; status: string; total: number; createdAt?: string }) => ({
+        id: o.id,
+        number: o.number,
+        customerName: o.contactName,
+        status: o.status as OrderStatus,
+        total: o.total,
+        createdAt: o.createdAt ?? '',
+      }))),
+      catchError((error) => {
+        console.error('Failed to load recent orders:', error);
+        return of([]);
+      })
+    );
   }
 
-  async getLowStockCount(): Promise<number> {
-    const res = await this.api.getInventory({ lowStock: 'true', pageSize: '1' } as never).toPromise();
-    return res.total;
+  getLowStockCount(): Observable<number> {
+    return this.api.getInventory({ lowStock: 'true', pageSize: '1' } as never).pipe(
+      map((res: any) => res.total),
+      catchError((error) => {
+        console.error('Failed to load low-stock count:', error);
+        return of(0);
+      })
+    );
   }
 
-  async getOrderStatusCounts(): Promise<OrderStatusCount[]> {
+  getOrderStatusCounts(): Observable<OrderStatusCount[]> {
     const statuses: OrderStatus[] = [
       'pending',
       'confirmed',
@@ -84,56 +110,70 @@ export class HttpDashboardDataSource implements DashboardDataSource {
       'partially_delivered',
     ];
 
-    const results = await Promise.all(
+    return forkJoin(
       statuses.map((status) =>
-        this.api.getOrders({ status, pageSize: '1' } as never).toPromise(),
-      ),
+        this.api.getOrders({ status, pageSize: '1' } as never).pipe(
+          map((res: any) => ({ status, total: res.total })),
+          catchError((error) => {
+            console.error(`Failed to load ${status} count:`, error);
+            return of({ status, total: 0 });
+          })
+        )
+      )
+    ).pipe(
+      map((results) => results.map((r: { status: OrderStatus; total: number }) => ({
+        status: r.status,
+        count: r.total,
+      })))
     );
-
-    return results.map((res: { total: number }, i: number) => ({
-      status: statuses[i],
-      count: res.total,
-    }));
   }
 
-  async getLowStockAlerts(limit = 5): Promise<LowStockAlert[]> {
-    const inventoryRes = await this.api.getInventory({ lowStock: 'true', pageSize: String(limit) } as never).toPromise();
-    const productsRes = await this.api.getProducts({ pageSize: '100' } as never).toPromise();
+  getLowStockAlerts(limit = 5): Observable<LowStockAlert[]> {
+    return forkJoin([
+      this.api.getInventory({ lowStock: 'true', pageSize: String(limit) } as never),
+      this.api.getProducts({ pageSize: '100' } as never),
+    ]).pipe(
+      map(([inventoryRes, productsRes]) => {
+        const productMap = new Map(
+          productsRes.items.map((p: any) => [
+            p.id,
+            p.content?.['en']?.name || p.content?.['bn']?.name || '',
+          ])
+        );
+        const variantToProduct = new Map<string, string>();
+        for (const p of productsRes.items) {
+          for (const v of p.variants) {
+            variantToProduct.set(v.id, p.id);
+          }
+        }
 
-    const productMap = new Map(
-      productsRes.items.map((p: { id: string; content?: Record<string, { name?: string }> }) => [
-        p.id,
-        p.content?.['en']?.name || p.content?.['bn']?.name || '',
-      ]),
+        return inventoryRes.items.map((item: any) => {
+          const productId = variantToProduct.get(item.variantId);
+          const productName =
+            productId && productMap.has(productId)
+              ? productMap.get(productId)!
+              : item.variantId;
+          return {
+            variantId: item.variantId,
+            productName,
+            sku: item.variantId,
+            available: item.available,
+            threshold: item.lowStockThreshold,
+          };
+        });
+      }),
+      catchError((error) => {
+        console.error('Failed to load low-stock alerts:', error);
+        return of([]);
+      })
     );
-    const variantToProduct = new Map<string, string>();
-    for (const p of productsRes.items) {
-      for (const v of p.variants) {
-        variantToProduct.set(v.id, p.id);
-      }
-    }
-
-    return inventoryRes.items.map((item: { variantId: string; available: number; lowStockThreshold: number }) => {
-      const productId = variantToProduct.get(item.variantId);
-      const productName =
-        productId && productMap.has(productId)
-          ? productMap.get(productId)!
-          : item.variantId;
-      return {
-        variantId: item.variantId,
-        productName,
-        sku: item.variantId,
-        available: item.available,
-        threshold: item.lowStockThreshold,
-      };
-    });
   }
 
-  async getNewCustomers(): Promise<number> {
-    throw new Error('Not backed by a contract operation; use sample source');
+  getNewCustomers(): Observable<number> {
+    return of(0);
   }
 
-  async getTopSellingProducts(): Promise<TopProduct[]> {
-    throw new Error('Not backed by a contract operation; use sample source');
+  getTopSellingProducts(): Observable<TopProduct[]> {
+    return of([]);
   }
 }
