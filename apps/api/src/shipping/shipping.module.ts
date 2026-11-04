@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
-import { Inject, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppConfigService } from '../platform/config/app-config.service';
-import { SHIPPING_ADAPTER, ShippingAdapter } from './shipping-adapter';
+import { SHIPPING_ADAPTER } from './shipping-adapter';
 import { SteadfastShippingAdapter } from './steadfast-shipping.adapter';
 import { ShippingController } from './shipping.controller';
 import { SteadfastWebhookController } from './shipping.controller';

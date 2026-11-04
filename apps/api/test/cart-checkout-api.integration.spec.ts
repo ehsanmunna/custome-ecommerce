@@ -30,30 +30,6 @@ interface CartRow {
   }>;
 }
 
-interface InventoryRow {
-  variantId: string;
-  quantityOnHand: number;
-  quantityReserved: number;
-}
-
-interface ZoneRow {
-  district: string;
-  zone: { id: string; deliveryFeePoisha: number; isActive: boolean };
-}
-
-interface CouponRow {
-  id: string;
-  code: string;
-  discountType: string;
-  discountValue: number;
-  minOrderPoisha: number;
-  startsAt: Date;
-  expiresAt: Date;
-  totalUsageLimit: number | null;
-  _count: { redemptions: number };
-  isActive: boolean;
-}
-
 describe('cart checkout HTTP API', () => {
 const carts: CartRow[] = [];
 const VALID_VARIANT_ID = '00000000-0000-4000-8000-000000000003';
@@ -170,7 +146,7 @@ const logger = { log: vi.fn(), error: vi.fn() };
         items: [{ id: itemId, quantity: input.quantity, unitPrice: 1000 }],
       })),
       removeCartItem: vi.fn(async () => undefined),
-      checkout: vi.fn(async (cartId: string, input: any) => ({
+      checkout: vi.fn(async (_cartId: string, _input: any) => ({
         orderId: 'order-id',
         orderNumber: 'ORD-test-1234',
         status: 'pending',

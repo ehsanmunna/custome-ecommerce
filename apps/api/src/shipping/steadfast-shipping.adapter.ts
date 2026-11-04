@@ -16,7 +16,7 @@ export interface SteadfastAdapterDependencies {
   fetch?: typeof fetch;
 }
 
-const STEADFAST_DEFAULT_BASE_URL = 'https://api.steadfast.com.bd';
+const _STEADFAST_DEFAULT_BASE_URL = 'https://api.steadfast.com.bd';
 
 const STEADFAST_STATUS_MAP: Record<string, ShipmentStatus> = {
   pending: 'pending',
@@ -42,12 +42,12 @@ function mapSteadfastStatus(value: unknown): ShipmentStatus {
 
 @Injectable()
 export class SteadfastShippingAdapter implements ShippingAdapter {
-  readonly name: 'steadfast' = 'steadfast';
+  readonly name = 'steadfast';
   private readonly configured: boolean;
 
   constructor(
     private readonly settings: SteadfastAdapterSettings,
-    dependencies: SteadfastAdapterDependencies = {},
+    dependencies: SteadfastAdapterDependencies = {} as const,
   ) {
     this.configured = Boolean(settings.apiKey && settings.baseUrl);
     this.httpFetch = dependencies.fetch ?? fetch;

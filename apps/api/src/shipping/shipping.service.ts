@@ -14,7 +14,6 @@ import {
   CreateParcelInput,
   ParcelResult,
   ShippingAdapter,
-  ShippingAdapterErrorImpl,
   isShippingAdapterError,
   SHIPPING_ADAPTER,
 } from './shipping-adapter';
@@ -104,7 +103,7 @@ export class ShippingService {
       throw error;
     }
 
-    let shipment: Prisma.ShipmentGetPayload<{}>;
+    let shipment: Prisma.ShipmentGetPayload<object>;
     try {
       shipment = await this.prisma.shipment.create({
         data: {
@@ -161,7 +160,7 @@ export class ShippingService {
       return this.mapShipment(current);
     }
 
-    let updated: Prisma.ShipmentGetPayload<{}>;
+    let updated: Prisma.ShipmentGetPayload<object>;
     try {
       updated = await this.prisma.shipment.update({
         where: { id: shipment.id },
@@ -306,7 +305,7 @@ export class ShippingService {
     throw error;
   }
 
-  private mapShipment(record: Prisma.ShipmentGetPayload<{}>): ShipmentView {
+  private mapShipment(record: Prisma.ShipmentGetPayload<object>): ShipmentView {
     return {
       id: record.id,
       orderId: record.orderId,

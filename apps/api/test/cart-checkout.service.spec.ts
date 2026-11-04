@@ -3,8 +3,6 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from 'database';
-import { describe, expect, it, vi } from 'vitest';
 import type { PrismaService } from '../src/platform/database/prisma.service';
 import { CartCheckoutService } from '../src/cart-checkout/cart-checkout.service';
 import {
