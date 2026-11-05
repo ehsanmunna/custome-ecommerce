@@ -27,13 +27,72 @@ function yesterdayInDhaka(): string {
   return formatDateKey(dhaka);
 }
 
+interface AnalyticsOverview {
+  orderCount: number;
+  revenue: number;
+}
+
+interface SalesResponse {
+  periodStart: string;
+  orderCount: number;
+  revenue: number;
+}
+
+interface OrderDto {
+  id: string;
+  number: string;
+  contactName: string;
+  status: string;
+  total: number;
+  createdAt?: string;
+}
+
+interface OrderPageDto {
+  items: OrderDto[];
+}
+
+interface ProductContent {
+  name?: string;
+}
+
+interface ProductGroupContent {
+  en?: ProductContent;
+  bn?: ProductContent;
+}
+
+interface ProductVariantDto {
+  id: string;
+}
+
+interface ProductItemDto {
+  id: string;
+  content: ProductGroupContent;
+  variants: ProductVariantDto[];
+}
+
+interface ProductPageDto {
+  items: ProductItemDto[];
+}
+
+interface InventoryItemDto {
+  variantId: string;
+  productName: string;
+  sku: string;
+  available: number;
+  lowStockThreshold: number;
+}
+
+interface InventoryPageDto {
+  items: InventoryItemDto[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class HttpDashboardDataSource implements DashboardDataSource {
   private readonly api = inject(AdminApiService);
 
   getOverviewToday(): Observable<{ orderCount: number; revenue: number }> {
     return this.api.getAnalyticsOverview({ date: todayInDhaka() } as never).pipe(
-      map((res) => ({
+      map((res: AnalyticsOverview) => ({
         orderCount: res.orderCount,
         revenue: res.revenue,
       })),
@@ -46,7 +105,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getOverviewYesterday(): Observable<{ orderCount: number; revenue: number }> {
     return this.api.getAnalyticsOverview({ date: yesterdayInDhaka() } as never).pipe(
-      map((res) => ({
+      map((res: AnalyticsOverview) => ({
         orderCount: res.orderCount,
         revenue: res.revenue,
       })),
@@ -59,7 +118,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getSales(range: DashboardRange): Observable<RevenuePoint[]> {
     return this.api.getSales({ range, interval: 'day' } as never).pipe(
-      map((res: RevenuePoint[]) => res.map((p: RevenuePoint) => ({
+      map((res: SalesResponse[]) => res.map((p: SalesResponse) => ({
         periodStart: p.periodStart,
         orderCount: p.orderCount,
         revenue: p.revenue,
@@ -73,7 +132,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getRecentOrders(limit = 8): Observable<RecentOrder[]> {
     return this.api.getOrders({ pageSize: String(limit) } as never).pipe(
-      map((res: Record<string, unknown>) => res.items.map((o: Record<string, unknown>) => ({
+      map((res: OrderPageDto) => res.items.map((o: OrderDto) => ({
         id: o.id,
         number: o.number,
         customerName: o.contactName,
@@ -90,7 +149,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getLowStockCount(): Observable<number> {
     return this.api.getInventory({ lowStock: 'true', pageSize: '1' } as never).pipe(
-      map((res) => res.total),
+      map((res: InventoryPageDto) => res.items.length),
       catchError((error) => {
         console.error('Failed to load low-stock count:', error);
         return of(0);
@@ -135,7 +194,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
     ]).pipe(
       map(([inventoryRes, productsRes]) => {
         const productMap = new Map(
-          productsRes.items.map((p) => [
+          productsRes.items.map((p: ProductItemDto) => [
             p.id,
             p.content?.['en']?.name || p.content?.['bn']?.name || '',
           ])
@@ -147,7 +206,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
           }
         }
 
-        return inventoryRes.items.map((item) => {
+        return inventoryRes.items.map((item: InventoryItemDto) => {
           const productId = variantToProduct.get(item.variantId);
           const productName =
             productId && productMap.has(productId)

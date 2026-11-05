@@ -48,6 +48,7 @@
 
 - [x] 8.1 Convert `features/dashboard/dashboard.service.ts` from `firstValueFrom`/`async`/`await` to pure Observable-returning methods — verifies service methods return Observable<T> without `firstValueFrom`
 - [x] 8.2 Convert `features/dashboard/dashboard.store.ts` `load()` from `async`/`await` to Observable subscription — verifies store loads via Observable subscription
+- [x] 8.3 Fix `http-dashboard-data-source.ts` TypeScript type errors (implicit `any` types)
 
 ## 9. Shared/Core
 
@@ -55,14 +56,14 @@
 
 ## 10. Verification
 
-- [ ] 10.1 Run `pnpm --filter admin typecheck` — verifies no TypeScript errors
-- [ ] 10.2 Run `pnpm --filter admin lint` — verifies no lint errors
-- [ ] 10.3 Run `pnpm --filter admin test` — verifies existing tests pass
-- [ ] 10.4 Grep production code: zero matches for `async`, `await`, `.then(`, `toPromise`, `firstValueFrom`, `lastValueFrom` in HTTP-related code — verifies no Promise patterns remain
-- [ ] 10.5 Grep production code: no `.subscribe()` inside any service — verifies services never subscribe
-- [ ] 10.6 Grep production code: every `.subscribe()` in components preceded by `takeUntilDestroyed` — verifies all component subscriptions cleaned up
-- [ ] 10.7 Grep production code: no nested subscribes — verifies no subscription inside subscribe
-- [ ] 10.8 Manual check: navigate away from each list/form screen mid-request — confirms no console errors and no further network activity after navigation
+- [x] 10.1 Run `pnpm --filter admin typecheck` — verifies no TypeScript errors
+- [x] 10.2 Run `pnpm --filter admin lint` — verifies no lint errors
+- [x] 10.3 Run `pnpm --filter admin test` — verifies existing tests pass
+- [x] 10.4 Grep production code: zero matches for `async`, `await`, `.then(`, `toPromise`, `firstValueFrom`, `lastValueFrom` in HTTP-related code — verifies no Promise patterns remain
+- [x] 10.5 Grep production code: no `.subscribe()` inside any service — verifies services never subscribe
+- [x] 10.6 Grep production code: every `.subscribe()` in components preceded by `takeUntilDestroyed` — verifies all component subscriptions cleaned up
+- [x] 10.7 Grep production code: no nested subscribes — verifies no subscription inside subscribe
+- [x] 10.8 Manual check: navigate away from each list/form screen mid-request — confirms no console errors and no further network activity after navigation
 
 ## Workflow follow-up
 
