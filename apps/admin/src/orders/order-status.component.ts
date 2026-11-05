@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   pending: ['confirmed', 'cancelled'],
@@ -54,6 +60,7 @@ export class OrderStatusComponent implements OnInit {
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
     private readonly route: ActivatedRoute,
     private readonly router: Router,
+    private readonly notification: NotificationService,
   ) {
     this.statusForm = this.fb.group({
       status: ['', Validators.required],
@@ -96,6 +103,13 @@ export class OrderStatusComponent implements OnInit {
             this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
           }
         },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load order');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
       });
   }
 
@@ -119,10 +133,6 @@ export class OrderStatusComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update order status';
-          return EMPTY;
-        }),
         finalize(() => (this.changing = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -134,6 +144,14 @@ export class OrderStatusComponent implements OnInit {
           const currentStatus = res.status;
           this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
           this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
+          this.notification.success(NOTIFICATION_MESSAGES.order.statusUpdate);
+        },
+        error: (err) => {
+          this.changing = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.order.statusUpdateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

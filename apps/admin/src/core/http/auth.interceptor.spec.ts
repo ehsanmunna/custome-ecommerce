@@ -22,6 +22,7 @@ import { ADMIN_AUTH_CONFIG, defaultAdminAuthConfig } from '../../auth/auth.confi
 import type { AuthSession } from '../../auth/auth.service';
 import { AuthService } from '../../auth/auth.service';
 import { authInterceptor } from './auth.interceptor';
+import { MessageService } from 'primeng/api';
 
 TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
@@ -67,6 +68,7 @@ describe('authInterceptor', () => {
         provideZonelessChangeDetection(),
         provideHttpClient(withInterceptors([authInterceptor])),
         provideHttpClientTesting(),
+        MessageService,
         { provide: AuthService, useValue: auth },
         { provide: Router, useValue: router },
         {

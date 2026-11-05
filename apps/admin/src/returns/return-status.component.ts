@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   requested: ['approved', 'rejected', 'cancelled'],
@@ -50,6 +56,7 @@ export class ReturnStatusComponent implements OnInit {
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
     @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
     @Inject(Router) private readonly router: Router,
+    private readonly notification: NotificationService,
   ) {
     this.returnId = this.route.snapshot.paramMap.get('returnId') || '';
     this.statusForm = this.fb.group({
@@ -92,6 +99,13 @@ export class ReturnStatusComponent implements OnInit {
             this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
           }
         },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load return');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
       });
   }
 
@@ -115,10 +129,6 @@ export class ReturnStatusComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update return status';
-          return EMPTY;
-        }),
         finalize(() => (this.changing = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -129,6 +139,14 @@ export class ReturnStatusComponent implements OnInit {
           const currentStatus = res.status;
           this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
           this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
+          this.notification.success(NOTIFICATION_MESSAGES.returns.statusUpdate);
+        },
+        error: (err) => {
+          this.changing = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.returns.statusUpdateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

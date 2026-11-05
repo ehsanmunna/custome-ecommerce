@@ -8,8 +8,10 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthService } from './auth.service';
-import { catchError, finalize, EMPTY } from 'rxjs';
+import { finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import { isGlobalHttpError, extractErrorMessage } from '../core/notifications/notification-messages';
 
 @Component({
   selector: 'app-login',
@@ -86,6 +88,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
+  private readonly notification = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   form: FormGroup = this.fb.group({
@@ -109,10 +112,6 @@ export class LoginComponent {
     const email = value.email ?? '';
     const password = value.password ?? '';
     this.auth.login(email, password).pipe(
-      catchError(() => {
-        this.error = this.transloco.translate('auth.invalidCredentials');
-        return EMPTY;
-      }),
       finalize(() => this.loading = false),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
@@ -120,6 +119,13 @@ export class LoginComponent {
         this.router.navigateByUrl(
           this.safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')),
         );
+      },
+      error: (err) => {
+        const generic = this.transloco.translate('auth.invalidCredentials') ?? 'Invalid credentials';
+        this.error = extractErrorMessage(err, generic);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
       },
     });
   }

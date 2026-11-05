@@ -26,6 +26,7 @@ import { PreferencesService } from '../../core/preferences/preferences.service';
 import { BreakpointService } from '../breakpoint.service';
 import { LayoutService } from '../layout.service';
 import { AdminShellComponent } from './admin-shell.component';
+import { MessageService } from 'primeng/api';
 
 TestBed.initTestEnvironment(BrowserDynamicTestingModule, platformBrowserDynamicTesting());
 
@@ -201,6 +202,7 @@ describe('AdminShellComponent', () => {
       providers: [
         provideZonelessChangeDetection(),
         provideRouter(testRoutes),
+        MessageService,
         { provide: BreakpointService, useValue: { isDesktop } },
         { provide: ClientConfigService, useValue: { config: clientConfig, value: clientConfig() } },
         {

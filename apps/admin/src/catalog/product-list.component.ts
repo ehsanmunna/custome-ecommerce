@@ -10,9 +10,15 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { switchMap, finalize } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface Product {
   id: string;
@@ -127,6 +133,7 @@ export class ProductListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       categoryId: ['', Validators.required],
@@ -161,16 +168,19 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load products';
-          return EMPTY;
-        }),
         finalize(() => (this.loading = false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.products = res?.items ?? [];
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load products');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -183,10 +193,6 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        catchError(() => {
-          this.categories = [];
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -195,6 +201,12 @@ export class ProductListComponent implements OnInit {
           this.categoryNames = {};
           for (const c of this.categories) {
             this.categoryNames[c.id] = c.content?.['en']?.name || c.content?.['bn']?.name || c.id;
+          }
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, 'Failed to load categories');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
           }
         },
       });
@@ -208,10 +220,6 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        catchError(() => {
-          this.brands = [];
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -220,6 +228,12 @@ export class ProductListComponent implements OnInit {
           this.brandNames = {};
           for (const b of this.brands) {
             this.brandNames[b.id] = b.content?.['en']?.name || b.content?.['bn']?.name || b.id;
+          }
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, 'Failed to load brands');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
           }
         },
       });
@@ -276,10 +290,6 @@ export class ProductListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create product';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -287,6 +297,14 @@ export class ProductListComponent implements OnInit {
         next: (res) => {
           this.closeCreateModal();
           this.products = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.product.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.product.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -331,10 +349,6 @@ export class ProductListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update product';
-          return EMPTY;
-        }),
         finalize(() => (this.updating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -342,6 +356,14 @@ export class ProductListComponent implements OnInit {
         next: (res) => {
           this.closeEditModal();
           this.products = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.product.update);
+        },
+        error: (err) => {
+          this.updating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.product.updateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -360,15 +382,18 @@ export class ProductListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to delete product';
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.products = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.product.delete);
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.product.deleteFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface InventoryItem {
   variantId: string;
@@ -70,6 +76,7 @@ export class InventoryAdjustmentComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
+    private readonly notification: NotificationService,
   ) {
     this.adjustmentForm = this.fb.group({
       variantId: ['', Validators.required],
@@ -113,6 +120,13 @@ export class InventoryAdjustmentComponent implements OnInit {
             );
           }
         },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load inventory');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
       });
   }
 
@@ -151,10 +165,6 @@ export class InventoryAdjustmentComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to adjust stock';
-          return EMPTY;
-        }),
         finalize(() => (this.adjustingId = null)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -167,6 +177,14 @@ export class InventoryAdjustmentComponent implements OnInit {
             sku: item.variantId,
           }));
           this.success = `Stock adjusted for ${variantId}`;
+          this.notification.success(NOTIFICATION_MESSAGES.inventory.adjust);
+        },
+        error: (err) => {
+          this.adjustingId = null;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.adjustFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

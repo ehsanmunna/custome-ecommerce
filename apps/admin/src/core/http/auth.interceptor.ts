@@ -4,12 +4,15 @@ import { Router } from '@angular/router';
 import { catchError, defer, finalize, from, type Observable, shareReplay, switchMap, throwError } from 'rxjs';
 import { AuthService, type AuthSession } from '../../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../../auth/auth.config';
+import { NotificationService } from '../notifications/notification.service';
+import { isGlobalHttpError, extractErrorMessage } from '../notifications/notification-messages';
 
 let refreshInFlight: Observable<AuthSession> | null = null;
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
+  const notification = inject(NotificationService);
   const config = inject(ADMIN_AUTH_CONFIG);
 
   const isApiRequest = request.url.startsWith(config.apiBaseUrl);
@@ -26,24 +29,32 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
   return next(authorizedRequest).pipe(
     catchError((error: unknown) => {
       if (
-        !(error instanceof HttpErrorResponse) ||
-        error.status !== 401 ||
-        !isApiRequest ||
-        isPublicAuthRequest
+        error instanceof HttpErrorResponse &&
+        error.status === 401 &&
+        isApiRequest &&
+        !isPublicAuthRequest
       ) {
-        return throwError(() => error);
+        if (!auth.refreshTokenValue) {
+          return failSession(auth, router, notification, error);
+        }
+
+        return refreshSession(auth).pipe(
+          switchMap((session) =>
+            next(request.clone({ setHeaders: { Authorization: `Bearer ${session.accessToken}` } })),
+          ),
+          catchError((refreshError: unknown) =>
+            failSession(auth, router, notification, refreshError),
+          ),
+        );
       }
 
-      if (!auth.refreshTokenValue) {
-        return failSession(auth, router, error);
+      if (error instanceof HttpErrorResponse && isGlobalHttpError(error.status)) {
+        notification.error(
+          extractErrorMessage(error, 'An unexpected error occurred.'),
+        );
       }
 
-      return refreshSession(auth).pipe(
-        switchMap((session) =>
-          next(request.clone({ setHeaders: { Authorization: `Bearer ${session.accessToken}` } })),
-        ),
-        catchError((refreshError: unknown) => failSession(auth, router, refreshError)),
-      );
+      return throwError(() => error);
     }),
   );
 };
@@ -64,11 +75,13 @@ function refreshSession(auth: AuthService): Observable<AuthSession> {
 function failSession(
   auth: AuthService,
   router: Router,
+  notification: NotificationService,
   error: unknown,
 ): Observable<never> {
   auth.clear();
   void router.navigate(['/login'], {
     queryParams: { returnUrl: router.url },
   });
+  notification.error('Session expired. Please log in again.');
   return throwError(() => error);
 }

@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface Coupon {
   id: string;
@@ -62,6 +68,7 @@ export class CouponListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       code: ['', Validators.required],
@@ -103,7 +110,14 @@ export class CouponListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.coupons = res?.items ?? [];
-      }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = extractErrorMessage(err, 'Failed to load coupons');
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 
@@ -138,7 +152,15 @@ export class CouponListComponent implements OnInit {
       next: (res) => {
         this.closeCreateModal();
         this.coupons = res?.items ?? [];
-      }
+        this.notification.success(NOTIFICATION_MESSAGES.coupon.create);
+      },
+      error: (err) => {
+        this.creating = false;
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.createFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 
@@ -173,7 +195,15 @@ export class CouponListComponent implements OnInit {
       next: (res) => {
         this.closeEditModal();
         this.coupons = res?.items ?? [];
-      }
+        this.notification.success(NOTIFICATION_MESSAGES.coupon.update);
+      },
+      error: (err) => {
+        this.updating = false;
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.updateFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 
@@ -195,7 +225,14 @@ export class CouponListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.coupons = res?.items ?? [];
-      }
+        this.notification.success(NOTIFICATION_MESSAGES.coupon.delete);
+      },
+      error: (err) => {
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.deleteFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 

@@ -79,6 +79,13 @@ class MockHttpClient {
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
 
+const mockNotification = {
+  success: () => {},
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+} as any;
+
 describe('ShippingZoneListComponent', () => {
   let component: ShippingZoneListComponent;
   let http: MockHttpClient;
@@ -90,7 +97,7 @@ describe('ShippingZoneListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ShippingZoneListComponent(http as any, auth, new FormBuilder(), config);
+    component = new ShippingZoneListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {
@@ -157,7 +164,7 @@ describe('CouponListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new CouponListComponent(http as any, auth, new FormBuilder(), config);
+    component = new CouponListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {
