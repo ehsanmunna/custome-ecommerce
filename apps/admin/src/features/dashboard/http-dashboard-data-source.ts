@@ -27,13 +27,59 @@ function yesterdayInDhaka(): string {
   return formatDateKey(dhaka);
 }
 
+interface AnalyticsOverview {
+  orderCount: number;
+  revenue: number;
+}
+
+interface SalesResponse {
+  periodStart: string;
+  orderCount: number;
+  revenue: number;
+}
+
+interface OrderDto {
+  id: string;
+  number: string;
+  contactName: string;
+  status: OrderStatus;
+  total: number;
+  createdAt?: string;
+}
+
+interface OrderPageDto {
+  items: OrderDto[];
+}
+
+interface InventoryItemDto {
+  variantId: string;
+  productName: string;
+  sku: string;
+  available: number;
+  lowStockThreshold: number;
+}
+
+interface InventoryPageDto {
+  items: InventoryItemDto[];
+}
+
+interface ProductItemDto {
+  id: string;
+  content: { en?: { name?: string }; bn?: { name?: string } };
+  variants: VariantDto[];
+}
+
+interface VariantDto {
+  id: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class HttpDashboardDataSource implements DashboardDataSource {
   private readonly api = inject(AdminApiService);
 
   getOverviewToday(): Observable<{ orderCount: number; revenue: number }> {
     return this.api.getAnalyticsOverview({ date: todayInDhaka() } as never).pipe(
-      map((res: any) => ({
+      map((res: AnalyticsOverview) => ({
         orderCount: res.orderCount,
         revenue: res.revenue,
       })),
@@ -46,7 +92,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getOverviewYesterday(): Observable<{ orderCount: number; revenue: number }> {
     return this.api.getAnalyticsOverview({ date: yesterdayInDhaka() } as never).pipe(
-      map((res: any) => ({
+      map((res: AnalyticsOverview) => ({
         orderCount: res.orderCount,
         revenue: res.revenue,
       })),
@@ -59,7 +105,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getSales(range: DashboardRange): Observable<RevenuePoint[]> {
     return this.api.getSales({ range, interval: 'day' } as never).pipe(
-      map((res: any) => res.map((p: { periodStart: string; orderCount: number; revenue: number }) => ({
+      map((res: SalesResponse[]) => res.map((p: SalesResponse) => ({
         periodStart: p.periodStart,
         orderCount: p.orderCount,
         revenue: p.revenue,
@@ -73,10 +119,10 @@ export class HttpDashboardDataSource implements DashboardDataSource {
 
   getRecentOrders(limit = 8): Observable<RecentOrder[]> {
     return this.api.getOrders({ pageSize: String(limit) } as never).pipe(
-      map((res: any) => res.items.map((o: { id: string; number: string; contactName: string; status: string; total: number; createdAt?: string }) => ({
+      map((res: OrderPageDto) => res.items.map((o: OrderDto) => ({
         id: o.id,
         number: o.number,
-        customerName: o.contactName,
+        contactName: o.contactName,
         status: o.status as OrderStatus,
         total: o.total,
         createdAt: o.createdAt ?? '',
@@ -85,12 +131,12 @@ export class HttpDashboardDataSource implements DashboardDataSource {
         console.error('Failed to load recent orders:', error);
         return of([]);
       })
-    );
+    ) as Observable<RecentOrder[]>;
   }
 
   getLowStockCount(): Observable<number> {
     return this.api.getInventory({ lowStock: 'true', pageSize: '1' } as never).pipe(
-      map((res: any) => res.total),
+      map((res: InventoryPageDto) => res.items.length),
       catchError((error) => {
         console.error('Failed to load low-stock count:', error);
         return of(0);
@@ -113,7 +159,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
     return forkJoin(
       statuses.map((status) =>
         this.api.getOrders({ status, pageSize: '1' } as never).pipe(
-          map((res: any) => ({ status, total: res.total })),
+          map((res) => ({ status, total: res.total })),
           catchError((error) => {
             console.error(`Failed to load ${status} count:`, error);
             return of({ status, total: 0 });
@@ -121,7 +167,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
         )
       )
     ).pipe(
-      map((results) => results.map((r: { status: OrderStatus; total: number }) => ({
+      map((results) => results.map((r) => ({
         status: r.status,
         count: r.total,
       })))
@@ -135,7 +181,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
     ]).pipe(
       map(([inventoryRes, productsRes]) => {
         const productMap = new Map(
-          productsRes.items.map((p: any) => [
+          productsRes.items.map((p: ProductItemDto) => [
             p.id,
             p.content?.['en']?.name || p.content?.['bn']?.name || '',
           ])
@@ -147,7 +193,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
           }
         }
 
-        return inventoryRes.items.map((item: any) => {
+        return inventoryRes.items.map((item: InventoryItemDto) => {
           const productId = variantToProduct.get(item.variantId);
           const productName =
             productId && productMap.has(productId)

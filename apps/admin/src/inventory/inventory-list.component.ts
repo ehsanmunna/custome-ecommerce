@@ -1,10 +1,12 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface InventoryItem {
   variantId: string;
@@ -40,55 +42,7 @@ export interface VariantPage {
   selector: 'app-inventory-list',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
-  template: `
-    <div class="p-4 max-w-[1000px] mx-auto">
-      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Inventory
-      </nav>
-
-      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Inventory</h1>
-
-      <div class="flex gap-2 mb-4 items-center flex-wrap">
-        <label class="flex items-center gap-1">
-          <input type="checkbox" [(ngModel)]="lowStockFilter" class="rounded border-[var(--color-border)]" /> Low stock only
-        </label>
-        <button (click)="loadInventory()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Refresh</button>
-      </div>
-
-      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
-
-      <table *ngIf="inventory.length; else emptyState" class="w-full border-collapse mb-4">
-        <thead>
-          <tr>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant SKU</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">On Hand</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reserved</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Available</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Low Stock Threshold</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of inventory" [class.bg-red-50]="item.lowStock">
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ variantSkus[item.variantId] || item.variantId }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.onHand }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.reserved }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.available }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.lowStockThreshold }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]" [class.text-red-600]="item.lowStock" [class.border-red-200]="item.lowStock" [class.bg-red-50]="item.lowStock">
-                {{ item.lowStock ? 'LOW STOCK' : 'OK' }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <ng-template #emptyState>
-        <p class="text-[var(--color-text-muted)]">No inventory items found.</p>
-      </ng-template>
-    </div>
-  `,
+  templateUrl: './inventory-list.component.html',
 })
 export class InventoryListComponent implements OnInit {
 
@@ -99,6 +53,8 @@ export class InventoryListComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
@@ -106,43 +62,37 @@ export class InventoryListComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadInventory();
+  ngOnInit(): void {
+    this.loadInventory();
   }
 
-  async loadInventory(): Promise<void> {
+  loadInventory(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
-      if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
-      const res = (await this.http.get<InventoryPage>(url.toString(), {
+    const token = this.auth.token;
+    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
+    if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
+    this.http.get<InventoryPage>(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as InventoryPage;
-      this.inventory = res?.items ?? [];
-      await this.loadVariantSkus();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load inventory';
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  async loadVariantSkus(): Promise<void> {
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as VariantPage;
-      const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);
-      this.variantSkus = {};
-      for (const v of variants) {
-        this.variantSkus[v.id] = v.sku;
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load inventory';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);
+        this.variantSkus = {};
+        for (const v of variants) {
+          this.variantSkus[v.id] = v.sku;
+        }
       }
-    } catch {
-      this.variantSkus = {};
-    }
+    });
   }
 }
 

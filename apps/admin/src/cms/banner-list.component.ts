@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface BannerContent {
   title?: string;
@@ -43,155 +45,7 @@ function localeBannerTitle(banner: Banner): string {
   selector: 'app-banner-list',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  template: `
-    <div class="p-4 max-w-[1000px] mx-auto">
-      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Banners
-      </nav>
-
-      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Banners</h1>
-
-      <div class="flex gap-2 mb-4 items-center flex-wrap">
-        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('cms.banners.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Banner</button>
-      </div>
-
-      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
-
-      <table *ngIf="banners.length; else emptyState" class="w-full border-collapse mb-4">
-        <thead>
-          <tr>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Placement</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Title</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Sort Order</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Active</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let b of banners">
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ b.placement }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ localeBannerTitle(b) }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ b.sortOrder }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ b.active ? 'Yes' : 'No' }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <button (click)="openEditModal(b)" *ngIf="auth.hasPermission('cms.banners.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
-              <button (click)="deleteBanner(b.id)" *ngIf="auth.hasPermission('cms.banners.delete')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <ng-template #emptyState>
-        <p class="text-[var(--color-text-muted)]">No banners found.</p>
-      </ng-template>
-
-      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Banner</h2>
-          <form [formGroup]="createForm" (ngSubmit)="createBanner()">
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Placement</label>
-              <input formControlName="placement" placeholder="e.g. homepage-hero" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
-              <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Media ID</label>
-              <input formControlName="mediaId" placeholder="optional" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
-              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (en)</label>
-              <input formControlName="titleEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (en)</label>
-              <input formControlName="bodyEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (en)</label>
-              <input formControlName="destinationUrlEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (bn)</label>
-              <input formControlName="titleBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (bn)</label>
-              <input formControlName="bodyBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (bn)</label>
-              <input formControlName="destinationUrlBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
-            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
-          </form>
-        </div>
-      </div>
-
-      <div *ngIf="editModal && editingBanner" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto">
-          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Banner</h2>
-          <form [formGroup]="editForm" (ngSubmit)="updateBanner()">
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Placement</label>
-              <input formControlName="placement" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
-              <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Media ID</label>
-              <input formControlName="mediaId" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Active</label>
-              <select formControlName="active" class="w-full p-2 border border-[var(--color-border)] rounded-md">
-                <option value="true">Yes</option>
-                <option value="false">No</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (en)</label>
-              <input formControlName="titleEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (en)</label>
-              <input formControlName="bodyEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (en)</label>
-              <input formControlName="destinationUrlEn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Title (bn)</label>
-              <input formControlName="titleBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Body (bn)</label>
-              <input formControlName="bodyBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Destination URL (bn)</label>
-              <input formControlName="destinationUrlBn" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
-            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './banner-list.component.html',
 })
 export class BannerListComponent implements OnInit {
 
@@ -205,6 +59,8 @@ export class BannerListComponent implements OnInit {
   creating = false;
   updating = false;
   editingBanner: Banner | null = null;
+
+  private readonly destroyRef = inject(DestroyRef);
 
   createForm: FormGroup;
   editForm: FormGroup;
@@ -243,24 +99,28 @@ export class BannerListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadBanners();
+  ngOnInit(): void {
+    this.loadBanners();
   }
 
-  async loadBanners(): Promise<void> {
+  loadBanners(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as BannerPage;
-      this.banners = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load banners';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load banners';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 
   buildContent(value: any): Record<string, BannerContent> {
@@ -294,29 +154,37 @@ export class BannerListComponent implements OnInit {
     this.createModal = false;
   }
 
-async createBanner(): Promise<void> {
+  createBanner(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body = {
-        placement: value.placement,
-        sortOrder: Math.round(parseFloat(value.sortOrder)),
-        active: value.active === true || value.active === 'true',
-        ...(value.mediaId ? { mediaId: value.mediaId } : {}),
-        content: this.buildContent(value),
-      };
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/banners`, body, {
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body = {
+      placement: value.placement,
+      sortOrder: Math.round(parseFloat(value.sortOrder)),
+      active: value.active === true || value.active === 'true',
+      ...(value.mediaId ? { mediaId: value.mediaId } : {}),
+      content: this.buildContent(value),
+    };
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/banners`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadBanners();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create banner';
-    } finally {
-      this.creating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create banner';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(banner: Banner): void {
@@ -342,44 +210,58 @@ async createBanner(): Promise<void> {
     this.editingBanner = null;
   }
 
-  async updateBanner(): Promise<void> {
+  updateBanner(): void {
     if (!this.editingBanner || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body = {
-        placement: value.placement,
-        sortOrder: Math.round(parseFloat(value.sortOrder)),
-        active: value.active === true || value.active === 'true',
-        ...(value.mediaId ? { mediaId: value.mediaId } : {}),
-        content: this.buildContent(value),
-      };
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/banners/${this.editingBanner.id}`, body, {
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body = {
+      placement: value.placement,
+      sortOrder: Math.round(parseFloat(value.sortOrder)),
+      active: value.active === true || value.active === 'true',
+      ...(value.mediaId ? { mediaId: value.mediaId } : {}),
+      content: this.buildContent(value),
+    };
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/banners/${this.editingBanner.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadBanners();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update banner';
-    } finally {
-      this.updating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update banner';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteBanner(id: string): Promise<void> {
+  deleteBanner(id: string): void {
     if (!confirm('Delete this banner?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/banners/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/banners/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadBanners();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete banner';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete banner';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 }
-

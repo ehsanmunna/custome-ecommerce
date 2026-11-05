@@ -1,6 +1,6 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { DashboardService } from './dashboard.service';
-import type { DashboardRange, AsyncState } from './dashboard.models';
+import type { DashboardRange, AsyncState, DashboardOverview } from './dashboard.models';
 
 export interface DashboardWidgetState {
   orders: AsyncState<{ today: { orderCount: number; revenue: number }; yesterday: { orderCount: number; revenue: number } }>;
@@ -27,29 +27,32 @@ export class DashboardStore {
   readonly error = computed(() => this._error());
   readonly range = computed(() => this.service.dashboardRange());
 
-  async load(): Promise<void> {
+  load(): void {
     this._loading.set(true);
     this._error.set(null);
 
-    try {
-      const overview = await this.service.loadOverview();
-      this._state.set({
-        orders: { status: 'ready', data: overview.orders.data },
-        revenue: { status: 'ready', data: overview.revenue.data },
-        newCustomers: { status: 'ready', data: overview.newCustomers.data, isSample: overview.newCustomers.isSample },
-        lowStockCount: { status: 'ready', data: overview.lowStockCount.data },
-        revenueChart: { status: 'ready', data: overview.revenueChart.data, isSample: overview.revenueChart.isSample },
-        recentOrders: { status: 'ready', data: overview.recentOrders.data },
-        topProducts: { status: 'ready', data: overview.topProducts.data, isSample: overview.topProducts.isSample },
-        orderStatus: { status: 'ready', data: overview.orderStatus.data },
-        lowStockAlerts: { status: 'ready', data: overview.lowStockAlerts.data },
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to load dashboard';
-      this._error.set(message);
-    } finally {
-      this._loading.set(false);
-    }
+    this.service.loadOverview().subscribe({
+      next: (overview: DashboardOverview) => {
+        this._state.set({
+          orders: { status: 'ready', data: overview.orders.data },
+          revenue: { status: 'ready', data: overview.revenue.data },
+          newCustomers: { status: 'ready', data: overview.newCustomers.data, isSample: overview.newCustomers.isSample },
+          lowStockCount: { status: 'ready', data: overview.lowStockCount.data },
+          revenueChart: { status: 'ready', data: overview.revenueChart.data, isSample: overview.revenueChart.isSample },
+          recentOrders: { status: 'ready', data: overview.recentOrders.data },
+          topProducts: { status: 'ready', data: overview.topProducts.data, isSample: overview.topProducts.isSample },
+          orderStatus: { status: 'ready', data: overview.orderStatus.data },
+          lowStockAlerts: { status: 'ready', data: overview.lowStockAlerts.data },
+        });
+      },
+      error: (err: unknown) => {
+        const message = err instanceof Error ? err.message : 'Failed to load dashboard';
+        this._error.set(message);
+      },
+      complete: () => {
+        this._loading.set(false);
+      }
+    });
   }
 
   setRange(range: DashboardRange): void {

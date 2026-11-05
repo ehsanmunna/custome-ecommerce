@@ -1,0 +1,96 @@
+<div class="p-4 max-w-[1000px] mx-auto">
+  <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+    <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Attribute Definitions
+  </nav>
+
+  <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Attribute Definitions</h1>
+
+  <div class="flex gap-2 mb-4 items-center flex-wrap">
+    <label class="font-medium text-sm text-[var(--color-text-secondary)]">Category</label>
+    <select [(ngModel)]="selectedCategoryId" (change)="loadAttributes()" class="w-auto p-2 border border-[var(--color-border)] rounded-md">
+      <option value="">Select a category</option>
+      <option *ngFor="let c of categories" [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</option>
+    </select>
+    <button (click)="openCreateModal()" [disabled]="!selectedCategoryId" *ngIf="auth.hasPermission('catalog.attributes.create')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)] opacity-50:cursor-not-allowed">+ New Attribute</button>
+  </div>
+
+  <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+
+  <div *ngIf="selectedCategoryId && attributes.length; else emptyState" class="w-full border-collapse mb-4">
+    <table class="w-full border-collapse">
+      <thead>
+        <tr>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Key</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Value Type</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Required</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Filterable</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Sort Order</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Options</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let a of attributes">
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ a.key }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ a.valueType }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ a.required ? 'Yes' : 'No' }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ a.filterable ? 'Yes' : 'No' }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ a.sortOrder }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ a.options?.join(', ') || '-' }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <ng-template #emptyState>
+    <p *ngIf="selectedCategoryId" class="text-[var(--color-text-muted)]">No attribute definitions for this category.</p>
+    <p *ngIf="!selectedCategoryId" class="text-[var(--color-text-muted)]">Select a category to manage its attributes.</p>
+  </ng-template>
+
+  <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
+    <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Attribute Definition</h2>
+      <form [formGroup]="createForm" (ngSubmit)="createAttribute()">
+        <div class="mb-3">
+          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Key (e.g., color, size)</label>
+          <input formControlName="key" placeholder="color" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
+          <small class="block text-[var(--color-text-muted)] text-xs mt-1">Lowercase letters, numbers, underscores. Must start with a letter.</small>
+        </div>
+        <div class="mb-3">
+          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Value Type</label>
+          <select formControlName="valueType" class="w-full p-2 border border-[var(--color-border)] rounded-md">
+            <option value="text">Text</option>
+            <option value="number">Number</option>
+            <option value="boolean">Boolean</option>
+            <option value="select">Select</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Required</label>
+          <select formControlName="required" class="w-full p-2 border border-[var(--color-border)] rounded-md">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Filterable</label>
+          <select formControlName="filterable" class="w-full p-2 border border-[var(--color-border)] rounded-md">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Sort Order</label>
+          <input type="number" formControlName="sortOrder" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
+        </div>
+        <div class="mb-3">
+          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Options (comma-separated, for select type)</label>
+          <input formControlName="options" placeholder="red, green, blue" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
+        </div>
+        <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
+        <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
+      </form>
+    </div>
+  </div>
+</div>

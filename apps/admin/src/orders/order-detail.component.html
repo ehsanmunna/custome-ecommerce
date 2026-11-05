@@ -1,0 +1,59 @@
+<div class="p-4 max-w-[1000px] mx-auto">
+  <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+    <a routerLink="/orders" class="text-[var(--color-primary)] underline">Orders</a> &gt; #{{ order?.number }}
+  </nav>
+
+  <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Order #{{ order?.number }}</h1>
+
+  <div class="flex gap-4 mb-4 text-sm text-[var(--color-text-muted)]">
+    <span>Status: <span class="font-semibold">{{ order?.status }}</span></span>
+    <span>Customer: {{ order?.contactName }}</span>
+    <span>Total: {{ order?.total.amount / 100 | currency }} {{ order?.total.currency }}</span>
+  </div>
+
+  <div class="mb-4">
+    <h3 class="text-lg font-semibold text-[var(--color-text)] mb-2">Items</h3>
+    <table class="w-full border-collapse">
+      <thead>
+        <tr>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">SKU</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Qty</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Unit Price</th>
+          <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Line Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of order?.items">
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ item.productName }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ item.sku }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ item.quantity }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ item.unitPrice.amount / 100 | currency }} {{ item.unitPrice.currency }}</td>
+          <td class="border border-[var(--color-border)] p-2 text-left">{{ item.lineTotal.amount / 100 | currency }} {{ item.lineTotal.currency }}</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr>
+          <td class="border border-[var(--color-border)] p-2 text-right" colspan="4">Subtotal:</td>
+          <td class="border border-[var(--color-border)] p-2 text-right">{{ order?.subtotal.amount / 100 | currency }} {{ order?.subtotal.currency }}</td>
+        </tr>
+        <tr>
+          <td class="border border-[var(--color-border)] p-2 text-right" colspan="4">Discount:</td>
+          <td class="border border-[var(--color-border)] p-2 text-right">- {{ order?.discount.amount / 100 | currency }} {{ order?.discount.currency }}</td>
+        </tr>
+        <tr>
+          <td class="border border-[var(--color-border)] p-2 text-right" colspan="4">Shipping:</td>
+          <td class="border border-[var(--color-border)] p-2 text-right">{{ order?.deliveryFee.amount / 100 | currency }} {{ order?.deliveryFee.currency }}</td>
+        </tr>
+        <tr>
+          <td class="border border-[var(--color-border)] p-2 text-right" colspan="4">Tax:</td>
+          <td class="border border-[var(--color-border)] p-2 text-right">{{ order?.tax.amount / 100 | currency }} {{ order?.tax.currency }}</td>
+        </tr>
+        <tr>
+          <td class="border border-[var(--color-border)] p-2 text-right" colspan="4">Total:</td>
+          <td class="border border-[var(--color-border)] p-2 text-right font-semibold">{{ order?.total.amount / 100 | currency }} {{ order?.total.currency }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>

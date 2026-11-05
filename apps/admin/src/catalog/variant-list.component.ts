@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Variant {
   id: string;
@@ -51,106 +53,7 @@ export interface AttributeDefinitionPage {
   selector: 'app-variant-list',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  template: `
-    <div class="p-4 max-w-[1000px] mx-auto">
-      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a routerLink="/products" class="text-[var(--color-primary)] underline">Products</a> &gt; Variants
-      </nav>
-
-      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Variants for Product {{ productId }}</h1>
-
-      <div class="flex gap-2 mb-4 items-center flex-wrap">
-        <button (click)="openCreateModal()" *ngIf="auth.hasPermission('catalog.products.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">+ New Variant</button>
-        <a routerLink="/products" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">Back to Products</a>
-      </div>
-
-      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
-
-      <table *ngIf="variants.length; else emptyState" class="w-full border-collapse mb-4">
-        <thead>
-          <tr>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">SKU</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Price</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Attributes</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let v of variants">
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ v.sku }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ (v.price.amount / 100).toFixed(2) }} {{ v.price.currency }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left"><span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]">{{ v.status }}</span></td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <span *ngFor="let k of attributeKeys(v.attributes)" class="text-[var(--color-text-secondary)] text-xs">{{ k }}: {{ v.attributes[k] }}</span>
-            </td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <button (click)="openEditModal(v)" *ngIf="auth.hasPermission('catalog.products.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Edit</button>
-              <button (click)="deleteVariant(v.id)" *ngIf="auth.hasPermission('catalog.products.update')" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]">Delete</button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <ng-template #emptyState>
-        <p>No variants found for this product.</p>
-      </ng-template>
-
-      <div *ngIf="createModal" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Variant</h2>
-          <form [formGroup]="createForm" (ngSubmit)="createVariant()">
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">SKU</label>
-              <input formControlName="sku" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Price (BDT)</label>
-              <input type="number" formControlName="price" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
-              <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <div class="mb-3" *ngFor="let attr of attributeDefs">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">{{ attr.key }} ({{ attr.valueType }}){{ attr.required ? ' *' : '' }}</label>
-              <input [formControlName]="'attr_' + attr.key" [placeholder]="attr.options?.join(', ')" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <button type="submit" [disabled]="createForm.invalid || creating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Create</button>
-            <button type="button" (click)="closeCreateModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
-          </form>
-        </div>
-      </div>
-
-      <div *ngIf="editModal && editingVariant" class="fixed inset-0 bg-black/50 flex items-center justify-center">
-        <div class="bg-[var(--color-surface)] p-6 rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-          <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Edit Variant</h2>
-          <form [formGroup]="editForm" (ngSubmit)="updateVariant()">
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">SKU</label>
-              <input formControlName="sku" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Price (BDT)</label>
-              <input type="number" formControlName="price" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </div>
-            <div class="mb-3">
-              <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
-              <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
-                <option value="active">Active</option>
-                <option value="archived">Archived</option>
-              </select>
-            </div>
-            <button type="submit" [disabled]="editForm.invalid || updating" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Save</button>
-            <button type="button" (click)="closeEditModal()" class="px-4 py-2 border-none rounded-md cursor-pointer ml-2">Cancel</button>
-          </form>
-        </div>
-      </div>
-    </div>
-  `,
+  templateUrl: './variant-list.component.html',
 })
 export class VariantListComponent implements OnInit {
 
@@ -166,6 +69,8 @@ export class VariantListComponent implements OnInit {
   creating = false;
   updating = false;
   editingVariant: Variant | null = null;
+
+  private readonly destroyRef = inject(DestroyRef);
 
   createForm: FormGroup;
   editForm: FormGroup;
@@ -189,61 +94,69 @@ export class VariantListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     if (!this.productId) {
       this.error = 'No product ID specified';
       return;
     }
-    await this.loadVariants();
-    await this.loadAttributeDefs();
+    this.loadVariants();
+    this.loadAttributeDefs();
   }
 
   attributeKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
 
-  async loadVariants(): Promise<void> {
+  loadVariants(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<{ items: Variant[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as { items: Variant[] };
-      this.variants = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load variants';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<{ items: Variant[] }>(
+      `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load variants';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 
-  async loadAttributeDefs(): Promise<void> {
-    // We need the category ID to load attribute definitions.
-    // For now, we'll load from the first category that has attributes.
-    // In a full implementation, we'd get the category from the product detail.
-    try {
-      const token = this.auth.token;
-      const catRes = (await this.http.get<{ items: any[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/categories`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as { items: any[] };
-      const firstCat = catRes?.items?.[0];
-      if (firstCat) {
-        const attrRes = (await this.http.get<AttributeDefinitionPage>(
-          `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        )) as unknown as AttributeDefinitionPage;
+  loadAttributeDefs(): void {
+    const token = this.auth.token;
+    this.http.get<{ items: any[] }>(
+      `${this.config.apiBaseUrl}/v1/admin/categories`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap((catRes) => {
+        const firstCat = catRes?.items?.[0];
+        if (firstCat) {
+          return this.http.get<AttributeDefinitionPage>(
+            `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+        }
+        return EMPTY;
+      }),
+      catchError(() => {
+        this.attributeDefs = [];
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (attrRes) => {
         this.attributeDefs = attrRes?.items ?? [];
-        // Add dynamic form controls for each attribute
         for (const attr of this.attributeDefs) {
           this.createForm.addControl('attr_' + attr.key, this.fb.control(''));
         }
       }
-    } catch {
-      this.attributeDefs = [];
-    }
+    });
   }
 
   openCreateModal(): void {
@@ -255,38 +168,46 @@ export class VariantListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createVariant(): Promise<void> {
+  createVariant(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const attributes: Record<string, unknown> = {};
-      for (const attr of this.attributeDefs) {
-        const ctrlValue = value['attr_' + attr.key];
-        if (ctrlValue !== undefined && ctrlValue !== '') {
-          attributes[attr.key] = attr.valueType === 'number' ? Number(ctrlValue) : ctrlValue;
-        }
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const attributes: Record<string, unknown> = {};
+    for (const attr of this.attributeDefs) {
+      const ctrlValue = value['attr_' + attr.key];
+      if (ctrlValue !== undefined && ctrlValue !== '') {
+        attributes[attr.key] = attr.valueType === 'number' ? Number(ctrlValue) : ctrlValue;
       }
-      const body: VariantInput = {
-        sku: value.sku,
-        price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
-        status: value.status,
-        attributes,
-      };
-      await this.http.post(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        body,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      this.closeCreateModal();
-      await this.loadVariants();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create variant';
-    } finally {
-      this.creating = false;
     }
+    const body: VariantInput = {
+      sku: value.sku,
+      price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
+      status: value.status,
+      attributes,
+    };
+    this.http.post(
+      `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+      body,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create variant';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(variant: Variant): void {
@@ -304,45 +225,62 @@ export class VariantListComponent implements OnInit {
     this.editingVariant = null;
   }
 
-  async updateVariant(): Promise<void> {
+  updateVariant(): void {
     if (!this.editingVariant || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body: VariantInput = {
-        sku: value.sku,
-        price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
-        status: value.status,
-        attributes: this.editingVariant.attributes,
-      };
-      await this.http.patch(
-        `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
-        body,
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body: VariantInput = {
+      sku: value.sku,
+      price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
+      status: value.status,
+      attributes: this.editingVariant.attributes,
+    };
+    this.http.patch(
+      `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
+      body,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
         { headers: { Authorization: `Bearer ${token}` } },
-      );
-      this.closeEditModal();
-      await this.loadVariants();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update variant';
-    } finally {
-      this.updating = false;
-    }
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update variant';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteVariant(id: string): Promise<void> {
+  deleteVariant(id: string): void {
     if (!confirm('Delete this variant?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadVariants();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete variant';
-    }
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete variant';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 }
 

@@ -7,6 +7,7 @@ import {
 import { TranslocoService, type Translation } from '@jsverse/transloco';
 import { PrimeNG } from 'primeng/config';
 import { catchError, of, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 type Translate = (key: string) => string;
 
@@ -53,14 +54,13 @@ export function providePrimeNgTranslations(): EnvironmentProviders {
       );
     };
 
-    const subscription = transloco.langChanges$
+    transloco.langChanges$
       .pipe(
         switchMap((lang) =>
           transloco.load(lang).pipe(catchError(() => of<Translation>({}))),
         ),
+        takeUntilDestroyed(destroyRef)
       )
       .subscribe(() => syncLabels());
-
-    destroyRef.onDestroy(() => subscription.unsubscribe());
   });
 }
