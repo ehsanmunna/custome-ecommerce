@@ -42,36 +42,13 @@ interface OrderDto {
   id: string;
   number: string;
   contactName: string;
-  status: string;
+  status: OrderStatus;
   total: number;
   createdAt?: string;
 }
 
 interface OrderPageDto {
   items: OrderDto[];
-}
-
-interface ProductContent {
-  name?: string;
-}
-
-interface ProductGroupContent {
-  en?: ProductContent;
-  bn?: ProductContent;
-}
-
-interface ProductVariantDto {
-  id: string;
-}
-
-interface ProductItemDto {
-  id: string;
-  content: ProductGroupContent;
-  variants: ProductVariantDto[];
-}
-
-interface ProductPageDto {
-  items: ProductItemDto[];
 }
 
 interface InventoryItemDto {
@@ -84,6 +61,16 @@ interface InventoryItemDto {
 
 interface InventoryPageDto {
   items: InventoryItemDto[];
+}
+
+interface ProductItemDto {
+  id: string;
+  content: { en?: { name?: string }; bn?: { name?: string } };
+  variants: VariantDto[];
+}
+
+interface VariantDto {
+  id: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -135,7 +122,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
       map((res: OrderPageDto) => res.items.map((o: OrderDto) => ({
         id: o.id,
         number: o.number,
-        customerName: o.contactName,
+        contactName: o.contactName,
         status: o.status as OrderStatus,
         total: o.total,
         createdAt: o.createdAt ?? '',
@@ -144,7 +131,7 @@ export class HttpDashboardDataSource implements DashboardDataSource {
         console.error('Failed to load recent orders:', error);
         return of([]);
       })
-    );
+    ) as Observable<RecentOrder[]>;
   }
 
   getLowStockCount(): Observable<number> {

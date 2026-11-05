@@ -1,0 +1,45 @@
+<div class="p-4 max-w-[1000px] mx-auto">
+  <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+    <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Returns
+  </nav>
+
+  <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Returns</h1>
+
+  <div class="flex gap-2 mb-4 items-center flex-wrap">
+    <label class="flex items-center gap-1">
+      <label class="font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
+      <select formControlName="statusFilter" class="w-full p-2 border border-[var(--color-border)] rounded-md">
+        <option value="">All</option>
+        <option *ngFor="let s of return_statuses" [value]="s">{{ s }}</option>
+      </select>
+    </label>
+    <button (click)="loadReturns()" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">Refresh</button>
+  </div>
+
+  <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+
+  <table *ngIf="returns.length; else emptyState" class="w-full border-collapse mb-4">
+    <thead>
+      <tr>
+        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Return #</th>
+        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Order #</th>
+        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
+        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Refund</th>
+        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let r of returns">
+        <td class="border border-[var(--color-border)] p-2 text-left">#{{ r.id }}</td>
+        <td class="border border-[var(--color-border)] p-2 text-left">{{ r.orderId }}</td>
+        <td class="border border-[var(--color-border)] p-2 text-left">{{ r.status }}</td>
+        <td class="border border-[var(--color-border)] p-2 text-left">{{ r.refundTotal.amount / 100 | currency }} {{ r.refundTotal.currency }}</td>
+        <td class="border border-[var(--color-border)] p-2 text-left">{{ r.createdAt }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <ng-template #emptyState>
+    <p class="text-[var(--color-text-muted)]">No returns found.</p>
+  </ng-template>
+</div>

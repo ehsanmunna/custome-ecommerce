@@ -42,55 +42,7 @@ export interface VariantPage {
   selector: 'app-inventory-list',
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
-  template: `
-    <div class="p-4 max-w-[1000px] mx-auto">
-      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a routerLink="/" class="text-[var(--color-primary)] underline">Dashboard</a> &gt; Inventory
-      </nav>
-
-      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Inventory</h1>
-
-      <div class="flex gap-2 mb-4 items-center flex-wrap">
-        <label class="flex items-center gap-1">
-          <input type="checkbox" [(ngModel)]="lowStockFilter" class="rounded border-[var(--color-border)]" /> Low stock only
-        </label>
-        <button (click)="loadInventory()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Refresh</button>
-      </div>
-
-      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
-
-      <table *ngIf="inventory.length; else emptyState" class="w-full border-collapse mb-4">
-        <thead>
-          <tr>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant SKU</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">On Hand</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reserved</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Available</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Low Stock Threshold</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of inventory" [class.bg-red-50]="item.lowStock">
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ variantSkus[item.variantId] || item.variantId }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.onHand }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.reserved }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.available }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.lowStockThreshold }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]" [class.text-red-600]="item.lowStock" [class.border-red-200]="item.lowStock" [class.bg-red-50]="item.lowStock">
-                {{ item.lowStock ? 'LOW STOCK' : 'OK' }}
-              </span>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <ng-template #emptyState>
-        <p class="text-[var(--color-text-muted)]">No inventory items found.</p>
-      </ng-template>
-    </div>
-  `,
+  templateUrl: './inventory-list.component.html',
 })
 export class InventoryListComponent implements OnInit {
 

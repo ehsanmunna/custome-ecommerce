@@ -10,7 +10,7 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -50,75 +50,17 @@ export interface InventoryAdjustmentResult {
   selector: 'app-inventory-adjustment',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  template: `
-    <div class="p-4 max-w-[1000px] mx-auto">
-      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a routerLink="/inventory" class="text-[var(--color-primary)] underline">Inventory</a> &gt; Stock Adjustment
-      </nav>
-
-      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Stock Adjustment</h1>
-
-      <div class="flex gap-2 mb-4 items-center flex-wrap">
-        <button (click)="loadInventory()" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10">Refresh</button>
-      </div>
-
-      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
-      <div *ngIf="success" class="text-[var(--color-success)] bg-[var(--color-success-foreground)]/10 p-2 rounded mb-4 border border-[var(--color-success)]/20">{{ success }}</div>
-
-      <table *ngIf="inventory.length; else emptyState" [formGroup]="adjustmentForm" class="w-full border-collapse mb-4">
-        <thead>
-          <tr>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Variant SKU</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Available</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Adjustment</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Reason</th>
-            <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of inventory" [class.bg-yellow-50]="adjustingId === item.variantId">
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.sku }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">{{ item.available }}</td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <input
-                type="number"
-                [formControlName]="'delta_' + item.variantId"
-                placeholder="e.g. +10 or -5"
-                class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <input
-                [formControlName]="'reason_' + item.variantId"
-                placeholder="Reason for adjustment"
-                class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-            </td>
-            <td class="border border-[var(--color-border)] p-2 text-left">
-              <button
-                (click)="adjustStock(item.variantId)"
-                [disabled]="adjustingId === item.variantId || !canAdjust(item.variantId) || !auth.hasPermission('inventory.adjust')"
-                class="px-4 py-2 border-none rounded-md cursor-pointer opacity-60:cursor-not-allowed bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
-              >
-                {{ adjustingId === item.variantId ? 'Applying...' : 'Adjust' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      <ng-template #emptyState>
-        <p class="text-[var(--color-text-muted)]">No inventory items found.</p>
-      </ng-template>
-    </div>
-  `,
+  templateUrl: './inventory-adjustment.component.html',
 })
 export class InventoryAdjustmentComponent implements OnInit {
 
   inventory: InventoryItem[] = [];
 
   loading = false;
-  adjustingId: string | null = null;
   error: string | null = null;
   success: string | null = null;
+
+  adjustingId: string | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -128,9 +70,13 @@ export class InventoryAdjustmentComponent implements OnInit {
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
-    @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
   ) {
-    this.adjustmentForm = this.fb.group({});
+    this.adjustmentForm = this.fb.group({
+      variantId: ['', Validators.required],
+      quantityDelta: [0, [Validators.required, Validators.min(1)]],
+      reason: ['', Validators.required],
+    });
   }
 
   ngOnInit(): void {
@@ -165,13 +111,7 @@ export class InventoryAdjustmentComponent implements OnInit {
     });
   }
 
-  canAdjust(variantId: string): boolean {
-    const deltaCtrl = this.adjustmentForm.get('delta_' + variantId);
-    const reasonCtrl = this.adjustmentForm.get('reason_' + variantId);
-    return !!(deltaCtrl?.value && reasonCtrl?.value);
-  }
-
-  async adjustStock(variantId: string): Promise<void> {
+  adjustStock(variantId: string): void {
     const deltaCtrl = this.adjustmentForm.get('delta_' + variantId);
     const reasonCtrl = this.adjustmentForm.get('reason_' + variantId);
     const delta = Number(deltaCtrl?.value);
@@ -182,7 +122,6 @@ export class InventoryAdjustmentComponent implements OnInit {
     const item = this.inventory.find(i => i.variantId === variantId);
     if (!item) return;
 
-    // Client-side validation: reject adjustments that would drive stock below zero
     if (delta < 0 && Math.abs(delta) > item.available) {
       this.error = `Cannot reduce stock below zero. Available: ${item.available}`;
       return;
@@ -224,4 +163,3 @@ export class InventoryAdjustmentComponent implements OnInit {
     });
   }
 }
-

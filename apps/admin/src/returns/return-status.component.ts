@@ -27,41 +27,7 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   selector: 'app-return-status',
   standalone: true,
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
-  template: `
-    <div class="p-4 max-w-[600px] mx-auto">
-      <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
-        <a routerLink="/returns" class="text-[var(--color-primary)] underline">Returns</a> &gt; #{{ returnId }} &gt; Status
-      </nav>
-
-      <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Change Return Status</h1>
-
-      <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
-      <div *ngIf="success" class="text-[var(--color-success)] bg-[var(--color-success-foreground)]/10 p-2 rounded mb-4 border border-[var(--color-success)]/20">{{ success }}</div>
-
-      <div *ngIf="ret" class="border border-[var(--color-border)] rounded-lg p-4 mb-4 bg-[var(--color-surface-secondary)]">
-        <p class="mb-1"><strong class="font-medium text-[var(--color-text-secondary)]">Return #:</strong> {{ ret.id }}</p>
-        <p class="mb-1"><strong class="font-medium text-[var(--color-text-secondary)]">Order:</strong> {{ ret.orderId }}</p>
-        <p class="mb-1"><strong class="font-medium text-[var(--color-text-secondary)]">Current status:</strong> <span class="text-[var(--color-text-muted)] text-xs px-2 py-0.5 rounded border border-[var(--color-border)]">{{ ret.status }}</span></p>
-      </div>
-
-      <form [formGroup]="statusForm" (ngSubmit)="changeStatus()" *ngIf="ret">
-        <div class="mb-3">
-          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">New status</label>
-          <select formControlName="status" class="w-full p-2 border border-[var(--color-border)] rounded-md">
-            <option *ngFor="let s of allowedNextStatuses" [value]="s">{{ s }}</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]">Note (optional)</label>
-          <input formControlName="note" placeholder="Reason for status change" class="w-full p-2 border border-[var(--color-border)] rounded-md" />
-        </div>
-        <button type="submit" [disabled]="statusForm.invalid || changing" class="px-4 py-2 border-none rounded-md cursor-pointer opacity-60:cursor-not-allowed bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">
-          {{ changing ? 'Updating...' : 'Update Status' }}
-        </button>
-        <a routerLink="/returns" class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] ml-2 hover:bg-[var(--color-primary)]/10">Back to returns</a>
-      </form>
-    </div>
-  `,
+  templateUrl: './return-status.component.html',
 })
 export class ReturnStatusComponent implements OnInit {
 
