@@ -1,4 +1,3 @@
-import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 
 const STORAGE_KEY = 'admin_theme';
@@ -28,18 +27,19 @@ export function loadTheme(): ThemeName {
 @Component({
   selector: 'app-theme-toggle',
   standalone: true,
-  imports: [CommonModule],
+  imports: [],
   template: `
     <div class="theme-toggle" role="group" aria-label="Theme">
-      <button
-        *ngFor="let theme of themes"
-        [attr.aria-pressed]="currentTheme === theme"
-        (click)="selectTheme(theme)"
-        class="theme-btn"
-        [class.active]="currentTheme === theme"
-      >
-        {{ getThemeLabel(theme) }}
-      </button>
+      @for (theme of themes; track theme) {
+        <button
+          [attr.aria-pressed]="currentTheme === theme"
+          (click)="selectTheme(theme)"
+          class="theme-btn"
+          [class.active]="currentTheme === theme"
+        >
+          {{ getThemeLabel(theme) }}
+        </button>
+      }
     </div>
   `,
   styles: `

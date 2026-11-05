@@ -1,5 +1,5 @@
 import { Component, input, output, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslocoPipe } from '@jsverse/transloco';
 
 export interface TopProduct {
@@ -18,9 +18,11 @@ export interface TopProductsAsyncState {
 @Component({
   selector: 'app-top-products-widget',
   standalone: true,
-  imports: [CommonModule, TranslocoPipe],
+  imports: [TranslocoPipe],
   template: `
-    <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+    <div
+      class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+    >
       <h3 class="mt-0 mb-4 text-lg font-semibold text-[var(--color-text)]">
         {{ 'dashboard.topProducts' | transloco }}
       </h3>
@@ -31,12 +33,16 @@ export interface TopProductsAsyncState {
         </div>
       } @else if (state().status === 'empty') {
         <div class="h-48 flex items-center justify-center">
-          <p class="text-sm text-[var(--color-text-muted)]">{{ 'dashboard.noTopProducts' | transloco }}</p>
+          <p class="text-sm text-[var(--color-text-muted)]">
+            {{ 'dashboard.noTopProducts' | transloco }}
+          </p>
         </div>
       } @else if (state().status === 'error') {
         <div class="h-48 flex items-center justify-center">
           <div class="text-center">
-            <p class="text-sm text-[var(--color-danger)]">{{ 'dashboard.widgetError' | transloco }}</p>
+            <p class="text-sm text-[var(--color-danger)]">
+              {{ 'dashboard.widgetError' | transloco }}
+            </p>
             <button
               (click)="retry.emit()"
               class="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-secondary)] transition-colors"
@@ -55,7 +61,9 @@ export interface TopProductsAsyncState {
                 </span>
                 <span class="text-[var(--color-text)]">{{ product.productName }}</span>
               </div>
-              <span class="text-[var(--color-text-secondary)]">{{ 'dashboard.unitsSold' | transloco: { value: product.unitsSold } }}</span>
+              <span class="text-[var(--color-text-secondary)]">{{
+                'dashboard.unitsSold' | transloco: { value: product.unitsSold }
+              }}</span>
             </li>
           }
         </ol>

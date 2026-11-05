@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -45,11 +45,10 @@ export interface AttributeDefinitionPage {
 @Component({
   selector: 'app-attribute-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './attribute-list.component.html',
 })
 export class AttributeListComponent implements OnInit {
-
   categories: Category[] = [];
   attributes: AttributeDefinition[] = [];
   selectedCategoryId = '';
@@ -86,19 +85,22 @@ export class AttributeListComponent implements OnInit {
 
   loadCategories(): void {
     const token = this.auth.token;
-    this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      catchError(() => {
-        this.categories = [];
-        return EMPTY;
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.categories = res?.items ?? [];
-      }
-    });
+    this.http
+      .get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        catchError(() => {
+          this.categories = [];
+          return EMPTY;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.categories = res?.items ?? [];
+        },
+      });
   }
 
   loadAttributes(): void {
@@ -109,25 +111,35 @@ export class AttributeListComponent implements OnInit {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    this.http.get<AttributeDefinitionPage>(
-      `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load attributes';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.attributes = res?.items ?? [];
-      }
-    });
+    this.http
+      .get<AttributeDefinitionPage>(
+        `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load attributes';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.attributes = res?.items ?? [];
+        },
+      });
   }
 
   openCreateModal(): void {
-    this.createForm.reset({ key: '', valueType: 'text', required: false, filterable: false, sortOrder: 0, options: '' });
+    this.createForm.reset({
+      key: '',
+      valueType: 'text',
+      required: false,
+      filterable: false,
+      sortOrder: 0,
+      options: '',
+    });
     this.createModal = true;
   }
 
@@ -149,29 +161,36 @@ export class AttributeListComponent implements OnInit {
       sortOrder: value.sortOrder,
     };
     if (value.options) {
-      body.options = value.options.split(',').map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      body.options = value.options
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
     }
-    this.http.post(
-      `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<AttributeDefinitionPage>(
+    this.http
+      .post(
         `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
+        body,
         { headers: { Authorization: `Bearer ${token}` } },
-      )),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create attribute';
-        return EMPTY;
-      }),
-      finalize(() => this.creating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.closeCreateModal();
-        this.attributes = res?.items ?? [];
-      }
-    });
+      )
+      .pipe(
+        switchMap(() =>
+          this.http.get<AttributeDefinitionPage>(
+            `${this.config.apiBaseUrl}/v1/admin/categories/${this.selectedCategoryId}/attributes`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to create attribute';
+          return EMPTY;
+        }),
+        finalize(() => (this.creating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.closeCreateModal();
+          this.attributes = res?.items ?? [];
+        },
+      });
   }
 }
-

@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -51,11 +51,10 @@ export interface MediaUploadCompleteRequest {
 @Component({
   selector: 'app-media-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './media-list.component.html',
 })
 export class MediaListComponent implements OnInit {
-
   media: MediaAsset[] = [];
 
   loading = false;
@@ -98,20 +97,23 @@ export class MediaListComponent implements OnInit {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load media';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.media = res?.items ?? [];
-      }
-    });
+    this.http
+      .get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load media';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.media = res?.items ?? [];
+        },
+      });
   }
 
   openCreateModal(): void {
@@ -137,30 +139,31 @@ export class MediaListComponent implements OnInit {
     if (value.altEn) {
       body.alt = { en: value.altEn };
     }
-    this.http.post<MediaAsset>(
-      `${this.config.apiBaseUrl}/v1/admin/media`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap((res) => {
-        this.pendingMedia = res ?? null;
-        this.closeCreateModal();
-        this.completeModal = true;
-        return this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create media upload';
-        return EMPTY;
-      }),
-      finalize(() => this.creating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.media = res?.items ?? [];
-      }
-    });
+    this.http
+      .post<MediaAsset>(`${this.config.apiBaseUrl}/v1/admin/media`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        switchMap((res) => {
+          this.pendingMedia = res ?? null;
+          this.closeCreateModal();
+          this.completeModal = true;
+          return this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+        }),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to create media upload';
+          return EMPTY;
+        }),
+        finalize(() => (this.creating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.media = res?.items ?? [];
+        },
+      });
   }
 
   closeCompleteModal(): void {
@@ -177,48 +180,55 @@ export class MediaListComponent implements OnInit {
     const body: MediaUploadCompleteRequest = {};
     if (value.width) body.width = Number(value.width);
     if (value.height) body.height = Number(value.height);
-    this.http.post(
-      `${this.config.apiBaseUrl}/v1/admin/media/${this.pendingMedia.id}/complete`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+    this.http
+      .post(`${this.config.apiBaseUrl}/v1/admin/media/${this.pendingMedia.id}/complete`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to complete media upload';
-        return EMPTY;
-      }),
-      finalize(() => this.completing = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.closeCompleteModal();
-        this.media = res?.items ?? [];
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to complete media upload';
+          return EMPTY;
+        }),
+        finalize(() => (this.completing = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.closeCompleteModal();
+          this.media = res?.items ?? [];
+        },
+      });
   }
 
   deleteMedia(id: string): void {
     if (!confirm('Delete this media?')) return;
     this.error = null;
     const token = this.auth.token;
-    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/media/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      switchMap(() => this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+    this.http
+      .delete(`${this.config.apiBaseUrl}/v1/admin/media/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to delete media';
-        return EMPTY;
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.media = res?.items ?? [];
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to delete media';
+          return EMPTY;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.media = res?.items ?? [];
+        },
+      });
   }
 }
-

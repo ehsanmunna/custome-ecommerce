@@ -1,5 +1,5 @@
 import { Component, input, output, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { DataTableComponent } from '../../../shared/ui/data-table/data-table.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -21,9 +21,11 @@ export interface OrdersAsyncState {
 @Component({
   selector: 'app-recent-orders-widget',
   standalone: true,
-  imports: [CommonModule, DataTableComponent, TranslocoPipe],
+  imports: [DataTableComponent, TranslocoPipe],
   template: `
-    <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+    <div
+      class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+    >
       <div class="flex items-center justify-between mb-4">
         <h3 class="mt-0 text-lg font-semibold text-[var(--color-text)]">
           {{ 'dashboard.recentOrders' | transloco }}

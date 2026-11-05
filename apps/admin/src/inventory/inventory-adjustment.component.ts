@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -49,11 +49,10 @@ export interface InventoryAdjustmentResult {
 @Component({
   selector: 'app-inventory-adjustment',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './inventory-adjustment.component.html',
 })
 export class InventoryAdjustmentComponent implements OnInit {
-
   inventory: InventoryItem[] = [];
 
   loading = false;
@@ -88,27 +87,33 @@ export class InventoryAdjustmentComponent implements OnInit {
     this.error = null;
     this.success = null;
     const token = this.auth.token;
-    this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load inventory';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.inventory = (res?.items ?? []).map((item: any) => ({
-          ...item,
-          sku: item.variantId,
-        }));
-        for (const item of this.inventory) {
-          this.adjustmentForm.addControl('delta_' + item.variantId, this.fb.control(''));
-          this.adjustmentForm.addControl('reason_' + item.variantId, this.fb.control('', Validators.required));
-        }
-      }
-    });
+    this.http
+      .get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load inventory';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.inventory = (res?.items ?? []).map((item: any) => ({
+            ...item,
+            sku: item.variantId,
+          }));
+          for (const item of this.inventory) {
+            this.adjustmentForm.addControl('delta_' + item.variantId, this.fb.control(''));
+            this.adjustmentForm.addControl(
+              'reason_' + item.variantId,
+              this.fb.control('', Validators.required),
+            );
+          }
+        },
+      });
   }
 
   adjustStock(variantId: string): void {
@@ -119,7 +124,7 @@ export class InventoryAdjustmentComponent implements OnInit {
 
     if (!delta || !reason) return;
 
-    const item = this.inventory.find(i => i.variantId === variantId);
+    const item = this.inventory.find((i) => i.variantId === variantId);
     if (!item) return;
 
     if (delta < 0 && Math.abs(delta) > item.available) {
@@ -136,30 +141,33 @@ export class InventoryAdjustmentComponent implements OnInit {
       quantityDelta: delta,
       reason,
     };
-    this.http.post(
-      `${this.config.apiBaseUrl}/v1/admin/inventory/${variantId}/adjustments`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
+    this.http
+      .post(`${this.config.apiBaseUrl}/v1/admin/inventory/${variantId}/adjustments`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to adjust stock';
-        return EMPTY;
-      }),
-      finalize(() => this.adjustingId = null),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        deltaCtrl?.setValue('');
-        reasonCtrl?.setValue('');
-        this.inventory = (res?.items ?? []).map((item: any) => ({
-          ...item,
-          sku: item.variantId,
-        }));
-        this.success = `Stock adjusted for ${variantId}`;
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to adjust stock';
+          return EMPTY;
+        }),
+        finalize(() => (this.adjustingId = null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          deltaCtrl?.setValue('');
+          reasonCtrl?.setValue('');
+          this.inventory = (res?.items ?? []).map((item: any) => ({
+            ...item,
+            sku: item.variantId,
+          }));
+          this.success = `Stock adjusted for ${variantId}`;
+        },
+      });
   }
 }
