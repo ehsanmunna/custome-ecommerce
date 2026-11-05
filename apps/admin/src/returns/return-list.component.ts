@@ -1,11 +1,12 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
-import { AdminAuthConfig } from '../auth/auth.config';
-import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_AUTH_CONFIG, type AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Return {
   id: string;
@@ -100,6 +101,8 @@ export class ReturnListComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
@@ -107,26 +110,30 @@ export class ReturnListComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadReturns();
+  ngOnInit(): void {
+    this.loadReturns();
   }
 
-  async loadReturns(): Promise<void> {
+  loadReturns(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/returns`);
-      if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
-      const res = (await this.http.get<ReturnPage>(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as ReturnPage;
-      this.returns = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load returns';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/returns`);
+    if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
+    this.http.get<ReturnPage>(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load returns';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.returns = res?.items ?? [];
+      }
+    });
   }
 }
 

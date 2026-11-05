@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 const ALLOWED_TRANSITIONS: Record<string, string[]> = {
   pending: ['confirmed', 'cancelled'],
@@ -75,6 +77,8 @@ export class OrderStatusComponent implements OnInit {
   error: string | null = null;
   success: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
@@ -92,59 +96,75 @@ export class OrderStatusComponent implements OnInit {
 
   orderNumber = '';
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     if (!this.orderId) {
       this.error = 'No order ID specified';
       return;
     }
-    await this.loadOrder();
+    this.loadOrder();
   }
 
-  async loadOrder(): Promise<void> {
+  loadOrder(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<{ id: string; number: string; status: string }>(
+    const token = this.auth.token;
+    this.http.get<{ id: string; number: string; status: string }>(
+      `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load order';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        if (res) {
+          this.order = res;
+          this.orderNumber = res.number;
+          const currentStatus = res.status;
+          this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+          this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
+        }
+      }
+    });
+  }
+
+  changeStatus(): void {
+    if (this.statusForm.invalid || !this.order) return;
+    this.changing = true;
+    this.error = null;
+    this.success = null;
+    const token = this.auth.token;
+    const value = this.statusForm.value;
+    const body: { status: string; note?: string } = { status: value.status };
+    if (value.note) body.note = value.note;
+    this.http.patch(
+      `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}/status`,
+      body,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<{ id: string; number: string; status: string }>(
         `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
         { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as { id: string; number: string; status: string };
-      if (res) {
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update order status';
+        return EMPTY;
+      }),
+      finalize(() => this.changing = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.success = `Order status updated to ${value.status}`;
         this.order = res;
         this.orderNumber = res.number;
         const currentStatus = res.status;
         this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
         this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
       }
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load order';
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  async changeStatus(): Promise<void> {
-    if (this.statusForm.invalid || !this.order) return;
-    this.changing = true;
-    this.error = null;
-    this.success = null;
-    try {
-      const token = this.auth.token;
-      const value = this.statusForm.value;
-      const body: { status: string; note?: string } = { status: value.status };
-      if (value.note) body.note = value.note;
-      await this.http.patch(
-        `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}/status`,
-        body,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      this.success = `Order status updated to ${value.status}`;
-      await this.loadOrder();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update order status';
-    } finally {
-      this.changing = false;
-    }
+    });
   }
 }
 

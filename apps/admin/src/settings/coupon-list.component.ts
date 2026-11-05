@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Coupon {
   id: string;
@@ -185,6 +187,8 @@ export class CouponListComponent implements OnInit {
   updating = false;
   editingCoupon: Coupon | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -214,24 +218,28 @@ export class CouponListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadCoupons();
+  ngOnInit(): void {
+    this.loadCoupons();
   }
 
-  async loadCoupons(): Promise<void> {
+  loadCoupons(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as CouponPage;
-      this.coupons = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load coupons';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load coupons';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.coupons = res?.items ?? [];
+      }
+    });
   }
 
   openCreateModal(): void {
@@ -251,32 +259,39 @@ export class CouponListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createCoupon(): Promise<void> {
+  createCoupon(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body = {
-        code: value.code,
-        discountType: value.discountType,
-        discountValue: Math.round(parseFloat(value.discountValue)),
-        minimumOrder: Math.round(parseFloat(value.minimumOrder) * 100),
-        startsAt: value.startsAt,
-        expiresAt: value.expiresAt,
-        active: value.active === true || value.active === 'true',
-      };
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/coupons`, body, {
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body = {
+      code: value.code,
+      discountType: value.discountType,
+      discountValue: Math.round(parseFloat(value.discountValue)),
+      minimumOrder: Math.round(parseFloat(value.minimumOrder) * 100),
+      startsAt: value.startsAt,
+      expiresAt: value.expiresAt,
+      active: value.active === true || value.active === 'true',
+    };
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/coupons`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeCreateModal();
-      await this.loadCoupons();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create coupon';
-    } finally {
-      this.creating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create coupon';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.coupons = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(coupon: Coupon): void {
@@ -298,46 +313,61 @@ export class CouponListComponent implements OnInit {
     this.editingCoupon = null;
   }
 
-  async updateCoupon(): Promise<void> {
+  updateCoupon(): void {
     if (!this.editingCoupon || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body = {
-        code: value.code,
-        discountType: value.discountType,
-        discountValue: Math.round(parseFloat(value.discountValue)),
-        minimumOrder: Math.round(parseFloat(value.minimumOrder) * 100),
-        startsAt: value.startsAt,
-        expiresAt: value.expiresAt,
-        active: value.active === true || value.active === 'true',
-      };
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/coupons/${this.editingCoupon.id}`, body, {
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body = {
+      code: value.code,
+      discountType: value.discountType,
+      discountValue: Math.round(parseFloat(value.discountValue)),
+      minimumOrder: Math.round(parseFloat(value.minimumOrder) * 100),
+      startsAt: value.startsAt,
+      expiresAt: value.expiresAt,
+      active: value.active === true || value.active === 'true',
+    };
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/coupons/${this.editingCoupon.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadCoupons();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update coupon';
-    } finally {
-      this.updating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update coupon';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.coupons = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteCoupon(id: string): Promise<void> {
+  deleteCoupon(id: string): void {
     if (!confirm('Delete this coupon?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/coupons/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/coupons/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadCoupons();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete coupon';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete coupon';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.coupons = res?.items ?? [];
+      }
+    });
   }
 }
 

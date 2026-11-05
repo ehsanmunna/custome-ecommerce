@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface CmsPageContent {
   slug: string;
@@ -188,6 +190,8 @@ export class PageListComponent implements OnInit {
   updating = false;
   editingPage: CmsPage | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -220,24 +224,28 @@ export class PageListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadPages();
+  ngOnInit(): void {
+    this.loadPages();
   }
 
-  async loadPages(): Promise<void> {
+  loadPages(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as CmsPagePage;
-      this.pages = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load CMS pages';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load CMS pages';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.pages = res?.items ?? [];
+      }
+    });
   }
 
   localeStatus(page: CmsPage): string {
@@ -278,24 +286,31 @@ export class PageListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createPage(): Promise<void> {
+  createPage(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body = { content: this.buildContent(value) };
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/pages`, body, {
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body = { content: this.buildContent(value) };
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/pages`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeCreateModal();
-      await this.loadPages();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create CMS page';
-    } finally {
-      this.creating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create CMS page';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.pages = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(page: CmsPage): void {
@@ -318,38 +333,53 @@ export class PageListComponent implements OnInit {
     this.editingPage = null;
   }
 
-  async updatePage(): Promise<void> {
+  updatePage(): void {
     if (!this.editingPage || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body = { content: this.buildContent(value) };
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/pages/${this.editingPage.id}`, body, {
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body = { content: this.buildContent(value) };
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/pages/${this.editingPage.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadPages();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update CMS page';
-    } finally {
-      this.updating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update CMS page';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.pages = res?.items ?? [];
+      }
+    });
   }
 
-  async deletePage(id: string): Promise<void> {
+  deletePage(id: string): void {
     if (!confirm('Delete this page?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/pages/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/pages/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CmsPagePage>(`${this.config.apiBaseUrl}/v1/admin/pages`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadPages();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete CMS page';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete CMS page';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.pages = res?.items ?? [];
+      }
+    });
   }
 }
 

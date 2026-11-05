@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface BannerContent {
   title?: string;
@@ -206,6 +208,8 @@ export class BannerListComponent implements OnInit {
   updating = false;
   editingBanner: Banner | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -243,24 +247,28 @@ export class BannerListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadBanners();
+  ngOnInit(): void {
+    this.loadBanners();
   }
 
-  async loadBanners(): Promise<void> {
+  loadBanners(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as BannerPage;
-      this.banners = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load banners';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load banners';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 
   buildContent(value: any): Record<string, BannerContent> {
@@ -294,29 +302,37 @@ export class BannerListComponent implements OnInit {
     this.createModal = false;
   }
 
-async createBanner(): Promise<void> {
+  createBanner(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body = {
-        placement: value.placement,
-        sortOrder: Math.round(parseFloat(value.sortOrder)),
-        active: value.active === true || value.active === 'true',
-        ...(value.mediaId ? { mediaId: value.mediaId } : {}),
-        content: this.buildContent(value),
-      };
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/banners`, body, {
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body = {
+      placement: value.placement,
+      sortOrder: Math.round(parseFloat(value.sortOrder)),
+      active: value.active === true || value.active === 'true',
+      ...(value.mediaId ? { mediaId: value.mediaId } : {}),
+      content: this.buildContent(value),
+    };
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/banners`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadBanners();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create banner';
-    } finally {
-      this.creating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create banner';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(banner: Banner): void {
@@ -342,44 +358,59 @@ async createBanner(): Promise<void> {
     this.editingBanner = null;
   }
 
-  async updateBanner(): Promise<void> {
+  updateBanner(): void {
     if (!this.editingBanner || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body = {
-        placement: value.placement,
-        sortOrder: Math.round(parseFloat(value.sortOrder)),
-        active: value.active === true || value.active === 'true',
-        ...(value.mediaId ? { mediaId: value.mediaId } : {}),
-        content: this.buildContent(value),
-      };
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/banners/${this.editingBanner.id}`, body, {
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body = {
+      placement: value.placement,
+      sortOrder: Math.round(parseFloat(value.sortOrder)),
+      active: value.active === true || value.active === 'true',
+      ...(value.mediaId ? { mediaId: value.mediaId } : {}),
+      content: this.buildContent(value),
+    };
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/banners/${this.editingBanner.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadBanners();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update banner';
-    } finally {
-      this.updating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update banner';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteBanner(id: string): Promise<void> {
+  deleteBanner(id: string): void {
     if (!confirm('Delete this banner?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/banners/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/banners/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BannerPage>(`${this.config.apiBaseUrl}/v1/admin/banners`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadBanners();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete banner';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete banner';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.banners = res?.items ?? [];
+      }
+    });
   }
 }
 

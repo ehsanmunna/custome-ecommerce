@@ -1,10 +1,12 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface InventoryItem {
   variantId: string;
@@ -99,6 +101,8 @@ export class InventoryListComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
@@ -106,43 +110,37 @@ export class InventoryListComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadInventory();
+  ngOnInit(): void {
+    this.loadInventory();
   }
 
-  async loadInventory(): Promise<void> {
+  loadInventory(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
-      if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
-      const res = (await this.http.get<InventoryPage>(url.toString(), {
+    const token = this.auth.token;
+    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
+    if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
+    this.http.get<InventoryPage>(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as InventoryPage;
-      this.inventory = res?.items ?? [];
-      await this.loadVariantSkus();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load inventory';
-    } finally {
-      this.loading = false;
-    }
-  }
-
-  async loadVariantSkus(): Promise<void> {
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as VariantPage;
-      const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);
-      this.variantSkus = {};
-      for (const v of variants) {
-        this.variantSkus[v.id] = v.sku;
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load inventory';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);
+        this.variantSkus = {};
+        for (const v of variants) {
+          this.variantSkus[v.id] = v.sku;
+        }
       }
-    } catch {
-      this.variantSkus = {};
-    }
+    });
   }
 }
 

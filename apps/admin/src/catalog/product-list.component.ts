@@ -10,8 +10,7 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { catchError } from 'rxjs/operators';
-import { EMPTY } from 'rxjs';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 
@@ -207,6 +206,8 @@ export class ProductListComponent implements OnInit {
   updating = false;
   editingProduct: Product | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -232,60 +233,76 @@ export class ProductListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadCategories();
-    await this.loadBrands();
-    await this.loadProducts();
+  ngOnInit(): void {
+    this.loadCategories();
+    this.loadBrands();
+    this.loadProducts();
   }
 
-  async loadProducts(): Promise<void> {
+  loadProducts(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
-      if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
-      const res = (await this.http.get<ProductPage>(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as ProductPage;
-      this.products = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load products';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
+    if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
+    this.http.get<ProductPage>(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load products';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.products = res?.items ?? [];
+      }
+    });
   }
 
-  async loadCategories(): Promise<void> {
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as CategoryPage;
-      this.categories = res?.items ?? [];
-      this.categoryNames = {};
-      for (const c of this.categories) {
-        this.categoryNames[c.id] = c.content?.['en']?.name || c.content?.['bn']?.name || c.id;
+  loadCategories(): void {
+    this.error = null;
+    const token = this.auth.token;
+    this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError(() => {
+        this.categories = [];
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.categories = res?.items ?? [];
+        this.categoryNames = {};
+        for (const c of this.categories) {
+          this.categoryNames[c.id] = c.content?.['en']?.name || c.content?.['bn']?.name || c.id;
+        }
       }
-    } catch {
-      this.categories = [];
-    }
+    });
   }
 
-  async loadBrands(): Promise<void> {
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as BrandPage;
-      this.brands = res?.items ?? [];
-      this.brandNames = {};
-      for (const b of this.brands) {
-        this.brandNames[b.id] = b.content?.['en']?.name || b.content?.['bn']?.name || b.id;
+  loadBrands(): void {
+    this.error = null;
+    const token = this.auth.token;
+    this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError(() => {
+        this.brands = [];
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.brands = res?.items ?? [];
+        this.brandNames = {};
+        for (const b of this.brands) {
+          this.brandNames[b.id] = b.content?.['en']?.name || b.content?.['bn']?.name || b.id;
+        }
       }
-    } catch {
-      this.brands = [];
-    }
+    });
   }
 
   openCreateModal(): void {
@@ -297,41 +314,48 @@ export class ProductListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createProduct(): Promise<void> {
+  createProduct(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body = {
-        categoryId: value.categoryId,
-        brandId: value.brandId || undefined,
-        status: value.status,
-        content: {
-          en: {
-            name: value.nameEn,
-            slug: value.slugEn,
-          },
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body = {
+      categoryId: value.categoryId,
+      brandId: value.brandId || undefined,
+      status: value.status,
+      content: {
+        en: {
+          name: value.nameEn,
+          slug: value.slugEn,
         },
-        variants: [
-          {
-            sku: value.variantSku,
-            price: { amount: Math.round(parseFloat(value.variantPrice) * 100), currency: 'BDT' },
-            attributes: {},
-          },
-        ],
-      };
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/products`, body, {
+      },
+      variants: [
+        {
+          sku: value.variantSku,
+          price: { amount: Math.round(parseFloat(value.variantPrice) * 100), currency: 'BDT' },
+          attributes: {},
+        },
+      ],
+    };
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/products`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<ProductPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeCreateModal();
-      await this.loadProducts();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create product';
-    } finally {
-      this.creating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create product';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.products = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(product: Product): void {
@@ -349,46 +373,61 @@ export class ProductListComponent implements OnInit {
     this.editingProduct = null;
   }
 
-  async updateProduct(): Promise<void> {
+  updateProduct(): void {
     if (!this.editingProduct || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body = {
-        status: value.status,
-        content: {
-          en: {
-            name: value.nameEn,
-            slug: value.slugEn,
-          },
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body = {
+      status: value.status,
+      content: {
+        en: {
+          name: value.nameEn,
+          slug: value.slugEn,
         },
-      };
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/products/${this.editingProduct.id}`, body, {
+      },
+    };
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/products/${this.editingProduct.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<ProductPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadProducts();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update product';
-    } finally {
-      this.updating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update product';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.products = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteProduct(id: string): Promise<void> {
+  deleteProduct(id: string): void {
     if (!confirm('Delete this product?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/products/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/products/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<ProductPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadProducts();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete product';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete product';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.products = res?.items ?? [];
+      }
+    });
   }
 }
 

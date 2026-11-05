@@ -1,10 +1,12 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { catchError, EMPTY, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface AnalyticsOverview {
   orderCount: number;
@@ -68,6 +70,8 @@ export class SalesMetricsComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   from = '';
   to = '';
 
@@ -77,30 +81,34 @@ export class SalesMetricsComponent implements OnInit {
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
   ) {}
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     const now = new Date();
     const start = new Date(now);
     start.setDate(start.getDate() - 30);
     this.from = start.toISOString().slice(0, 16);
     this.to = now.toISOString().slice(0, 16);
-    await this.loadOverview();
+    this.loadOverview();
   }
 
-  async loadOverview(): Promise<void> {
+  loadOverview(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const url = `${this.config.apiBaseUrl}/v1/admin/analytics/overview?from=${this.from}&to=${this.to}`;
-      const res = (await this.http.get<AnalyticsOverview>(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as AnalyticsOverview;
-      this.overview = res ?? null;
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load sales metrics';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    const url = `${this.config.apiBaseUrl}/v1/admin/analytics/overview?from=${this.from}&to=${this.to}`;
+    this.http.get<AnalyticsOverview>(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load sales metrics';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.overview = res ?? null;
+      }
+    });
   }
 }
 

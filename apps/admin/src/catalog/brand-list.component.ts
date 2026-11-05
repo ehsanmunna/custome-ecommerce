@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Brand {
   id: string;
@@ -149,6 +151,8 @@ export class BrandListComponent implements OnInit {
   updating = false;
   editingBrand: Brand | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -174,24 +178,28 @@ export class BrandListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadBrands();
+  ngOnInit(): void {
+    this.loadBrands();
   }
 
-  async loadBrands(): Promise<void> {
+  loadBrands(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as BrandPage;
-      this.brands = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load brands';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load brands';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.brands = res?.items ?? [];
+      }
+    });
   }
 
   openCreateModal(): void {
@@ -203,32 +211,39 @@ export class BrandListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createBrand(): Promise<void> {
+  createBrand(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body: any = {
-        status: value.status,
-        content: {
-          en: { name: value.nameEn, slug: value.slugEn },
-        },
-      };
-      if (value.nameBn || value.slugBn) {
-        body.content.bn = { name: value.nameBn, slug: value.slugBn };
-      }
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/brands`, body, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeCreateModal();
-      await this.loadBrands();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create brand';
-    } finally {
-      this.creating = false;
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body: any = {
+      status: value.status,
+      content: {
+        en: { name: value.nameEn, slug: value.slugEn },
+      },
+    };
+    if (value.nameBn || value.slugBn) {
+      body.content.bn = { name: value.nameBn, slug: value.slugBn };
     }
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/brands`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create brand';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.brands = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(brand: Brand): void {
@@ -248,46 +263,61 @@ export class BrandListComponent implements OnInit {
     this.editingBrand = null;
   }
 
-  async updateBrand(): Promise<void> {
+  updateBrand(): void {
     if (!this.editingBrand || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body: any = {
-        status: value.status,
-        content: {
-          en: { name: value.nameEn, slug: value.slugEn },
-        },
-      };
-      if (value.nameBn || value.slugBn) {
-        body.content.bn = { name: value.nameBn, slug: value.slugBn };
-      }
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/brands/${this.editingBrand.id}`, body, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadBrands();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update brand';
-    } finally {
-      this.updating = false;
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body: any = {
+      status: value.status,
+      content: {
+        en: { name: value.nameEn, slug: value.slugEn },
+      },
+    };
+    if (value.nameBn || value.slugBn) {
+      body.content.bn = { name: value.nameBn, slug: value.slugBn };
     }
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/brands/${this.editingBrand.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update brand';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.brands = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteBrand(id: string): Promise<void> {
+  deleteBrand(id: string): void {
     if (!confirm('Delete this brand?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/brands/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/brands/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadBrands();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete brand';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete brand';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.brands = res?.items ?? [];
+      }
+    });
   }
 }
 

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Category {
   id: string;
@@ -167,6 +169,8 @@ export class CategoryListComponent implements OnInit {
   updating = false;
   editingCategory: Category | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -195,20 +199,29 @@ export class CategoryListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadCategories();
+  ngOnInit(): void {
+    this.loadCategories();
   }
 
-  async loadCategories(): Promise<void> {
+  loadCategories(): void {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    const res = (await this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+    this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
       headers: { Authorization: `Bearer ${token}` },
-    })) as unknown as CategoryPage;
-    this.categories = res?.items ?? [];
-    this.buildTree();
-    this.loading = false;
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load categories';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.categories = res?.items ?? [];
+        this.buildTree();
+      }
+    });
   }
 
   buildTree(): void {
@@ -236,34 +249,42 @@ export class CategoryListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createCategory(): Promise<void> {
+  createCategory(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body: any = {
-        status: value.status,
-        sortOrder: value.sortOrder,
-        content: {
-          en: { name: value.nameEn, slug: value.slugEn },
-        },
-      };
-      if (value.parentId) body.parentId = value.parentId;
-      if (value.nameBn || value.slugBn) {
-        body.content.bn = { name: value.nameBn, slug: value.slugBn };
-      }
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/categories`, body, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeCreateModal();
-      await this.loadCategories();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create category';
-    } finally {
-      this.creating = false;
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body: any = {
+      status: value.status,
+      sortOrder: value.sortOrder,
+      content: {
+        en: { name: value.nameEn, slug: value.slugEn },
+      },
+    };
+    if (value.parentId) body.parentId = value.parentId;
+    if (value.nameBn || value.slugBn) {
+      body.content.bn = { name: value.nameBn, slug: value.slugBn };
     }
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/categories`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create category';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.categories = res?.items ?? [];
+        this.buildTree();
+      }
+    });
   }
 
   openEditModal(category: Category): void {
@@ -284,47 +305,64 @@ export class CategoryListComponent implements OnInit {
     this.editingCategory = null;
   }
 
-  async updateCategory(): Promise<void> {
+  updateCategory(): void {
     if (!this.editingCategory || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body: any = {
-        status: value.status,
-        sortOrder: value.sortOrder,
-        content: {
-          en: { name: value.nameEn, slug: value.slugEn },
-        },
-      };
-      if (value.nameBn || value.slugBn) {
-        body.content.bn = { name: value.nameBn, slug: value.slugBn };
-      }
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/categories/${this.editingCategory.id}`, body, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadCategories();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update category';
-    } finally {
-      this.updating = false;
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body: any = {
+      status: value.status,
+      sortOrder: value.sortOrder,
+      content: {
+        en: { name: value.nameEn, slug: value.slugEn },
+      },
+    };
+    if (value.nameBn || value.slugBn) {
+      body.content.bn = { name: value.nameBn, slug: value.slugBn };
     }
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/categories/${this.editingCategory.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update category';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.categories = res?.items ?? [];
+        this.buildTree();
+      }
+    });
   }
 
-  async deleteCategory(id: string): Promise<void> {
+  deleteCategory(id: string): void {
     if (!confirm('Delete this category?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadCategories();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete category';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete category';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.categories = res?.items ?? [];
+        this.buildTree();
+      }
+    });
   }
 }
 

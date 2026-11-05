@@ -1,9 +1,11 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface OrderDetail {
   id: string;
@@ -142,6 +144,8 @@ export class OrderDetailComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
@@ -151,29 +155,33 @@ export class OrderDetailComponent implements OnInit {
     this.orderId = this.route.snapshot.paramMap.get('orderId') || '';
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     if (!this.orderId) {
       this.error = 'No order ID specified';
       return;
     }
-    await this.loadOrder();
+    this.loadOrder();
   }
 
-  async loadOrder(): Promise<void> {
+  loadOrder(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<OrderDetail>(
-        `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as OrderDetail;
-      this.order = res ?? null;
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load order';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<OrderDetail>(
+      `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load order';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.order = res ?? null;
+      }
+    });
   }
 }
 

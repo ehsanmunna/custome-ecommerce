@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Variant {
   id: string;
@@ -167,6 +169,8 @@ export class VariantListComponent implements OnInit {
   updating = false;
   editingVariant: Variant | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -189,61 +193,69 @@ export class VariantListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     if (!this.productId) {
       this.error = 'No product ID specified';
       return;
     }
-    await this.loadVariants();
-    await this.loadAttributeDefs();
+    this.loadVariants();
+    this.loadAttributeDefs();
   }
 
   attributeKeys(obj: Record<string, unknown>): string[] {
     return Object.keys(obj);
   }
 
-  async loadVariants(): Promise<void> {
+  loadVariants(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<{ items: Variant[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as { items: Variant[] };
-      this.variants = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load variants';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<{ items: Variant[] }>(
+      `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load variants';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 
-  async loadAttributeDefs(): Promise<void> {
-    // We need the category ID to load attribute definitions.
-    // For now, we'll load from the first category that has attributes.
-    // In a full implementation, we'd get the category from the product detail.
-    try {
-      const token = this.auth.token;
-      const catRes = (await this.http.get<{ items: any[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/categories`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as { items: any[] };
-      const firstCat = catRes?.items?.[0];
-      if (firstCat) {
-        const attrRes = (await this.http.get<AttributeDefinitionPage>(
-          `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        )) as unknown as AttributeDefinitionPage;
+  loadAttributeDefs(): void {
+    const token = this.auth.token;
+    this.http.get<{ items: any[] }>(
+      `${this.config.apiBaseUrl}/v1/admin/categories`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap((catRes) => {
+        const firstCat = catRes?.items?.[0];
+        if (firstCat) {
+          return this.http.get<AttributeDefinitionPage>(
+            `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          );
+        }
+        return EMPTY;
+      }),
+      catchError(() => {
+        this.attributeDefs = [];
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (attrRes) => {
         this.attributeDefs = attrRes?.items ?? [];
-        // Add dynamic form controls for each attribute
         for (const attr of this.attributeDefs) {
           this.createForm.addControl('attr_' + attr.key, this.fb.control(''));
         }
       }
-    } catch {
-      this.attributeDefs = [];
-    }
+    });
   }
 
   openCreateModal(): void {
@@ -255,38 +267,46 @@ export class VariantListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createVariant(): Promise<void> {
+  createVariant(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const attributes: Record<string, unknown> = {};
-      for (const attr of this.attributeDefs) {
-        const ctrlValue = value['attr_' + attr.key];
-        if (ctrlValue !== undefined && ctrlValue !== '') {
-          attributes[attr.key] = attr.valueType === 'number' ? Number(ctrlValue) : ctrlValue;
-        }
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const attributes: Record<string, unknown> = {};
+    for (const attr of this.attributeDefs) {
+      const ctrlValue = value['attr_' + attr.key];
+      if (ctrlValue !== undefined && ctrlValue !== '') {
+        attributes[attr.key] = attr.valueType === 'number' ? Number(ctrlValue) : ctrlValue;
       }
-      const body: VariantInput = {
-        sku: value.sku,
-        price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
-        status: value.status,
-        attributes,
-      };
-      await this.http.post(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        body,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      this.closeCreateModal();
-      await this.loadVariants();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create variant';
-    } finally {
-      this.creating = false;
     }
+    const body: VariantInput = {
+      sku: value.sku,
+      price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
+      status: value.status,
+      attributes,
+    };
+    this.http.post(
+      `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+      body,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create variant';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(variant: Variant): void {
@@ -304,45 +324,62 @@ export class VariantListComponent implements OnInit {
     this.editingVariant = null;
   }
 
-  async updateVariant(): Promise<void> {
+  updateVariant(): void {
     if (!this.editingVariant || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body: VariantInput = {
-        sku: value.sku,
-        price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
-        status: value.status,
-        attributes: this.editingVariant.attributes,
-      };
-      await this.http.patch(
-        `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
-        body,
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body: VariantInput = {
+      sku: value.sku,
+      price: { amount: Math.round(parseFloat(value.price) * 100), currency: 'BDT' },
+      status: value.status,
+      attributes: this.editingVariant.attributes,
+    };
+    this.http.patch(
+      `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
+      body,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
         { headers: { Authorization: `Bearer ${token}` } },
-      );
-      this.closeEditModal();
-      await this.loadVariants();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update variant';
-    } finally {
-      this.updating = false;
-    }
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update variant';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteVariant(id: string): Promise<void> {
+  deleteVariant(id: string): void {
     if (!confirm('Delete this variant?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadVariants();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete variant';
-    }
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete variant';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.variants = res?.items ?? [];
+      }
+    });
   }
 }
 

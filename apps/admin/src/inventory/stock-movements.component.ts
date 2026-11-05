@@ -1,9 +1,11 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Reservation {
   id: string;
@@ -96,34 +98,40 @@ export class StockMovementsComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadMovements();
+  private readonly destroyRef = inject(DestroyRef);
+
+  ngOnInit(): void {
+    this.loadMovements();
   }
 
-  async loadMovements(): Promise<void> {
+  loadMovements(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<{ items: Reservation[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )) as unknown as { items: Reservation[] };
-      const reservations = res?.items ?? [];
-      this.movements = reservations.map((r) => ({
-        id: r.id,
-        variantId: r.variantId,
-        type: this.mapType(r.status),
-        quantity: r.quantity,
-        reason: r.source,
-        status: r.status,
-        createdAt: r.expiresAt,
-      }));
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load stock movements';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<{ items: Reservation[] }>(
+      `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load stock movements';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        const reservations = res?.items ?? [];
+        this.movements = reservations.map((r) => ({
+          id: r.id,
+          variantId: r.variantId,
+          type: this.mapType(r.status),
+          quantity: r.quantity,
+          reason: r.source,
+          status: r.status,
+          createdAt: r.expiresAt,
+        }));
+      }
+    });
   }
 
   private mapType(status: string): MovementLedgerEntry['type'] {

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Reservation {
   id: string;
@@ -130,6 +132,8 @@ export class InventoryReservationComponent implements OnInit {
   error: string | null = null;
   success: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
 
   constructor(
@@ -145,83 +149,100 @@ export class InventoryReservationComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadReservations();
+  ngOnInit(): void {
+    this.loadReservations();
   }
 
-  async loadReservations(): Promise<void> {
+  loadReservations(): void {
     this.loading = true;
     this.error = null;
     this.success = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as ReservationPage;
-      this.reservations = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load reservations';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load reservations';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.reservations = res?.items ?? [];
+      }
+    });
   }
 
-  async createReservation(): Promise<void> {
+  createReservation(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
     this.success = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body: ReservationInput = {
-        variantId: value.variantId,
-        quantity: value.quantity,
-      };
-      if (value.expiresAt) {
-        body.expiresAt = value.expiresAt;
-      }
-      await this.http.post(
-        `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
-        body,
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-
-      this.createForm.reset({ variantId: '', quantity: 1, expiresAt: '' });
-      await this.loadReservations();
-      this.success = 'Reservation created';
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create reservation';
-    } finally {
-      this.creating = false;
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body: ReservationInput = {
+      variantId: value.variantId,
+      quantity: value.quantity,
+    };
+    if (value.expiresAt) {
+      body.expiresAt = value.expiresAt;
     }
+    this.http.post(
+      `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
+      body,
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create reservation';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.createForm.reset({ variantId: '', quantity: 1, expiresAt: '' });
+        this.reservations = res?.items ?? [];
+        this.success = 'Reservation created';
+      }
+    });
   }
 
-  async releaseReservation(reservationId: string): Promise<void> {
-    await this.updateReservationStatus(reservationId, 'released');
+  releaseReservation(reservationId: string): void {
+    this.updateReservationStatus(reservationId, 'released');
   }
 
-  async commitReservation(reservationId: string): Promise<void> {
-    await this.updateReservationStatus(reservationId, 'committed');
+  commitReservation(reservationId: string): void {
+    this.updateReservationStatus(reservationId, 'committed');
   }
 
-  private async updateReservationStatus(reservationId: string, status: string): Promise<void> {
+  private updateReservationStatus(reservationId: string, status: string): void {
     this.processingId = reservationId;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.patch(
-        `${this.config.apiBaseUrl}/v1/admin/inventory/reservations/${reservationId}/status`,
-        { status },
-        { headers: { Authorization: `Bearer ${token}` } },
-      );
-      this.success = `Reservation ${status}`;
-      await this.loadReservations();
-    } catch (err: any) {
-      this.error = err?.message ?? `Failed to ${status} reservation`;
-    } finally {
-      this.processingId = null;
-    }
+    const token = this.auth.token;
+    this.http.patch(
+      `${this.config.apiBaseUrl}/v1/admin/inventory/reservations/${reservationId}/status`,
+      { status },
+      { headers: { Authorization: `Bearer ${token}` } },
+    ).pipe(
+      switchMap(() => this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? `Failed to ${status} reservation`;
+        return EMPTY;
+      }),
+      finalize(() => this.processingId = null),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.success = `Reservation ${status}`;
+        this.reservations = res?.items ?? [];
+      }
+    });
   }
 }
 

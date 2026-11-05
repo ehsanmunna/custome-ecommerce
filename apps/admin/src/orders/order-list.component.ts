@@ -1,10 +1,12 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { catchError, EMPTY, finalize } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface Order {
   id: string;
@@ -132,6 +134,8 @@ export class OrderListComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
@@ -139,28 +143,32 @@ export class OrderListComponent implements OnInit {
   ) {
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadOrders();
+  ngOnInit(): void {
+    this.loadOrders();
   }
 
-  async loadOrders(): Promise<void> {
+  loadOrders(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const url = new URL(`${this.config.apiBaseUrl}/v1/admin/orders`);
-      if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
-      if (this.createdFrom) url.searchParams.set('createdFrom', this.createdFrom);
-      if (this.createdTo) url.searchParams.set('createdTo', this.createdTo);
-      const res = (await this.http.get<OrderPage>(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as OrderPage;
-      this.orders = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load orders';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/orders`);
+    if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
+    if (this.createdFrom) url.searchParams.set('createdFrom', this.createdFrom);
+    if (this.createdTo) url.searchParams.set('createdTo', this.createdTo);
+    this.http.get<OrderPage>(url.toString(), {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load orders';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.orders = res?.items ?? [];
+      }
+    });
   }
 }
 

@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -11,6 +11,8 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface ShippingZone {
   id: string;
@@ -149,6 +151,8 @@ export class ShippingZoneListComponent implements OnInit {
   updating = false;
   editingZone: ShippingZone | null = null;
 
+  private readonly destroyRef = inject(DestroyRef);
+
   createForm: FormGroup;
   editForm: FormGroup;
 
@@ -172,24 +176,28 @@ export class ShippingZoneListComponent implements OnInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
-    await this.loadZones();
+  ngOnInit(): void {
+    this.loadZones();
   }
 
-  async loadZones(): Promise<void> {
+  loadZones(): void {
     this.loading = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const res = (await this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })) as unknown as ShippingZonePage;
-      this.zones = res?.items ?? [];
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to load shipping zones';
-    } finally {
-      this.loading = false;
-    }
+    const token = this.auth.token;
+    this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to load shipping zones';
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.zones = res?.items ?? [];
+      }
+    });
   }
 
   openCreateModal(): void {
@@ -201,29 +209,36 @@ export class ShippingZoneListComponent implements OnInit {
     this.createModal = false;
   }
 
-  async createZone(): Promise<void> {
+  createZone(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.createForm.value;
-      const body = {
-        code: value.code,
-        name: value.name,
-        fee: Math.round(parseFloat(value.fee) * 100),
-        active: value.active === true || value.active === 'true',
-      };
-      await this.http.post(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, body, {
+    const token = this.auth.token;
+    const value = this.createForm.value;
+    const body = {
+      code: value.code,
+      name: value.name,
+      fee: Math.round(parseFloat(value.fee) * 100),
+      active: value.active === true || value.active === 'true',
+    };
+    this.http.post(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeCreateModal();
-      await this.loadZones();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to create shipping zone';
-    } finally {
-      this.creating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to create shipping zone';
+        return EMPTY;
+      }),
+      finalize(() => this.creating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeCreateModal();
+        this.zones = res?.items ?? [];
+      }
+    });
   }
 
   openEditModal(zone: ShippingZone): void {
@@ -242,43 +257,58 @@ export class ShippingZoneListComponent implements OnInit {
     this.editingZone = null;
   }
 
-  async updateZone(): Promise<void> {
+  updateZone(): void {
     if (!this.editingZone || this.editForm.invalid) return;
     this.updating = true;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      const value = this.editForm.value;
-      const body = {
-        code: value.code,
-        name: value.name,
-        fee: Math.round(parseFloat(value.fee) * 100),
-        active: value.active === true || value.active === 'true',
-      };
-      await this.http.patch(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${this.editingZone.id}`, body, {
+    const token = this.auth.token;
+    const value = this.editForm.value;
+    const body = {
+      code: value.code,
+      name: value.name,
+      fee: Math.round(parseFloat(value.fee) * 100),
+      active: value.active === true || value.active === 'true',
+    };
+    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${this.editingZone.id}`, body, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      this.closeEditModal();
-      await this.loadZones();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to update shipping zone';
-    } finally {
-      this.updating = false;
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to update shipping zone';
+        return EMPTY;
+      }),
+      finalize(() => this.updating = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.closeEditModal();
+        this.zones = res?.items ?? [];
+      }
+    });
   }
 
-  async deleteZone(id: string): Promise<void> {
+  deleteZone(id: string): void {
     if (!confirm('Delete this shipping zone?')) return;
     this.error = null;
-    try {
-      const token = this.auth.token;
-      await this.http.delete(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${id}`, {
+    const token = this.auth.token;
+    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }).pipe(
+      switchMap(() => this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
         headers: { Authorization: `Bearer ${token}` },
-      });
-      await this.loadZones();
-    } catch (err: any) {
-      this.error = err?.message ?? 'Failed to delete shipping zone';
-    }
+      })),
+      catchError((err: any) => {
+        this.error = err?.message ?? 'Failed to delete shipping zone';
+        return EMPTY;
+      }),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: (res) => {
+        this.zones = res?.items ?? [];
+      }
+    });
   }
 }
 

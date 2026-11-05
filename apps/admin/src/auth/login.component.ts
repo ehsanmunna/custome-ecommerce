@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, DestroyRef, inject } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -8,6 +8,8 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { AuthService } from './auth.service';
+import { catchError, finalize, EMPTY } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-login',
@@ -84,6 +86,7 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly transloco = inject(TranslocoService);
+  private readonly destroyRef = inject(DestroyRef);
 
   form: FormGroup = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
@@ -93,7 +96,7 @@ export class LoginComponent {
   loading = false;
   error: string | null = null;
 
-  async onSubmit(): Promise<void> {
+  onSubmit(): void {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       return;
@@ -102,19 +105,23 @@ export class LoginComponent {
     this.loading = true;
     this.error = null;
 
-    try {
-      const value = this.form.value;
-      const email = value.email ?? '';
-      const password = value.password ?? '';
-      await this.auth.login(email, password);
-      await this.router.navigateByUrl(
-        this.safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')),
-      );
-    } catch {
-      this.error = this.transloco.translate('auth.invalidCredentials');
-    } finally {
-      this.loading = false;
-    }
+    const value = this.form.value;
+    const email = value.email ?? '';
+    const password = value.password ?? '';
+    this.auth.login(email, password).pipe(
+      catchError(() => {
+        this.error = this.transloco.translate('auth.invalidCredentials');
+        return EMPTY;
+      }),
+      finalize(() => this.loading = false),
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
+      next: () => {
+        this.router.navigateByUrl(
+          this.safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')),
+        );
+      },
+    });
   }
 
   private safeReturnUrl(value: string | null): string {
