@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface Category {
   id: string;
@@ -68,6 +74,7 @@ export class AttributeListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       key: ['', [Validators.required, Validators.pattern('^[a-z][a-z0-9_]*$')]],
@@ -100,6 +107,13 @@ export class AttributeListComponent implements OnInit {
         next: (res) => {
           this.categories = res?.items ?? [];
         },
+        error: (err) => {
+          this.categories = [];
+          this.error = extractErrorMessage(err, 'Failed to load categories');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
       });
   }
 
@@ -127,6 +141,13 @@ export class AttributeListComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.attributes = res?.items ?? [];
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load attributes');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -179,10 +200,6 @@ export class AttributeListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create attribute';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -190,6 +207,14 @@ export class AttributeListComponent implements OnInit {
         next: (res) => {
           this.closeCreateModal();
           this.attributes = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.attribute.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.attribute.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

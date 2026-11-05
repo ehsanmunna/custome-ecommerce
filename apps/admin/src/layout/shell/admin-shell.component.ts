@@ -7,6 +7,7 @@ import {
 } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { TranslocoPipe } from '@jsverse/transloco';
+import { ToastModule } from 'primeng/toast';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { AuthService } from '../../auth/auth.service';
@@ -18,12 +19,13 @@ import { TopbarComponent } from '../topbar/topbar.component';
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
-  imports: [RouterOutlet, SidebarComponent, TopbarComponent, TranslocoPipe],
+  imports: [RouterOutlet, SidebarComponent, TopbarComponent, TranslocoPipe, ToastModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <a class="skip-link" href="#main-content">
       {{ 'shell.skipToContent' | transloco }}
     </a>
+    <p-toast [baseZIndex]="1100" />
 
     <div
       class="layout-wrapper"

@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface Category {
   id: string;
@@ -69,6 +75,7 @@ export class CategoryListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       parentId: [''],
@@ -113,6 +120,13 @@ export class CategoryListComponent implements OnInit {
         next: (res) => {
           this.categories = res?.items ?? [];
           this.buildTree();
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load categories');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -177,10 +191,6 @@ export class CategoryListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create category';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -189,6 +199,14 @@ export class CategoryListComponent implements OnInit {
           this.closeCreateModal();
           this.categories = res?.items ?? [];
           this.buildTree();
+          this.notification.success(NOTIFICATION_MESSAGES.category.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.category.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -237,10 +255,6 @@ export class CategoryListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update category';
-          return EMPTY;
-        }),
         finalize(() => (this.updating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -249,6 +263,14 @@ export class CategoryListComponent implements OnInit {
           this.closeEditModal();
           this.categories = res?.items ?? [];
           this.buildTree();
+          this.notification.success(NOTIFICATION_MESSAGES.category.update);
+        },
+        error: (err) => {
+          this.updating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.category.updateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -267,16 +289,19 @@ export class CategoryListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to delete category';
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.categories = res?.items ?? [];
           this.buildTree();
+          this.notification.success(NOTIFICATION_MESSAGES.category.delete);
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.category.deleteFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

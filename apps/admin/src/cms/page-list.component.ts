@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface CmsPageContent {
   slug: string;
@@ -78,6 +84,7 @@ export class PageListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       titleEn: ['', Validators.required],
@@ -122,6 +129,13 @@ export class PageListComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.pages = res?.items ?? [];
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load CMS pages');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -187,10 +201,6 @@ export class PageListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create CMS page';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -198,6 +208,14 @@ export class PageListComponent implements OnInit {
         next: (res) => {
           this.closeCreateModal();
           this.pages = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.page.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.page.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -239,10 +257,6 @@ export class PageListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update CMS page';
-          return EMPTY;
-        }),
         finalize(() => (this.updating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -250,6 +264,14 @@ export class PageListComponent implements OnInit {
         next: (res) => {
           this.closeEditModal();
           this.pages = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.page.update);
+        },
+        error: (err) => {
+          this.updating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.page.updateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -268,15 +290,18 @@ export class PageListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to delete CMS page';
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.pages = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.page.delete);
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.page.deleteFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

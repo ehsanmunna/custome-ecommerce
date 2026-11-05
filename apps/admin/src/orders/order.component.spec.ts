@@ -72,6 +72,13 @@ class MockHttpClient {
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
 
+const mockNotification = {
+  success: () => {},
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+} as any;
+
 describe('OrderListComponent', () => {
   let component: OrderListComponent;
   let http: MockHttpClient;
@@ -228,7 +235,7 @@ describe('OrderStatusComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new OrderStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'order-1' } } } as any, {} as any);
+    component = new OrderStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'order-1' } } } as any, {} as any, mockNotification);
   });
 
   afterEach(() => {
@@ -379,7 +386,7 @@ describe('ReturnStatusComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ReturnStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'ret-1' } } } as any, {} as any);
+    component = new ReturnStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'ret-1' } } } as any, {} as any, mockNotification);
   });
 
   afterEach(() => {

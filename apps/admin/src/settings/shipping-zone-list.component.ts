@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface ShippingZone {
   id: string;
@@ -60,6 +66,7 @@ export class ShippingZoneListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       code: ['', Validators.required],
@@ -95,7 +102,14 @@ export class ShippingZoneListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.zones = res?.items ?? [];
-      }
+      },
+      error: (err) => {
+        this.loading = false;
+        this.error = extractErrorMessage(err, 'Failed to load shipping zones');
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 
@@ -127,7 +141,15 @@ export class ShippingZoneListComponent implements OnInit {
       next: (res) => {
         this.closeCreateModal();
         this.zones = res?.items ?? [];
-      }
+        this.notification.success(NOTIFICATION_MESSAGES.shippingZone.create);
+      },
+      error: (err) => {
+        this.creating = false;
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.createFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 
@@ -159,7 +181,15 @@ export class ShippingZoneListComponent implements OnInit {
       next: (res) => {
         this.closeEditModal();
         this.zones = res?.items ?? [];
-      }
+        this.notification.success(NOTIFICATION_MESSAGES.shippingZone.update);
+      },
+      error: (err) => {
+        this.updating = false;
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.updateFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 
@@ -181,7 +211,14 @@ export class ShippingZoneListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.zones = res?.items ?? [];
-      }
+        this.notification.success(NOTIFICATION_MESSAGES.shippingZone.delete);
+      },
+      error: (err) => {
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.deleteFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
+      },
     });
   }
 

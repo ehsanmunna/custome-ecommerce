@@ -78,6 +78,13 @@ class MockHttpClient {
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
 
+const mockNotification = {
+  success: () => {},
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+} as any;
+
 describe('PageListComponent', () => {
   let component: PageListComponent;
   let http: MockHttpClient;
@@ -89,7 +96,7 @@ describe('PageListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new PageListComponent(http as any, auth, new FormBuilder(), config);
+    component = new PageListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {
@@ -195,7 +202,7 @@ describe('BannerListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new BannerListComponent(http as any, auth, new FormBuilder(), config);
+    component = new BannerListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {

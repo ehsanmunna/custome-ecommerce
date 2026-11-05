@@ -1,6 +1,7 @@
 import { ApplicationConfig } from '@angular/core';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
+import { MessageService } from 'primeng/api';
 import { routes } from './app.routes';
 import { ADMIN_AUTH_CONFIG, defaultAdminAuthConfig } from './auth/auth.config';
 import { authInterceptor } from './core/http/auth.interceptor';
@@ -15,6 +16,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
+    MessageService,
     provideClientConfig(),
     provideClientTheme(),
     ...provideAdminTransloco(),

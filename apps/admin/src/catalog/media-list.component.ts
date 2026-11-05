@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface MediaAsset {
   id: string;
@@ -76,6 +82,7 @@ export class MediaListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       fileName: ['', Validators.required],
@@ -112,6 +119,13 @@ export class MediaListComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.media = res?.items ?? [];
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load media');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -152,16 +166,20 @@ export class MediaListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           });
         }),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create media upload';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.media = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.media.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -190,10 +208,6 @@ export class MediaListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to complete media upload';
-          return EMPTY;
-        }),
         finalize(() => (this.completing = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -201,6 +215,14 @@ export class MediaListComponent implements OnInit {
         next: (res) => {
           this.closeCompleteModal();
           this.media = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.media.complete);
+        },
+        error: (err) => {
+          this.completing = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.completeFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -219,15 +241,18 @@ export class MediaListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to delete media';
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.media = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.media.delete);
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

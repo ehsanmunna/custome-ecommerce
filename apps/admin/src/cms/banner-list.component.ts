@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface BannerContent {
   title?: string;
@@ -71,6 +77,7 @@ export class BannerListComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       placement: ['', Validators.required],
@@ -121,6 +128,13 @@ export class BannerListComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.banners = res?.items ?? [];
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load banners');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -187,10 +201,6 @@ export class BannerListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create banner';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -198,6 +208,14 @@ export class BannerListComponent implements OnInit {
         next: (res) => {
           this.closeCreateModal();
           this.banners = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.banner.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.banner.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -248,10 +266,6 @@ export class BannerListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update banner';
-          return EMPTY;
-        }),
         finalize(() => (this.updating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -259,6 +273,14 @@ export class BannerListComponent implements OnInit {
         next: (res) => {
           this.closeEditModal();
           this.banners = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.banner.update);
+        },
+        error: (err) => {
+          this.updating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.banner.updateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -277,15 +299,18 @@ export class BannerListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to delete banner';
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.banners = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.banner.delete);
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.banner.deleteFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }

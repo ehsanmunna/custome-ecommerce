@@ -79,6 +79,13 @@ class MockHttpClient {
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
 
+const mockNotification = {
+  success: () => {},
+  error: () => {},
+  warn: () => {},
+  info: () => {},
+} as any;
+
 describe('ProductListComponent', () => {
   let component: ProductListComponent;
   let http: MockHttpClient;
@@ -90,7 +97,7 @@ describe('ProductListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ProductListComponent(http as any, auth, new FormBuilder(), config);
+    component = new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {
@@ -193,7 +200,7 @@ describe('MediaListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new MediaListComponent(http as any, auth, new FormBuilder(), config);
+    component = new MediaListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {
@@ -371,7 +378,7 @@ describe('InventoryAdjustmentComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new InventoryAdjustmentComponent(http as any, auth, new FormBuilder(), config);
+    component = new InventoryAdjustmentComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {
@@ -466,7 +473,7 @@ describe('InventoryReservationComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new InventoryReservationComponent(http as any, auth, new FormBuilder(), config);
+    component = new InventoryReservationComponent(http as any, auth, new FormBuilder(), config, mockNotification);
   });
 
   afterEach(() => {

@@ -13,6 +13,12 @@ import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { NotificationService } from '../core/notifications/notification.service';
+import {
+  NOTIFICATION_MESSAGES,
+  isGlobalHttpError,
+  extractErrorMessage,
+} from '../core/notifications/notification-messages';
 
 export interface Variant {
   id: string;
@@ -80,6 +86,7 @@ export class VariantListComponent implements OnInit {
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
     @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
+    private readonly notification: NotificationService,
   ) {
     this.createForm = this.fb.group({
       sku: ['', Validators.required],
@@ -127,6 +134,13 @@ export class VariantListComponent implements OnInit {
         next: (res) => {
           this.variants = res?.items ?? [];
         },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load variants');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
       });
   }
 
@@ -158,6 +172,13 @@ export class VariantListComponent implements OnInit {
           this.attributeDefs = attrRes?.items ?? [];
           for (const attr of this.attributeDefs) {
             this.createForm.addControl('attr_' + attr.key, this.fb.control(''));
+          }
+        },
+        error: (err) => {
+          this.attributeDefs = [];
+          this.error = extractErrorMessage(err, 'Failed to load attribute definitions');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
           }
         },
       });
@@ -202,10 +223,6 @@ export class VariantListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to create variant';
-          return EMPTY;
-        }),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -213,6 +230,14 @@ export class VariantListComponent implements OnInit {
         next: (res) => {
           this.closeCreateModal();
           this.variants = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.variant.create);
+        },
+        error: (err) => {
+          this.creating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.createFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -255,10 +280,6 @@ export class VariantListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to update variant';
-          return EMPTY;
-        }),
         finalize(() => (this.updating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
@@ -266,6 +287,14 @@ export class VariantListComponent implements OnInit {
         next: (res) => {
           this.closeEditModal();
           this.variants = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.variant.update);
+        },
+        error: (err) => {
+          this.updating = false;
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.updateFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
@@ -285,15 +314,18 @@ export class VariantListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to delete variant';
-          return EMPTY;
-        }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.variants = res?.items ?? [];
+          this.notification.success(NOTIFICATION_MESSAGES.variant.delete);
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.deleteFailed);
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
         },
       });
   }
