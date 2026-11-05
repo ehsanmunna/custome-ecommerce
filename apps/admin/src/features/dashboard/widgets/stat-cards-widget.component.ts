@@ -1,18 +1,21 @@
 import { Component, input, output, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { StatCardComponent } from '../../../shared/ui/stat-card/stat-card.component';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 export interface OverviewAsyncState {
   status: 'loading' | 'ready' | 'empty' | 'error';
-  data?: { today: { orderCount: number; revenue: number }; yesterday: { orderCount: number; revenue: number } };
+  data?: {
+    today: { orderCount: number; revenue: number };
+    yesterday: { orderCount: number; revenue: number };
+  };
   error?: string;
 }
 
 @Component({
   selector: 'app-stat-cards-widget',
   standalone: true,
-  imports: [CommonModule, StatCardComponent, TranslocoPipe],
+  imports: [StatCardComponent, TranslocoPipe],
   template: `
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       <app-stat-card
@@ -53,8 +56,17 @@ export interface OverviewAsyncState {
 export class StatCardsWidgetComponent {
   readonly orders = input.required<OverviewAsyncState>();
   readonly revenue = input.required<OverviewAsyncState>();
-  readonly newCustomers = input.required<{ status: 'loading' | 'ready' | 'empty' | 'error'; data?: number; error?: string; isSample?: boolean }>();
-  readonly lowStockCount = input.required<{ status: 'loading' | 'ready' | 'empty' | 'error'; data?: number; error?: string }>();
+  readonly newCustomers = input.required<{
+    status: 'loading' | 'ready' | 'empty' | 'error';
+    data?: number;
+    error?: string;
+    isSample?: boolean;
+  }>();
+  readonly lowStockCount = input.required<{
+    status: 'loading' | 'ready' | 'empty' | 'error';
+    data?: number;
+    error?: string;
+  }>();
   readonly retry = output<string>();
 
   readonly ordersValue = computed(() => {

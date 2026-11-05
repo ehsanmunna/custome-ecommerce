@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
@@ -37,11 +37,10 @@ export interface MovementLedgerEntry {
 @Component({
   selector: 'app-stock-movements',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [RouterLink],
   templateUrl: './stock-movements.component.html',
 })
 export class StockMovementsComponent implements OnInit {
-
   movements: MovementLedgerEntry[] = [];
 
   loading = false;
@@ -63,30 +62,32 @@ export class StockMovementsComponent implements OnInit {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    this.http.get<{ items: Reservation[] }>(
-      `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load stock movements';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        const reservations = res?.items ?? [];
-        this.movements = reservations.map((r) => ({
-          id: r.id,
-          variantId: r.variantId,
-          type: this.mapType(r.status),
-          quantity: r.quantity,
-          reason: r.source,
-          status: r.status,
-          createdAt: r.expiresAt,
-        }));
-      }
-    });
+    this.http
+      .get<{ items: Reservation[] }>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load stock movements';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          const reservations = res?.items ?? [];
+          this.movements = reservations.map((r) => ({
+            id: r.id,
+            variantId: r.variantId,
+            type: this.mapType(r.status),
+            quantity: r.quantity,
+            reason: r.source,
+            status: r.status,
+            createdAt: r.expiresAt,
+          }));
+        },
+      });
   }
 
   mapType(status: string): string {

@@ -10,7 +10,8 @@
     "start:dev": "ng serve",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "control-flow":"ng generate @angular/core:control-flow"
   },
   "devDependencies": {
     "@angular-devkit/build-angular": "21.2.29",

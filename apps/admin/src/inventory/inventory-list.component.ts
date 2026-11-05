@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
@@ -41,11 +41,10 @@ export interface VariantPage {
 @Component({
   selector: 'app-inventory-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink],
   templateUrl: './inventory-list.component.html',
 })
 export class InventoryListComponent implements OnInit {
-
   inventory: InventoryItem[] = [];
   variantSkus: Record<string, string> = {};
 
@@ -59,8 +58,7 @@ export class InventoryListComponent implements OnInit {
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
-  ) {
-  }
+  ) {}
 
   ngOnInit(): void {
     this.loadInventory();
@@ -72,27 +70,33 @@ export class InventoryListComponent implements OnInit {
     const token = this.auth.token;
     const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
     if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
-    this.http.get<InventoryPage>(url.toString(), {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      switchMap(() => this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
+    this.http
+      .get<InventoryPage>(url.toString(), {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load inventory';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        const variants: Variant[] = (res?.items as any[] ?? []).flatMap((p: any) => p.variants || []);
-        this.variantSkus = {};
-        for (const v of variants) {
-          this.variantSkus[v.id] = v.sku;
-        }
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load inventory';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          const variants: Variant[] = ((res?.items as any[]) ?? []).flatMap(
+            (p: any) => p.variants || [],
+          );
+          this.variantSkus = {};
+          for (const v of variants) {
+            this.variantSkus[v.id] = v.sku;
+          }
+        },
+      });
   }
 }
-

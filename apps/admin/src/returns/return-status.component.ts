@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -26,11 +26,10 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 @Component({
   selector: 'app-return-status',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './return-status.component.html',
 })
 export class ReturnStatusComponent implements OnInit {
-
   returnId = '';
   ret: { id: string; orderId: string; status: string } | null = null;
 
@@ -71,26 +70,29 @@ export class ReturnStatusComponent implements OnInit {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    this.http.get<{ id: string; orderId: string; status: string }>(
-      `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load return';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        if (res) {
-          this.ret = res;
-          const currentStatus = res.status;
-          this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
-          this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
-        }
-      }
-    });
+    this.http
+      .get<{ id: string; orderId: string; status: string }>(
+        `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load return';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          if (res) {
+            this.ret = res;
+            const currentStatus = res.status;
+            this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+            this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
+          }
+        },
+      });
   }
 
   changeStatus(): void {
@@ -102,30 +104,32 @@ export class ReturnStatusComponent implements OnInit {
     const value = this.statusForm.value;
     const body: { status: string; note?: string } = { status: value.status };
     if (value.note) body.note = value.note;
-    this.http.patch(
-      `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}/status`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<{ id: string; orderId: string; status: string }>(
-        `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to update return status';
-        return EMPTY;
-      }),
-      finalize(() => this.changing = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.success = `Return status updated to ${value.status}`;
-        this.ret = res;
-        const currentStatus = res.status;
-        this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
-        this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
-      }
-    });
+    this.http
+      .patch(`${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}/status`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<{ id: string; orderId: string; status: string }>(
+            `${this.config.apiBaseUrl}/v1/admin/returns/${this.returnId}`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to update return status';
+          return EMPTY;
+        }),
+        finalize(() => (this.changing = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.success = `Return status updated to ${value.status}`;
+          this.ret = res;
+          const currentStatus = res.status;
+          this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
+          this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
+        },
+      });
   }
 }
-

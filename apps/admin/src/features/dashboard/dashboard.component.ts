@@ -1,5 +1,5 @@
 import { Component, inject, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { TranslocoPipe, TranslocoService } from '@jsverse/transloco';
 import { DashboardStore } from './dashboard.store';
 import { StatCardsWidgetComponent } from './widgets/stat-cards-widget.component';
@@ -12,8 +12,7 @@ import { LowStockWidgetComponent } from './widgets/low-stock-widget.component';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-    imports: [
-    CommonModule,
+  imports: [
     TranslocoPipe,
     StatCardsWidgetComponent,
     RevenueChartWidgetComponent,
@@ -36,26 +35,42 @@ import { LowStockWidgetComponent } from './widgets/low-stock-widget.component';
         <div class="flex items-center gap-2">
           <button
             (click)="setRange('7')"
-            [class]="'px-3 py-1.5 rounded-md text-sm font-medium transition-colors ' + (range() === '7' ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')"
+            [class]="
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors ' +
+              (range() === '7'
+                ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')
+            "
           >
             {{ 'dashboard.range7' | transloco }}
           </button>
           <button
             (click)="setRange('30')"
-            [class]="'px-3 py-1.5 rounded-md text-sm font-medium transition-colors ' + (range() === '30' ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')"
+            [class]="
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors ' +
+              (range() === '30'
+                ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')
+            "
           >
             {{ 'dashboard.range30' | transloco }}
           </button>
           <button
             (click)="setRange('90')"
-            [class]="'px-3 py-1.5 rounded-md text-sm font-medium transition-colors ' + (range() === '90' ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')"
+            [class]="
+              'px-3 py-1.5 rounded-md text-sm font-medium transition-colors ' +
+              (range() === '90'
+                ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')
+            "
           >
             {{ 'dashboard.range90' | transloco }}
           </button>
         </div>
       </div>
 
-      @if (store.loading()) {        <div class="h-64 flex items-center justify-center">
+      @if (store.loading()) {
+        <div class="h-64 flex items-center justify-center">
           <div class="h-8 w-32 rounded-md bg-[var(--color-surface-secondary)] animate-pulse"></div>
         </div>
       } @else if (store.error()) {
@@ -123,6 +138,6 @@ export class DashboardComponent implements OnInit {
     if (!state) {
       return { status: 'loading' as const };
     }
-    return ((state as unknown) as Record<string, unknown>)[key] ?? { status: 'loading' as const };
+    return (state as unknown as Record<string, unknown>)[key] ?? { status: 'loading' as const };
   }
 }

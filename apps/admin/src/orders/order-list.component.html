@@ -8,7 +8,10 @@
   <div class="flex gap-2 mb-4 items-center flex-wrap">
     <label class="flex items-center gap-1">
       <label class="font-medium text-sm text-[var(--color-text-secondary)]">Status</label>
-      <select formControlName="statusFilter" class="w-full p-2 border border-[var(--color-border)] rounded-md">
+      <select
+        formControlName="statusFilter"
+        class="w-full p-2 border border-[var(--color-border)] rounded-md"
+      >
         <option value="">All</option>
         <option value="draft">Draft</option>
         <option value="confirmed">Confirmed</option>
@@ -18,37 +21,81 @@
         <option value="cancelled">Cancelled</option>
       </select>
     </label>
-    <button (click)="loadOrders()" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">Refresh</button>
+    <button
+      (click)="loadOrders()"
+      class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+    >
+      Refresh
+    </button>
   </div>
 
-  <div *ngIf="error" class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  }
 
-  <table *ngIf="orders.length; else emptyState" class="w-full border-collapse mb-4">
-    <thead>
-      <tr>
-        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Order #</th>
-        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Status</th>
-        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Customer</th>
-        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Total</th>
-        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Delivery</th>
-        <th class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]">Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let order of orders">
-        <td class="border border-[var(--color-border)] p-2 text-left">#{{ order.number }}</td>
-        <td class="border border-[var(--color-border)] p-2 text-left">{{ order.status }}</td>
-        <td class="border border-[var(--color-border)] p-2 text-left">{{ order.contactName }}</td>
-        <td class="border border-[var(--color-border)] p-2 text-left">{{ order.total.amount / 100 | currency }} {{ order.total.currency }}</td>
-        <td class="border border-[var(--color-border)] p-2 text-left">{{ order.delivery.method || 'Standard' }}</td>
-        <td class="border border-[var(--color-border)] p-2 text-left">
-          <button (click)="viewOrder(order.id)" class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]">View</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
-
-  <ng-template #emptyState>
+  @if (orders.length) {
+    <table class="w-full border-collapse mb-4">
+      <thead>
+        <tr>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Order #
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Status
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Customer
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Total
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Delivery
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Actions
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (order of orders; track order) {
+          <tr>
+            <td class="border border-[var(--color-border)] p-2 text-left">#{{ order.number }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ order.status }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              {{ order.contactName }}
+            </td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              {{ order.total.amount / 100 | currency }} {{ order.total.currency }}
+            </td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              {{ order.delivery.method || 'Standard' }}
+            </td>
+            <td class="border border-[var(--color-border)] p-2 text-left">
+              <button
+                (click)="viewOrder(order.id)"
+                class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+              >
+                View
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
     <p class="text-[var(--color-text-muted)]">No orders found.</p>
-  </ng-template>
+  }
 </div>

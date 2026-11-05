@@ -1,11 +1,14 @@
 import { Component, input, output, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ChartThemeService } from '../chart-theme.service';
 import { TranslocoPipe } from '@jsverse/transloco';
 
 export interface SalesAsyncState {
   status: 'loading' | 'ready' | 'empty' | 'error';
-  data?: { points: { periodStart: string; orderCount: number; revenue: number }[]; range: '7' | '30' | '90' };
+  data?: {
+    points: { periodStart: string; orderCount: number; revenue: number }[];
+    range: '7' | '30' | '90';
+  };
   error?: string;
   isSample?: boolean;
 }
@@ -13,21 +16,29 @@ export interface SalesAsyncState {
 @Component({
   selector: 'app-revenue-chart-widget',
   standalone: true,
-  imports: [CommonModule, TranslocoPipe],
+  imports: [TranslocoPipe],
   template: `
-    <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+    <div
+      class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+    >
       <div class="flex items-center justify-between mb-4">
         <h3 class="mt-0 text-lg font-semibold text-[var(--color-text)]">
           {{ 'dashboard.revenueChart' | transloco }}
         </h3>
         <div class="flex gap-1">
-          <button
-            *ngFor="let range of ranges"
-            (click)="setRange(range)"
-            [class]="'px-3 py-1.5 text-xs rounded-md transition-colors ' + (range === selectedRange() ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]' : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')"
-          >
-            {{ rangeLabel(range) | transloco }}
-          </button>
+          @for (range of ranges; track range) {
+            <button
+              (click)="setRange(range)"
+              [class]="
+                'px-3 py-1.5 text-xs rounded-md transition-colors ' +
+                (range === selectedRange()
+                  ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                  : 'bg-[var(--color-surface-secondary)] text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-secondary)]/50')
+              "
+            >
+              {{ rangeLabel(range) | transloco }}
+            </button>
+          }
         </div>
       </div>
 
@@ -37,12 +48,16 @@ export interface SalesAsyncState {
         </div>
       } @else if (state().status === 'empty') {
         <div class="h-48 flex items-center justify-center">
-          <p class="text-sm text-[var(--color-text-muted)]">{{ 'dashboard.revenueEmpty' | transloco }}</p>
+          <p class="text-sm text-[var(--color-text-muted)]">
+            {{ 'dashboard.revenueEmpty' | transloco }}
+          </p>
         </div>
       } @else if (state().status === 'error') {
         <div class="h-48 flex items-center justify-center">
           <div class="text-center">
-            <p class="text-sm text-[var(--color-danger)]">{{ 'dashboard.widgetError' | transloco }}</p>
+            <p class="text-sm text-[var(--color-danger)]">
+              {{ 'dashboard.widgetError' | transloco }}
+            </p>
             <button
               (click)="retry.emit()"
               class="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-secondary)] transition-colors"

@@ -1,5 +1,5 @@
 import { Component, input, output, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { ChartThemeService } from '../chart-theme.service';
 import { TranslocoPipe } from '@jsverse/transloco';
 
@@ -17,9 +17,11 @@ export interface OrderStatusAsyncState {
 @Component({
   selector: 'app-order-status-widget',
   standalone: true,
-  imports: [CommonModule, TranslocoPipe],
+  imports: [TranslocoPipe],
   template: `
-    <div class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm">
+    <div
+      class="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm"
+    >
       <h3 class="mt-0 mb-4 text-lg font-semibold text-[var(--color-text)]">
         {{ 'dashboard.orderStatus' | transloco }}
       </h3>
@@ -30,12 +32,16 @@ export interface OrderStatusAsyncState {
         </div>
       } @else if (state().status === 'empty') {
         <div class="h-48 flex items-center justify-center">
-          <p class="text-sm text-[var(--color-text-muted)]">{{ 'dashboard.orderStatusEmpty' | transloco }}</p>
+          <p class="text-sm text-[var(--color-text-muted)]">
+            {{ 'dashboard.orderStatusEmpty' | transloco }}
+          </p>
         </div>
       } @else if (state().status === 'error') {
         <div class="h-48 flex items-center justify-center">
           <div class="text-center">
-            <p class="text-sm text-[var(--color-danger)]">{{ 'dashboard.widgetError' | transloco }}</p>
+            <p class="text-sm text-[var(--color-danger)]">
+              {{ 'dashboard.widgetError' | transloco }}
+            </p>
             <button
               (click)="retry.emit()"
               class="mt-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-sm text-[var(--color-text)] hover:bg-[var(--color-surface-secondary)] transition-colors"
@@ -70,13 +76,24 @@ export class OrderStatusWidgetComponent {
   readonly chartData = computed(() => {
     const counts = this.statusCounts();
     const colors = this.chartTheme.getColors();
-    const palette = [colors.primary, colors.success, colors.warning, colors.danger, colors.info, colors.surface, colors.textMuted, colors.border].filter((c): c is string => Boolean(c));
+    const palette = [
+      colors.primary,
+      colors.success,
+      colors.warning,
+      colors.danger,
+      colors.info,
+      colors.surface,
+      colors.textMuted,
+      colors.border,
+    ].filter((c): c is string => Boolean(c));
     return {
       labels: counts.map((c) => c.status),
       datasets: [
         {
           data: counts.map((c) => c.count),
-          backgroundColor: counts.map((_, i) => palette[i % palette.length] || 'var(--p-primary-500)'),
+          backgroundColor: counts.map(
+            (_, i) => palette[i % palette.length] || 'var(--p-primary-500)',
+          ),
           borderColor: counts.map(() => colors.surfaceLight || 'var(--p-surface-200)'),
         },
       ],

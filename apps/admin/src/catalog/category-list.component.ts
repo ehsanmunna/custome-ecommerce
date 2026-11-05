@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -19,7 +19,16 @@ export interface Category {
   parentId?: string;
   status: string;
   sortOrder: number;
-  content: Record<string, { name: string; slug: string; description?: string; metaTitle?: string; metaDescription?: string }>;
+  content: Record<
+    string,
+    {
+      name: string;
+      slug: string;
+      description?: string;
+      metaTitle?: string;
+      metaDescription?: string;
+    }
+  >;
   imageId?: string;
 }
 
@@ -33,11 +42,10 @@ export interface CategoryPage {
 @Component({
   selector: 'app-category-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './category-list.component.html',
 })
 export class CategoryListComponent implements OnInit {
-
   categories: Category[] = [];
   rootCategories: Category[] = [];
   expanded: Record<string, boolean> = {};
@@ -89,33 +97,36 @@ export class CategoryListComponent implements OnInit {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load categories';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.categories = res?.items ?? [];
-        this.buildTree();
-      }
-    });
+    this.http
+      .get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load categories';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.categories = res?.items ?? [];
+          this.buildTree();
+        },
+      });
   }
 
   buildTree(): void {
-    this.rootCategories = this.categories.filter(c => !c.parentId);
+    this.rootCategories = this.categories.filter((c) => !c.parentId);
   }
 
   childCount(parentId: string): number {
-    return this.categories.filter(c => c.parentId === parentId).length;
+    return this.categories.filter((c) => c.parentId === parentId).length;
   }
 
   childrenOf(parentId: string): Category[] {
-    return this.categories.filter(c => c.parentId === parentId);
+    return this.categories.filter((c) => c.parentId === parentId);
   }
 
   toggleChildren(id: string): void {
@@ -123,7 +134,15 @@ export class CategoryListComponent implements OnInit {
   }
 
   openCreateModal(): void {
-    this.createForm.reset({ parentId: '', status: 'active', sortOrder: 0, nameEn: '', slugEn: '', nameBn: '', slugBn: '' });
+    this.createForm.reset({
+      parentId: '',
+      status: 'active',
+      sortOrder: 0,
+      nameEn: '',
+      slugEn: '',
+      nameBn: '',
+      slugBn: '',
+    });
     this.createModal = true;
   }
 
@@ -148,25 +167,30 @@ export class CategoryListComponent implements OnInit {
     if (value.nameBn || value.slugBn) {
       body.content.bn = { name: value.nameBn, slug: value.slugBn };
     }
-    this.http.post(`${this.config.apiBaseUrl}/v1/admin/categories`, body, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      switchMap(() => this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+    this.http
+      .post(`${this.config.apiBaseUrl}/v1/admin/categories`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create category';
-        return EMPTY;
-      }),
-      finalize(() => this.creating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.closeCreateModal();
-        this.categories = res?.items ?? [];
-        this.buildTree();
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to create category';
+          return EMPTY;
+        }),
+        finalize(() => (this.creating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.closeCreateModal();
+          this.categories = res?.items ?? [];
+          this.buildTree();
+        },
+      });
   }
 
   openEditModal(category: Category): void {
@@ -203,48 +227,57 @@ export class CategoryListComponent implements OnInit {
     if (value.nameBn || value.slugBn) {
       body.content.bn = { name: value.nameBn, slug: value.slugBn };
     }
-    this.http.patch(`${this.config.apiBaseUrl}/v1/admin/categories/${this.editingCategory.id}`, body, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      switchMap(() => this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+    this.http
+      .patch(`${this.config.apiBaseUrl}/v1/admin/categories/${this.editingCategory.id}`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to update category';
-        return EMPTY;
-      }),
-      finalize(() => this.updating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.closeEditModal();
-        this.categories = res?.items ?? [];
-        this.buildTree();
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to update category';
+          return EMPTY;
+        }),
+        finalize(() => (this.updating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.closeEditModal();
+          this.categories = res?.items ?? [];
+          this.buildTree();
+        },
+      });
   }
 
   deleteCategory(id: string): void {
     if (!confirm('Delete this category?')) return;
     this.error = null;
     const token = this.auth.token;
-    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      switchMap(() => this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+    this.http
+      .delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to delete category';
-        return EMPTY;
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.categories = res?.items ?? [];
-        this.buildTree();
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to delete category';
+          return EMPTY;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.categories = res?.items ?? [];
+          this.buildTree();
+        },
+      });
   }
 }
-

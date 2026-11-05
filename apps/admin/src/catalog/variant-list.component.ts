@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -52,11 +52,10 @@ export interface AttributeDefinitionPage {
 @Component({
   selector: 'app-variant-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './variant-list.component.html',
 })
 export class VariantListComponent implements OnInit {
-
   variants: Variant[] = [];
   attributeDefs: AttributeDefinition[] = [];
   productId!: string;
@@ -111,52 +110,57 @@ export class VariantListComponent implements OnInit {
     this.loading = true;
     this.error = null;
     const token = this.auth.token;
-    this.http.get<{ items: Variant[] }>(
-      `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load variants';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.variants = res?.items ?? [];
-      }
-    });
+    this.http
+      .get<{ items: Variant[] }>(
+        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load variants';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.variants = res?.items ?? [];
+        },
+      });
   }
 
   loadAttributeDefs(): void {
     const token = this.auth.token;
-    this.http.get<{ items: any[] }>(
-      `${this.config.apiBaseUrl}/v1/admin/categories`,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap((catRes) => {
-        const firstCat = catRes?.items?.[0];
-        if (firstCat) {
-          return this.http.get<AttributeDefinitionPage>(
-            `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
-            { headers: { Authorization: `Bearer ${token}` } },
-          );
-        }
-        return EMPTY;
-      }),
-      catchError(() => {
-        this.attributeDefs = [];
-        return EMPTY;
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (attrRes) => {
-        this.attributeDefs = attrRes?.items ?? [];
-        for (const attr of this.attributeDefs) {
-          this.createForm.addControl('attr_' + attr.key, this.fb.control(''));
-        }
-      }
-    });
+    this.http
+      .get<{ items: any[] }>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        switchMap((catRes) => {
+          const firstCat = catRes?.items?.[0];
+          if (firstCat) {
+            return this.http.get<AttributeDefinitionPage>(
+              `${this.config.apiBaseUrl}/v1/admin/categories/${firstCat.id}/attributes`,
+              { headers: { Authorization: `Bearer ${token}` } },
+            );
+          }
+          return EMPTY;
+        }),
+        catchError(() => {
+          this.attributeDefs = [];
+          return EMPTY;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (attrRes) => {
+          this.attributeDefs = attrRes?.items ?? [];
+          for (const attr of this.attributeDefs) {
+            this.createForm.addControl('attr_' + attr.key, this.fb.control(''));
+          }
+        },
+      });
   }
 
   openCreateModal(): void {
@@ -187,27 +191,30 @@ export class VariantListComponent implements OnInit {
       status: value.status,
       attributes,
     };
-    this.http.post(
-      `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<{ items: Variant[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create variant';
-        return EMPTY;
-      }),
-      finalize(() => this.creating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.closeCreateModal();
-        this.variants = res?.items ?? [];
-      }
-    });
+    this.http
+      .post(`${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<{ items: Variant[] }>(
+            `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to create variant';
+          return EMPTY;
+        }),
+        finalize(() => (this.creating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.closeCreateModal();
+          this.variants = res?.items ?? [];
+        },
+      });
   }
 
   openEditModal(variant: Variant): void {
@@ -237,50 +244,57 @@ export class VariantListComponent implements OnInit {
       status: value.status,
       attributes: this.editingVariant.attributes,
     };
-    this.http.patch(
-      `${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<{ items: Variant[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to update variant';
-        return EMPTY;
-      }),
-      finalize(() => this.updating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.closeEditModal();
-        this.variants = res?.items ?? [];
-      }
-    });
+    this.http
+      .patch(`${this.config.apiBaseUrl}/v1/admin/variants/${this.editingVariant.id}`, body, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<{ items: Variant[] }>(
+            `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to update variant';
+          return EMPTY;
+        }),
+        finalize(() => (this.updating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.closeEditModal();
+          this.variants = res?.items ?? [];
+        },
+      });
   }
 
   deleteVariant(id: string): void {
     if (!confirm('Delete this variant?')) return;
     this.error = null;
     const token = this.auth.token;
-    this.http.delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      switchMap(() => this.http.get<{ items: Variant[] }>(
-        `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
-        { headers: { Authorization: `Bearer ${token}` } },
-      )),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to delete variant';
-        return EMPTY;
-      }),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.variants = res?.items ?? [];
-      }
-    });
+    this.http
+      .delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<{ items: Variant[] }>(
+            `${this.config.apiBaseUrl}/v1/admin/products/${this.productId}/variants`,
+            { headers: { Authorization: `Bearer ${token}` } },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to delete variant';
+          return EMPTY;
+        }),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.variants = res?.items ?? [];
+        },
+      });
   }
 }
-

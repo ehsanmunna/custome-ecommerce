@@ -1,5 +1,5 @@
 import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import {
   FormsModule,
   ReactiveFormsModule,
@@ -40,11 +40,10 @@ export interface ReservationInput {
 @Component({
   selector: 'app-inventory-reservation',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterLink],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   templateUrl: './inventory-reservation.component.html',
 })
 export class InventoryReservationComponent implements OnInit {
-
   reservations: Reservation[] = [];
 
   loading = false;
@@ -79,20 +78,23 @@ export class InventoryReservationComponent implements OnInit {
     this.error = null;
     this.success = null;
     const token = this.auth.token;
-    this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
-      headers: { Authorization: `Bearer ${token}` },
-    }).pipe(
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load reservations';
-        return EMPTY;
-      }),
-      finalize(() => this.loading = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.reservations = res?.items ?? [];
-      }
-    });
+    this.http
+      .get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to load reservations';
+          return EMPTY;
+        }),
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.reservations = res?.items ?? [];
+        },
+      });
   }
 
   createReservation(): void {
@@ -109,27 +111,33 @@ export class InventoryReservationComponent implements OnInit {
     if (value.expiresAt) {
       body.expiresAt = value.expiresAt;
     }
-    this.http.post(
-      `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
-      body,
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
+    this.http
+      .post(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, body, {
         headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create reservation';
-        return EMPTY;
-      }),
-      finalize(() => this.creating = false),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.createForm.reset({ variantId: '', quantity: 1, expiresAt: '' });
-        this.reservations = res?.items ?? [];
-        this.success = 'Reservation created';
-      }
-    });
+      })
+      .pipe(
+        switchMap(() =>
+          this.http.get<ReservationPage>(
+            `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? 'Failed to create reservation';
+          return EMPTY;
+        }),
+        finalize(() => (this.creating = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.createForm.reset({ variantId: '', quantity: 1, expiresAt: '' });
+          this.reservations = res?.items ?? [];
+          this.success = 'Reservation created';
+        },
+      });
   }
 
   releaseReservation(reservationId: string): void {
@@ -144,26 +152,33 @@ export class InventoryReservationComponent implements OnInit {
     this.processingId = reservationId;
     this.error = null;
     const token = this.auth.token;
-    this.http.patch(
-      `${this.config.apiBaseUrl}/v1/admin/inventory/reservations/${reservationId}/status`,
-      { status },
-      { headers: { Authorization: `Bearer ${token}` } },
-    ).pipe(
-      switchMap(() => this.http.get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })),
-      catchError((err: any) => {
-        this.error = err?.message ?? `Failed to ${status} reservation`;
-        return EMPTY;
-      }),
-      finalize(() => this.processingId = null),
-      takeUntilDestroyed(this.destroyRef)
-    ).subscribe({
-      next: (res) => {
-        this.success = `Reservation ${status}`;
-        this.reservations = res?.items ?? [];
-      }
-    });
+    this.http
+      .patch(
+        `${this.config.apiBaseUrl}/v1/admin/inventory/reservations/${reservationId}/status`,
+        { status },
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .pipe(
+        switchMap(() =>
+          this.http.get<ReservationPage>(
+            `${this.config.apiBaseUrl}/v1/admin/inventory/reservations`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            },
+          ),
+        ),
+        catchError((err: any) => {
+          this.error = err?.message ?? `Failed to ${status} reservation`;
+          return EMPTY;
+        }),
+        finalize(() => (this.processingId = null)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.success = `Reservation ${status}`;
+          this.reservations = res?.items ?? [];
+        },
+      });
   }
 }
-
