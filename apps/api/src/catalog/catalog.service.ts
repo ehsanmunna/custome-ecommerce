@@ -619,6 +619,21 @@ export class CatalogService {
           select: { id: true },
         });
         if (input.media !== undefined) await this.replaceProductMedia(tx, created.id, input.media);
+        if (input.variants !== undefined) {
+          for (const variant of input.variants) {
+            await tx.productVariant.create({
+              data: {
+                productId: created.id,
+                sku: variant.sku,
+                pricePoisha: variant.price,
+                compareAtPricePoisha: variant.compareAtPrice,
+                status: variant.status ?? 'active',
+                sortOrder: variant.sortOrder ?? 0,
+                attributes: variant.attributes as Prisma.InputJsonObject,
+              },
+            });
+          }
+        }
         return tx.product.findUniqueOrThrow({ where: { id: created.id }, include: productInclude });
       });
       return mapProduct(record);
