@@ -22,8 +22,6 @@ import {
   localizedPaginationQuerySchema,
   paginationQuerySchema,
   parseCatalogInput,
-  productAdminQuerySchema,
-  productInputSchema,
   storefrontQuerySchema,
   variantInputSchema,
 } from './catalog.schemas';
@@ -45,20 +43,6 @@ export class StorefrontCatalogController {
   productsByCategory(@Param('slug') slug: string, @Query() query: Record<string, unknown>) {
     const input = parseCatalogInput(storefrontQuerySchema, query);
     return this.catalog.storefrontProductsByCategory(slug, input.locale, input);
-  }
-
-  @Get('products')
-  @AuthAccess({ access: 'public' })
-  products(@Query() query: Record<string, unknown>) {
-    const input = parseCatalogInput(storefrontQuerySchema, query);
-    return this.catalog.storefrontProducts(input);
-  }
-
-  @Get('products/:slug')
-  @AuthAccess({ access: 'public' })
-  product(@Param('slug') slug: string, @Query() query: Record<string, unknown>) {
-    const { locale } = parseCatalogInput(localeQuerySchema, query);
-    return this.catalog.storefrontProduct(slug, locale);
   }
 
   @Get('brands')
@@ -145,38 +129,6 @@ export class AdminCatalogController {
       id,
       parseCatalogInput(attributeDefinitionInputSchema, body),
     );
-  }
-
-  @Get('products')
-  @AuthAccess({ access: 'admin', permission: 'catalog.products.read', scope: 'store' })
-  products(@Query() query: Record<string, unknown>) {
-    const input = parseCatalogInput(productAdminQuerySchema, query);
-    return this.catalog.adminProducts({ ...input, locale: 'bn' });
-  }
-
-  @Post('products')
-  @AuthAccess({ access: 'admin', permission: 'catalog.products.create', scope: 'store' })
-  createProduct(@Body() body: unknown) {
-    return this.catalog.createProduct(parseCatalogInput(productInputSchema, body));
-  }
-
-  @Get('products/:productId')
-  @AuthAccess({ access: 'admin', permission: 'catalog.products.read', scope: 'store' })
-  product(@Param('productId', ParseUUIDPipe) id: string) {
-    return this.catalog.adminProduct(id);
-  }
-
-  @Patch('products/:productId')
-  @AuthAccess({ access: 'admin', permission: 'catalog.products.update', scope: 'store' })
-  updateProduct(@Param('productId', ParseUUIDPipe) id: string, @Body() body: unknown) {
-    return this.catalog.updateProduct(id, parseCatalogInput(productInputSchema, body));
-  }
-
-  @Delete('products/:productId')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @AuthAccess({ access: 'admin', permission: 'catalog.products.delete', scope: 'store' })
-  async deleteProduct(@Param('productId', ParseUUIDPipe) id: string): Promise<void> {
-    await this.catalog.deleteProduct(id);
   }
 
   @Post('products/:productId/variants')

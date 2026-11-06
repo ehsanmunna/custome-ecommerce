@@ -100,6 +100,13 @@ export interface BrandPage {
   pageSize: number;
 }
 
+export interface MediaAsset {
+  id: string;
+  url: string;
+  mimeType: string;
+  alt: Record<string, string>;
+}
+
 @Component({
   selector: 'app-product-list',
   standalone: true,
@@ -110,6 +117,7 @@ export class ProductListComponent implements OnInit {
   products: Product[] = [];
   categories: Category[] = [];
   brands: Brand[] = [];
+  media: MediaAsset[] = [];
   categoryNames: Record<string, string> = {};
   brandNames: Record<string, string> = {};
 
@@ -143,6 +151,8 @@ export class ProductListComponent implements OnInit {
       slugEn: ['', Validators.required],
       variantSku: ['', Validators.required],
       variantPrice: [0, Validators.required],
+      mediaIds: [[]],
+      primaryMediaId: [''],
     });
     this.editForm = this.fb.group({
       status: ['draft', Validators.required],
@@ -154,6 +164,7 @@ export class ProductListComponent implements OnInit {
   ngOnInit(): void {
     this.loadCategories();
     this.loadBrands();
+    this.loadMedia();
     this.loadProducts();
   }
 
@@ -239,6 +250,34 @@ export class ProductListComponent implements OnInit {
       });
   }
 
+  mediaName(id: string): string {
+    const m = this.media.find((x) => x.id === id);
+    return m ? m.url : id;
+  }
+
+  loadMedia(): void {
+    this.error = null;
+    const token = this.auth.token;
+    this.http
+      .get<{ items: MediaAsset[] }>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.media = res?.items ?? [];
+        },
+        error: (err) => {
+          this.error = extractErrorMessage(err, 'Failed to load media');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
+      });
+  }
+
   openCreateModal(): void {
     this.createForm.reset({
       categoryId: '',
@@ -248,7 +287,9 @@ export class ProductListComponent implements OnInit {
       slugEn: '',
       variantSku: '',
       variantPrice: 0,
+      mediaIds: [],
     });
+    this.loadMedia();
     this.createModal = true;
   }
 
@@ -275,10 +316,15 @@ export class ProductListComponent implements OnInit {
       variants: [
         {
           sku: value.variantSku,
-          price: { amount: Math.round(parseFloat(value.variantPrice) * 100), currency: 'BDT' },
+          price: Math.round(parseFloat(value.variantPrice)),
           attributes: {},
         },
       ],
+      media: (value.mediaIds || []).map((mediaId: string, index: number) => ({
+        mediaId,
+        primary: mediaId === (value.primaryMediaId || ''),
+        sortOrder: index,
+      })),
     };
     this.http
       .post(`${this.config.apiBaseUrl}/v1/admin/products`, body, {

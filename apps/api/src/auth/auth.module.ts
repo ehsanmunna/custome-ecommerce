@@ -8,6 +8,7 @@ import { AuthSessionService } from './auth-session.service';
 import { OTP_DELIVERY_ADAPTER } from './otp-delivery';
 import { ProviderOtpDeliveryAdapter } from './otp-delivery.providers';
 import { PasswordHashService } from './password-hash.service';
+import { RolesGuard } from './roles.guard';
 import { AppConfigService } from '../platform/config/app-config.service';
 import { ProblemDetailsFilter } from '../platform/problem-details.filter';
 
@@ -35,6 +36,7 @@ import { ProblemDetailsFilter } from '../platform/problem-details.filter';
       inject: [AppConfigService],
     },
     { provide: APP_GUARD, useExisting: AuthenticationGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_FILTER, useExisting: ProblemDetailsFilter },
   ],
   exports: [AuthService, AuthSessionService, AuthCryptoService],

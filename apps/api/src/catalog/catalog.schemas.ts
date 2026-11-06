@@ -43,6 +43,17 @@ export const brandInputSchema = z
   })
   .strict();
 
+export const variantInputSchema = z
+  .object({
+    sku: z.string().trim().min(1).max(100),
+    price: z.number().int().min(0).max(2_147_483_647),
+    compareAtPrice: z.number().int().min(0).max(2_147_483_647).nullable().optional(),
+    status: z.enum(['active', 'archived']).optional(),
+    sortOrder: z.number().int().optional(),
+    attributes: z.record(z.string(), z.unknown()),
+  })
+  .strict();
+
 export const productInputSchema = z
   .object({
     categoryId: z.string().uuid(),
@@ -60,17 +71,7 @@ export const productInputSchema = z
           .strict(),
       )
       .optional(),
-  })
-  .strict();
-
-export const variantInputSchema = z
-  .object({
-    sku: z.string().trim().min(1).max(100),
-    price: z.number().int().min(0).max(2_147_483_647),
-    compareAtPrice: z.number().int().min(0).max(2_147_483_647).nullable().optional(),
-    status: z.enum(['active', 'archived']).optional(),
-    sortOrder: z.number().int().optional(),
-    attributes: z.record(z.string(), z.unknown()),
+    variants: z.array(variantInputSchema).optional(),
   })
   .strict();
 
