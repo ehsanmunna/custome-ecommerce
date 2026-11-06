@@ -1,9 +1,8 @@
 import { Inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, throwError, of } from 'rxjs';
+import { catchError, Observable, of, tap, throwError } from 'rxjs';
 import type { components } from 'api-sdk';
 import { ADMIN_AUTH_CONFIG, type AdminAuthConfig } from './auth.config';
-import { catchError } from 'rxjs';
 
 export type AdminRole = components['schemas']['Role'];
 export type AdminUser = components['schemas']['AdminUser'];
@@ -39,7 +38,7 @@ export class AuthService {
 
     const storedExpiry = this.storage.getItem(this.config.expiryStorageKey);
     const parsedExpiry = storedExpiry === null ? Number.NaN : Number(storedExpiry);
-    this.expiresAt = Number.isFinite(parsedExpiry) ? parsedExpiry : null;
+    this.expiresAt = isPositiveFiniteNumber(parsedExpiry) ? parsedExpiry : null;
 
     const storedUser = this.storage.getItem(this.config.userStorageKey);
     if (storedUser === null) {
@@ -84,7 +83,13 @@ export class AuthService {
   }
 
   get isAuthenticated(): boolean {
-    return !!this.accessToken && this.expiresAt !== null && Date.now() < this.expiresAt;
+    const expiresAt = this.expiresAt;
+
+    return (
+      !!this.accessToken &&
+      isPositiveFiniteNumber(expiresAt) &&
+      Date.now() < expiresAt
+    );
   }
 
   get token(): string | null {
@@ -129,6 +134,7 @@ export class AuthService {
 
   login(email: string, password: string): Observable<AuthSession> {
     return this.http.post<AuthSession>(`${this.config.apiBaseUrl}${this.config.loginPath}`, { email, password }).pipe(
+      tap((session) => this.applySession(session)),
       catchError((error) => {
         throw new Error('Login failed: ' + (error instanceof Error ? error.message : String(error)));
       })
@@ -140,9 +146,12 @@ export class AuthService {
       return throwError(() => new Error('No refresh token available'));
     }
 
+    const currentRefreshToken = this.refreshToken;
+
     return this.http.post<AuthSession>(`${this.config.apiBaseUrl}${this.config.refreshPath}`, {
-      refreshToken: this.refreshToken,
+      refreshToken: currentRefreshToken,
     }).pipe(
+      tap((session) => this.applySession(session, currentRefreshToken)),
       catchError((error) => {
         throw new Error('Refresh failed: ' + (error instanceof Error ? error.message : String(error)));
       })
@@ -157,6 +166,10 @@ export class AuthService {
     return this.http.get<AdminUser>(`${this.config.apiBaseUrl}${this.config.mePath}`, {
       headers: { Authorization: `Bearer ${this.accessToken}` },
     }).pipe(
+      tap((user) => {
+        this.currentUser = user;
+        this.persistToStorage();
+      }),
       catchError((error) => {
         throw new Error('Failed to load current user: ' + (error instanceof Error ? error.message : String(error)));
       })
@@ -165,12 +178,14 @@ export class AuthService {
 
   logout(): Observable<void> {
     if (!this.accessToken) {
+      this.clear();
       return of(void 0);
     }
 
     return this.http.post<void>(`${this.config.apiBaseUrl}${this.config.logoutPath}`, {}, {
       headers: { Authorization: `Bearer ${this.accessToken}` },
     }).pipe(
+      tap(() => this.clear()),
       catchError((error) => {
         // Still clear local state even if server fails
         this.clear();
@@ -190,12 +205,18 @@ export class AuthService {
   private applySession(session: AuthSession, fallbackRefreshToken: string | null = null): void {
     this.accessToken = session.accessToken;
     this.refreshToken = session.refreshToken ?? fallbackRefreshToken;
-    this.expiresAt = Date.now() + session.expiresIn * 1000;
+    this.expiresAt = isPositiveFiniteNumber(session.expiresIn)
+      ? Date.now() + session.expiresIn * 1000
+      : null;
     if (session.user) {
       this.currentUser = session.user;
     }
     this.persistToStorage();
   }
+}
+
+function isPositiveFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

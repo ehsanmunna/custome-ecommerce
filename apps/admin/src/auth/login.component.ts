@@ -116,9 +116,8 @@ export class LoginComponent {
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: () => {
-        this.router.navigateByUrl(
-          this.safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl')),
-        );
+        const url = this.safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+        void this.router.navigateByUrl(url);
       },
       error: (err) => {
         const generic = this.transloco.translate('auth.invalidCredentials') ?? 'Invalid credentials';
