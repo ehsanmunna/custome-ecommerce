@@ -1511,6 +1511,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/image-storage/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload an image to local storage
+         * @description Store an uploaded image file under assets/<feature>/ on the API server's disk.
+         */
+        post: operations["uploadImage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/image-storage/serve/{feature}/{filename}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Serve a stored image
+         * @description Return the stored image file content for the given feature and filename.
+         */
+        get: operations["serveImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -2351,6 +2391,18 @@ export interface components {
         };
         NotificationPage: components["schemas"]["PageMetadata"] & {
             items: components["schemas"]["Notification"][];
+        };
+        ImageUploadResponse: {
+            /** Format: uri */
+            url: string;
+            feature: string;
+            filename: string;
+            mimeType: string;
+            sizeBytes: number;
+        };
+        ImageServeResponse: {
+            mimeType: string;
+            size: number;
         };
     };
     responses: {
@@ -5208,6 +5260,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SalesSeries"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    uploadImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description Image file to upload.
+                     */
+                    file: string;
+                    /** @description Feature category for organizing the image (e.g., products, categories). */
+                    feature: string;
+                    /** @description Optional JSON string with localized alt text (bn, en). */
+                    alt?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Image uploaded and stored. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageUploadResponse"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    serveImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                feature: string;
+                filename: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image file content. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": string;
                 };
             };
             default: components["responses"]["Problem"];

@@ -33,6 +33,7 @@ enum AttributeValueType {
 
 enum MediaProvider {
   r2
+  local
 }
 
 model Category {

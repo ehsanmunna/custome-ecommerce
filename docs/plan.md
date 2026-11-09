@@ -15,7 +15,7 @@ Build order: Database → API → Admin Dashboard → Storefront
 
 ## Phase 2: API
 8. Admin auth and role permissions (owner, manager, staff, support).
-9. Media uploads to the client's Cloudflare R2.
+9. Media uploads to the local image store on the API server (Docker volume per client).
 10. Catalog: categories, products, flexible attributes, bn/en translations and DB-query search.
 11. Inventory: single location, stock adjustments and low-stock flags.
 12. Customer auth: phone OTP and email.
