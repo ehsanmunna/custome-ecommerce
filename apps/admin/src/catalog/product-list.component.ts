@@ -19,6 +19,7 @@ import {
   isGlobalHttpError,
   extractErrorMessage,
 } from '../core/notifications/notification-messages';
+import { ImageService } from '../core/image-storage/image-storage.service';
 
 export interface Product {
   id: string;
@@ -143,6 +144,7 @@ export class ProductListComponent implements OnInit {
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
     private readonly notification: NotificationService,
+    private readonly imageService: ImageService,
   ) {
     this.createForm = this.fb.group({
       categoryId: ['', Validators.required],
@@ -248,6 +250,31 @@ export class ProductListComponent implements OnInit {
           }
         },
       });
+  }
+
+  selectedMedia(): MediaAsset[] {
+    const ids = this.createForm.get('mediaIds')?.value || [];
+    return this.media.filter((m) => ids.includes(m.id));
+  }
+
+  deleteMedia(mediaId: string): void {
+    if (!confirm('Delete this image?')) return;
+    this.imageService.deleteMedia(mediaId).then(() => {
+      this.media = this.media.filter((m) => m.id !== mediaId);
+      const currentMediaIds = this.createForm.get('mediaIds')?.value || [];
+      this.createForm.patchValue({
+        mediaIds: currentMediaIds.filter((id: string) => id !== mediaId),
+      });
+      if (this.createForm.get('primaryMediaId')?.value === mediaId) {
+        this.createForm.patchValue({ primaryMediaId: '' });
+      }
+      this.notification.success(NOTIFICATION_MESSAGES.media.delete);
+    }).catch((err) => {
+      this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
+      if (!isGlobalHttpError(err?.status)) {
+        this.notification.error(this.error);
+      }
+    });
   }
 
   loadProducts(): void {

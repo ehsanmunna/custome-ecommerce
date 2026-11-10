@@ -90,6 +90,7 @@ const mockImageService = {
   fetch: () => Promise.resolve(new Blob([])),
   createObjectUrl: () => 'mock-url',
   revokeObjectUrl: () => {},
+  deleteMedia: () => Promise.resolve(),
 } as any;
 
 describe('ProductListComponent', () => {
@@ -103,7 +104,7 @@ describe('ProductListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService);
   });
 
   afterEach(() => {
