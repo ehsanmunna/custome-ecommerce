@@ -17,9 +17,9 @@ The agent can only alert while you are chatting in this project. It cannot messa
 
 ### Missing from the plan
 
-- **Client onboarding:** creating a new client's database, running migrations, seeding, and setting up their R2 bucket. Items 3 and 7 cover only pieces of this.
+- **Client onboarding:** creating a new client's database, running migrations, seeding, and setting up their media volume on the API server. Items 3 and 7 cover only pieces of this.
 - **Super-admin tooling:** a super-admin runs migrations and rollbacks, but no item builds a CLI or screen for it. The role is also not in the roles list (owner, manager, staff, support).
-- **R2 credentials:** item 27 (settings) lists payment, courier and notification keys but not the client's R2 keys.
+- **R2 credentials:** item 27 (settings) lists payment, courier and notification keys but not the client's future s3 media driver credentials. R2 remains a documented backup target.
 - **Process for new API versions:** "a new client request creates a new API version" has no item, such as contract tests or a versioning checklist.
 
 ### Conflict to confirm

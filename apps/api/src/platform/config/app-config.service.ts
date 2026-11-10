@@ -86,38 +86,6 @@ export class AppConfigService {
     return this.config.get('TWILIO_FROM_NUMBER');
   }
 
-  get r2AccountId(): string | undefined {
-    return this.config.get('R2_ACCOUNT_ID');
-  }
-
-  get r2Bucket(): string | undefined {
-    return this.config.get('R2_BUCKET');
-  }
-
-  get r2AccessKeyId(): string | undefined {
-    return this.config.get('R2_ACCESS_KEY_ID');
-  }
-
-  get r2SecretAccessKey(): string | undefined {
-    return this.config.get('R2_SECRET_ACCESS_KEY');
-  }
-
-  get r2PublicBaseUrl(): string | undefined {
-    return this.config.get('R2_PUBLIC_BASE_URL');
-  }
-
-  get r2UploadTtlSeconds(): number {
-    return this.read('R2_UPLOAD_TTL_SECONDS');
-  }
-
-  get r2MaxUploadBytes(): number {
-    return this.read('R2_MAX_UPLOAD_BYTES');
-  }
-
-  get r2ImageResizingEnabled(): boolean {
-    return this.read('R2_IMAGE_RESIZING_ENABLED');
-  }
-
   get steadfastApiKey(): string | undefined {
     return this.config.get('STEADFAST_API_KEY');
   }
@@ -135,9 +103,6 @@ export class AppConfigService {
       this.databaseUrl,
       this.authTokenSigningSecret,
       this.authTokenHashSecret,
-      ...[this.r2AccessKeyId, this.r2SecretAccessKey].filter(
-        (value): value is string => typeof value === 'string' && value.length > 0,
-      ),
       ...[this.resendApiKey, this.twilioAuthToken].filter(
         (value): value is string => typeof value === 'string' && value.length > 0,
       ),
@@ -167,14 +132,6 @@ export class AppConfigService {
       TWILIO_ACCOUNT_SID: '[REDACTED]',
       TWILIO_AUTH_TOKEN: '[REDACTED]',
       TWILIO_FROM_NUMBER: this.twilioFromNumber ?? '',
-      R2_ACCOUNT_ID: '[REDACTED]',
-      R2_ACCESS_KEY_ID: '[REDACTED]',
-      R2_SECRET_ACCESS_KEY: '[REDACTED]',
-      R2_BUCKET: this.r2Bucket ?? '',
-      R2_PUBLIC_BASE_URL: this.r2PublicBaseUrl ?? '',
-      R2_UPLOAD_TTL_SECONDS: this.r2UploadTtlSeconds,
-      R2_MAX_UPLOAD_BYTES: this.r2MaxUploadBytes,
-      R2_IMAGE_RESIZING_ENABLED: this.r2ImageResizingEnabled,
       STEADFAST_API_KEY: '[REDACTED]',
       STEADFAST_API_BASE_URL: this.steadfastApiBaseUrl ?? '',
       STEADFAST_WEBHOOK_SECRET: '[REDACTED]',

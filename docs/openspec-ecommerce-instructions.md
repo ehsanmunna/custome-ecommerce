@@ -85,7 +85,7 @@ Each client gets their own storefront and their own database.
   to change schema
 - Admin: Angular
 - Storefront: SSR framework per client (SEO required), built from the starter
-- Media: Cloudflare R2 in the CLIENT's own Cloudflare account
+- Media: Self-hosted local image store on the API server (Docker volume per client), behind a `StorageAdapter`; `s3` driver (R2, B2, etc.) is a future option
 - Hosting: API on a shared VPS (container per client); storefront and admin on
   the client's Vercel/Cloudflare account; PostgreSQL location per client
   (see open decisions)
@@ -146,7 +146,7 @@ Each client gets their own storefront and their own database.
 | `auth-customers` | Phone OTP and email login, guest checkout, addresses, OTP rate limits |
 | `auth-admin` | Admin users, roles (owner/manager/staff/support), permissions, tech-admin role, audit log; API endpoints `GET/POST/PATCH/DELETE /admin/roles` and `GET /admin/permissions` implemented via `add-admin-roles-endpoint` |
 | `catalog` | Products, categories, brands, attribute definitions, variants, SEO fields, translations |
-| `media` | Image upload (R2), variants/resizing, key-based URLs |
+| `media` | Image upload (local store, pluggable adapter), sharp variants, key-based URLs |
 | `inventory` | Stock per variant, reservations, movements ledger, adjustments, low-stock alerts |
 | `pricing-promotions` | Prices, tax setting, coupons |
 | `cart-checkout` | Guest and user carts, delivery charge by zone, order creation |
@@ -186,7 +186,7 @@ the next, except where noted.
 | 9 | `add-auth-api` | Customer OTP and email login, admin login, RBAC guards |
 | 10 | `add-admin-roles-endpoint` | `GET/POST/PATCH/DELETE /admin/roles` and `GET /admin/permissions` API endpoints with role-based access control |
 | 11 | `add-catalog-api` | Catalog CRUD, search and filters |
-| 12 | `add-media-api` | Presigned uploads to R2, resize job |
+| 12 | `add-media-api` | Multipart upload to local store, sharp variants |
 | 13 | `add-inventory-api` | `reserve`, `release`, `deduct`, `adjust` service interface |
 | 14 | `add-cart-checkout-api` | Cart, delivery charge, order placement (COD first) |
 | 15 | `add-orders-api` | Status transitions with permissions, history, returns |

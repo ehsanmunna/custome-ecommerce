@@ -43,7 +43,7 @@ The platform supports two primary actor groups: **storefront customers** and **s
 | UC-12 | Manage categories | Create a category tree, localize names/slugs, assign category images | Implemented |
 | UC-13 | Manage products | Create products with variants, attributes, media, and localized descriptions | Implemented |
 | UC-14 | Manage inventory | Adjust stock levels; view stock reservations and movements | Implemented |
-| UC-15 | Manage media | Upload media assets to Cloudflare R2; associate with products/categories/banners | Implemented |
+| UC-15 | Manage media | Upload media assets to local image store via StorageAdapter; associate with products/categories/banners | Implemented |
 | UC-16 | Manage orders | View orders; change order status with audit history | Planned |
 | UC-17 | Manage returns | Approve/reject returns; record receipt and refund | Planned |
 | UC-18 | Manage coupons | Create discount coupons (percentage/fixed, usage limits, date windows) | Planned |
@@ -178,14 +178,14 @@ graph TB
         Prisma[Prisma Service - DB client]
         Crypto[Auth Crypto - password hash / tokens]
         OTP[OTP Delivery Providers - email/sms]
-        MediaStorage[Media Storage - Cloudflare R2]
+        MediaStorage[Media Storage - local image store via StorageAdapter]
         Shipping[Shipping Adapter - Steadfast]
         Logging[Structured Logger]
     end
 
     subgraph Data_Layer
         Postgres[(PostgreSQL 16)]
-        R2[(Cloudflare R2 - object storage)]
+        Local[(Local image store on API server's disk)]
     end
 
     Client_Layer --> API_Layer
@@ -221,7 +221,7 @@ graph TB
 ┌─────────────────────────────────────────────────────────────┐
 │  Infrastructure Layer                                         │
 │  • Prisma ORM + PostgreSQL 16                                │
-│  • Cloudflare R2 (media storage)                             │
+│  • Local image store (media storage)                             │
 │  • OTP providers (email/sms)                                 │
 │  • Steadfast courier adapter                                 │
 │  • Structured logging                                        │
@@ -242,7 +242,7 @@ graph TB
 
 **Immutable migrations:** Applied migrations are immutable. `pnpm db:migrate` verifies SHA-256 checksums of all applied migrations before applying anything and fails on drift.
 
-**Per-client tenancy:** Each client provisions their own database and storefront but shares the same API binary and schema. Client-specific credentials (R2, courier, OTP) come from a secret manager and are never committed.
+**Per-client tenancy:** Each client provisions their own database and storefront but shares the same API binary and schema. Client-specific credentials (future s3 media driver, courier, OTP) come from a secret manager and are never committed.
 
 **Contract-first:** The OpenAPI document in `apps/api/openapi/openapi.yaml` is the canonical contract. Only operations in `x-implemented-operations` are runtime routes; others are planned integration boundaries.
 
@@ -264,7 +264,7 @@ Core entities and their relationships:
 - **Shipment** → order, courier (steadfast), tracking, status
 - **AdminUser** → role, status changes
 - **AdminRole** → permissions, scope (store/platform)
-- **MediaAsset** → provider (R2), linked to products, categories, brands, CMS banners
+- **MediaAsset** → provider (local, s3 reserved for future), linked to products, categories, brands, CMS banners
 - **ShippingZone** → districts, delivery fee
 - **Coupon** → discount rules, redemptions
 - **CmsPage / CmsBanner** → localized content, publication status

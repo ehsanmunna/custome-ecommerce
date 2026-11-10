@@ -86,6 +86,13 @@ const mockNotification = {
   info: () => {},
 } as any;
 
+const mockImageService = {
+  fetch: () => Promise.resolve(new Blob([])),
+  createObjectUrl: () => 'mock-url',
+  revokeObjectUrl: () => {},
+  deleteMedia: () => Promise.resolve(),
+} as any;
+
 describe('ProductListComponent', () => {
   let component: ProductListComponent;
   let http: MockHttpClient;
@@ -97,7 +104,7 @@ describe('ProductListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService);
   });
 
   afterEach(() => {
@@ -200,7 +207,7 @@ describe('MediaListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new MediaListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = new MediaListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService);
   });
 
   afterEach(() => {
@@ -208,11 +215,11 @@ describe('MediaListComponent', () => {
   });
 
   it('should load media assets successfully', async () => {
-    http.setResponse(`${baseUrl}/v1/admin/media`, {
+    http.setResponse(`${baseUrl}/v1/image-storage/list`, {
       items: [
         {
           id: 'media-1',
-          provider: 'r2',
+          provider: 'local',
           key: 'image.jpg',
           mimeType: 'image/jpeg',
           sizeBytes: 1024,
@@ -231,58 +238,16 @@ describe('MediaListComponent', () => {
     expect(component.media[0].key).toBe('image.jpg');
   });
 
-  it('should handle media upload creation failure', async () => {
-    http.setError(`${baseUrl}/v1/admin/media`, new Error('Upload failed'));
+  it('should handle media upload failure', async () => {
+    http.setError(`${baseUrl}/v1/image-storage/upload`, new Error('Upload failed'));
 
-    component.createForm.setValue({
-      fileName: 'image.jpg',
-      mimeType: 'image/jpeg',
-      sizeBytes: 1024,
+    component.uploadForm.setValue({
+      file: new File(['test'], 'image.jpg', { type: 'image/jpeg' }),
       altEn: 'test image',
     });
-    await component.createMediaUpload();
+    await component.uploadFile();
 
     expect(component.error).toBe('Upload failed');
-  });
-
-  it('should handle media completion failure', async () => {
-    http.setResponse(`${baseUrl}/v1/admin/media`, {
-      items: [],
-      total: 0,
-      page: 1,
-      pageSize: 20,
-    });
-    await component.loadMedia();
-
-    http.setResponse(`${baseUrl}/v1/admin/media`, {
-      items: [
-        {
-          id: 'media-1',
-          provider: 'r2',
-          key: 'image.jpg',
-          mimeType: 'image/jpeg',
-          sizeBytes: 1024,
-          upload: {
-            url: 'https://upload.example.com/image.jpg',
-            method: 'PUT',
-            headers: {},
-            expiresAt: '2026-01-02T00:00:00Z',
-          },
-          createdAt: '2026-01-01T00:00:00Z',
-        },
-      ],
-      total: 1,
-      page: 1,
-      pageSize: 20,
-    });
-    await component.loadMedia();
-
-    component.pendingMedia = component.media[0];
-    http.setError(`${baseUrl}/v1/admin/media/media-1/complete`, new Error('Completion failed'));
-
-    await component.completeMediaUpload();
-
-    expect(component.error).toBe('Completion failed');
   });
 });
 

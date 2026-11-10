@@ -100,6 +100,9 @@ x-implemented-operations:
   - GET /admin/customers/{customerId}
   - GET /admin/analytics/overview
   - GET /admin/analytics/sales
+  - POST /image-storage/upload
+  - GET /image-storage/serve
+  - GET /image-storage/list
 tags:
   - name: Health
   - name: Admin authentication
@@ -124,6 +127,7 @@ tags:
   - name: Admin CMS
   - name: Notifications
   - name: Analytics
+  - name: ImageStorage
 paths:
   /health/live:
     get:
@@ -547,9 +551,6 @@ paths:
                 $ref: '#/components/schemas/MediaAsset'
         default:
           $ref: '#/components/responses/Problem'
-  /admin/media/{mediaId}/complete:
-    parameters:
-      - $ref: '#/components/parameters/MediaId'
     post:
       operationId: completeMediaUpload
       tags: [Media]
@@ -574,9 +575,6 @@ paths:
                 $ref: '#/components/schemas/MediaAsset'
         default:
           $ref: '#/components/responses/Problem'
-  /admin/media/{mediaId}:
-    parameters:
-      - $ref: '#/components/parameters/MediaId'
     delete:
       operationId: deleteMedia
       tags: [Media]
@@ -2601,6 +2599,91 @@ paths:
                 $ref: '#/components/schemas/SalesSeries'
         default:
           $ref: '#/components/responses/Problem'
+  /image-storage/upload:
+    post:
+      operationId: uploadImage
+      tags: [ImageStorage]
+      summary: Upload an image to local storage
+      description: Store an uploaded image file under assets/<feature>/ on the API server's disk.
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: image-storage.create
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, feature]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Image file to upload.
+                feature:
+                  type: string
+                  description: Feature category for organizing the image (e.g., products, categories).
+                alt:
+                  type: string
+                  description: Optional JSON string with localized alt text (bn, en).
+      responses:
+        '201':
+          description: Image uploaded and stored.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUploadResponse'
+        default:
+          $ref: '#/components/responses/Problem'
+  /image-storage/serve:
+    get:
+      operationId: serveImage
+      tags: [ImageStorage]
+      summary: Serve a stored image
+      description: Return the stored image file content for the given storage key.
+      parameters:
+        - name: storageKey
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: image-storage.read
+      responses:
+        '200':
+          description: Image file content.
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        default:
+          $ref: '#/components/responses/Problem'
+  /image-storage/list:
+    get:
+      operationId: listMedia
+      tags: [ImageStorage]
+      summary: List media assets
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: image-storage.read
+      responses:
+        '200':
+          description: Paginated media assets.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaPage'
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearerAuth:
@@ -3071,7 +3154,6 @@ components:
           $ref: '#/components/schemas/Id'
         provider:
           type: string
-          const: r2
         key:
           type: string
         mimeType:
@@ -3096,80 +3178,9 @@ components:
           type: string
           format: uri
           readOnly: true
-        upload:
-          $ref: '#/components/schemas/MediaUploadInstruction'
-        variants:
-          $ref: '#/components/schemas/MediaVariants'
         createdAt:
           type: string
           format: date-time
-    MediaUploadInstruction:
-      type: object
-      required: [url, method, headers, expiresAt]
-      properties:
-        url:
-          type: string
-          format: uri
-        method:
-          type: string
-          const: PUT
-        headers:
-          type: object
-          additionalProperties:
-            type: string
-        expiresAt:
-          type: string
-          format: date-time
-    MediaVariant:
-      type: object
-      required: [url, width]
-      properties:
-        url:
-          type: string
-          format: uri
-        width:
-          type: integer
-          minimum: 1
-    MediaVariants:
-      type: object
-      properties:
-        thumbnail:
-          $ref: '#/components/schemas/MediaVariant'
-        card:
-          $ref: '#/components/schemas/MediaVariant'
-        detail:
-          $ref: '#/components/schemas/MediaVariant'
-        large:
-          $ref: '#/components/schemas/MediaVariant'
-    MediaUploadRequest:
-      type: object
-      required: [fileName, mimeType, sizeBytes]
-      properties:
-        fileName:
-          type: string
-          minLength: 1
-        mimeType:
-          type: string
-        sizeBytes:
-          type: integer
-          minimum: 0
-        alt:
-          type: object
-          properties:
-            bn:
-              type: string
-            en:
-              type: string
-    MediaUploadCompleteRequest:
-      type: object
-      description: Supplied image dimensions must be positive and provided together or omitted.
-      properties:
-        width:
-          type: integer
-          minimum: 1
-        height:
-          type: integer
-          minimum: 1
     Category:
       type: object
       required: [id, status, sortOrder, content]
@@ -4634,3 +4645,31 @@ components:
               type: array
               items:
                 $ref: '#/components/schemas/Notification'
+    ImageUploadResponse:
+      type: object
+      required: [mediaId, url, feature, storageKey, mimeType, sizeBytes]
+      properties:
+        mediaId:
+          type: string
+          format: uuid
+        url:
+          type: string
+          format: uri
+        feature:
+          type: string
+        storageKey:
+          type: string
+        mimeType:
+          type: string
+        sizeBytes:
+          type: integer
+          minimum: 0
+    ImageServeResponse:
+      type: object
+      required: [mimeType, size]
+      properties:
+        mimeType:
+          type: string
+        size:
+          type: integer
+          minimum: 0

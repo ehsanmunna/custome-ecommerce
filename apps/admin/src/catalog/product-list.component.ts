@@ -10,7 +10,7 @@ import {
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { switchMap, finalize } from 'rxjs';
+import { finalize } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
 import { NotificationService } from '../core/notifications/notification.service';
@@ -19,6 +19,7 @@ import {
   isGlobalHttpError,
   extractErrorMessage,
 } from '../core/notifications/notification-messages';
+import { ImageService } from '../core/image-storage/image-storage.service';
 
 export interface Product {
   id: string;
@@ -129,6 +130,7 @@ export class ProductListComponent implements OnInit {
   editModal = false;
   creating = false;
   updating = false;
+  uploadingMedia = false;
   editingProduct: Product | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
@@ -142,6 +144,7 @@ export class ProductListComponent implements OnInit {
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
     private readonly notification: NotificationService,
+    private readonly imageService: ImageService,
   ) {
     this.createForm = this.fb.group({
       categoryId: ['', Validators.required],
@@ -164,36 +167,7 @@ export class ProductListComponent implements OnInit {
   ngOnInit(): void {
     this.loadCategories();
     this.loadBrands();
-    this.loadMedia();
     this.loadProducts();
-  }
-
-  loadProducts(): void {
-    this.loading = true;
-    this.error = null;
-    const token = this.auth.token;
-    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
-    if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
-    this.http
-      .get<ProductPage>(url.toString(), {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .pipe(
-        finalize(() => (this.loading = false)),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (res) => {
-          this.products = res?.items ?? [];
-        },
-        error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load products');
-          if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
-          }
-        },
-      });
   }
 
   loadCategories(): void {
@@ -259,7 +233,7 @@ export class ProductListComponent implements OnInit {
     this.error = null;
     const token = this.auth.token;
     this.http
-      .get<{ items: MediaAsset[] }>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+      .get<{ items: MediaAsset[] }>(`${this.config.apiBaseUrl}/v1/image-storage/list`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
@@ -271,6 +245,108 @@ export class ProductListComponent implements OnInit {
         },
         error: (err) => {
           this.error = extractErrorMessage(err, 'Failed to load media');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
+      });
+  }
+
+  selectedMedia(): MediaAsset[] {
+    const ids = this.createForm.get('mediaIds')?.value || [];
+    return this.media.filter((m) => ids.includes(m.id));
+  }
+
+  deleteMedia(mediaId: string): void {
+    if (!confirm('Delete this image?')) return;
+    this.imageService.deleteMedia(mediaId).then(() => {
+      this.media = this.media.filter((m) => m.id !== mediaId);
+      const currentMediaIds = this.createForm.get('mediaIds')?.value || [];
+      this.createForm.patchValue({
+        mediaIds: currentMediaIds.filter((id: string) => id !== mediaId),
+      });
+      if (this.createForm.get('primaryMediaId')?.value === mediaId) {
+        this.createForm.patchValue({ primaryMediaId: '' });
+      }
+      this.notification.success(NOTIFICATION_MESSAGES.media.delete);
+    }).catch((err) => {
+      this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
+      if (!isGlobalHttpError(err?.status)) {
+        this.notification.error(this.error);
+      }
+    });
+  }
+
+  loadProducts(): void {
+    this.loading = true;
+    this.error = null;
+    const token = this.auth.token;
+    const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
+    if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
+    this.http
+      .get<ProductPage>(url.toString(), {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .pipe(
+        finalize(() => (this.loading = false)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (res) => {
+          this.products = res?.items ?? [];
+        },
+        error: (err) => {
+          this.loading = false;
+          this.error = extractErrorMessage(err, 'Failed to load products');
+          if (!isGlobalHttpError(err?.status)) {
+            this.notification.error(this.error);
+          }
+        },
+      });
+  }
+
+  onMediaFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    if (files.length === 0) return;
+
+    this.uploadingMedia = true;
+    this.error = null;
+    const token = this.auth.token;
+    const formData = new FormData();
+    for (const file of files) {
+      formData.append('file', file);
+    }
+    formData.append('feature', 'products');
+
+    this.http
+      .post<{ mediaId: string; url: string; key: string; mimeType: string; sizeBytes: number }[]>(
+        `${this.config.apiBaseUrl}/v1/image-storage/upload`,
+        formData,
+        { headers: { Authorization: `Bearer ${token}` } },
+      )
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (results) => {
+          const newMedia: MediaAsset[] = results.map((res) => ({
+            id: res.mediaId,
+            url: res.url,
+            mimeType: res.mimeType,
+            alt: {},
+          }));
+          this.media = [...this.media, ...newMedia];
+          const currentMediaIds = this.createForm.get('mediaIds')?.value || [];
+          this.createForm.patchValue({
+            mediaIds: [...currentMediaIds, ...results.map((res) => res.mediaId)],
+          });
+          this.uploadingMedia = false;
+          this.notification.success(NOTIFICATION_MESSAGES.media.create);
+        },
+        error: (err) => {
+          this.uploadingMedia = false;
+          this.error = extractErrorMessage(err, 'Failed to upload media');
           if (!isGlobalHttpError(err?.status)) {
             this.notification.error(this.error);
           }
@@ -331,18 +407,12 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        switchMap(() =>
-          this.http.get<ProductPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ),
         finalize(() => (this.creating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (res) => {
+        next: () => {
           this.closeCreateModal();
-          this.products = res?.items ?? [];
           this.notification.success(NOTIFICATION_MESSAGES.product.create);
         },
         error: (err) => {
@@ -390,18 +460,12 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        switchMap(() =>
-          this.http.get<ProductPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ),
         finalize(() => (this.updating = false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (res) => {
+        next: () => {
           this.closeEditModal();
-          this.products = res?.items ?? [];
           this.notification.success(NOTIFICATION_MESSAGES.product.update);
         },
         error: (err) => {
@@ -423,16 +487,10 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        switchMap(() =>
-          this.http.get<ProductPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (res) => {
-          this.products = res?.items ?? [];
+        next: () => {
           this.notification.success(NOTIFICATION_MESSAGES.product.delete);
         },
         error: (err) => {

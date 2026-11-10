@@ -3,7 +3,7 @@ import { AuthModule } from './auth/auth.module';
 import { CartCheckoutModule } from './cart-checkout/cart-checkout.module';
 import { CatalogModule } from './catalog/catalog.module';
 import { InventoryModule } from './inventory/inventory.module';
-import { MediaModule } from './media/media.module';
+import { ImageStorageModule } from './image-storage/image-storage.module';
 import { ShippingModule } from './shipping/shipping.module';
 import { RolesModule } from './roles/roles.module';
 import { OrdersModule } from './orders/orders.module';
@@ -29,7 +29,7 @@ import { SchemaModule } from './platform/schema/schema.module';
     CartCheckoutModule,
     CatalogModule,
     InventoryModule,
-    MediaModule,
+    ImageStorageModule,
     ShippingModule,
     RolesModule,
     OrdersModule,
