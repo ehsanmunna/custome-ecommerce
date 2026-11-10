@@ -1,16 +1,19 @@
 import {
   BadRequestException,
   Controller,
+  Delete,
   Get,
   Inject,
+  NotFoundException,
+  Param,
   Post,
   Query,
   Req,
   Res,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { AuthAccess } from '../auth/auth-access.decorator';
 import {
   parseImageStorageInput,
@@ -43,17 +46,17 @@ export class ImageStorageController {
   constructor(@Inject(ImageStorageService) private readonly storage: ImageStorageService) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FilesInterceptor('file'))
   @AuthAccess({
     access: 'admin',
     permission: 'media.create',
     scope: 'store',
   })
   async upload(
-    @UploadedFile() file: MulterFile,
+    @UploadedFiles() files: MulterFile[],
     @Req() req: any,
   ) {
-    if (!file) {
+    if (!files || files.length === 0) {
       throw new BadRequestException('No file provided');
     }
 
@@ -62,7 +65,11 @@ export class ImageStorageController {
       alt: req.body?.alt ? JSON.parse(req.body.alt) : undefined,
     });
 
-    return this.storage.upload(input.feature, file, input.alt);
+    const results = await Promise.all(
+      files.map((file) => this.storage.upload(input.feature, file, input.alt)),
+    );
+
+    return results;
   }
 
   @Get('serve')
@@ -89,5 +96,15 @@ export class ImageStorageController {
   })
   async list(@Query() query: Record<string, unknown>): Promise<MediaPage> {
     return this.storage.list(parseMediaInput(mediaListQuerySchema, query));
+  }
+
+  @Delete(':id')
+  @AuthAccess({
+    access: 'admin',
+    permission: 'media.delete',
+    scope: 'store',
+  })
+  async remove(@Param('id') id: string): Promise<void> {
+    await this.storage.remove(id);
   }
 }

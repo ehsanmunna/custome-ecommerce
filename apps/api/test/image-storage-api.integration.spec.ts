@@ -107,17 +107,17 @@ describe('image-storage integration (controller + service level)', () => {
   it('uploads and returns mediaId, stores file under feature subfolder', async () => {
     const file = createMockFile('product.png', pngBuffer());
 
-    const result = await controller.upload(file, { body: { feature: 'products', alt: JSON.stringify({ en: 'Product image' }) } });
+    const result = await controller.upload([file], { body: { feature: 'products', alt: JSON.stringify({ en: 'Product image' }) } });
 
-    expect(result.mediaId).toBeDefined();
-    expect(result.feature).toBe('products');
-    expect(result.mimeType).toBe('image/png');
-    expect(result.sizeBytes).toBeGreaterThan(0);
-    expect(result.storageKey).toMatch(/\d{4}\/\d{2}\/[0-9a-f-]+\/original\.webp/);
-    expect(result.url).toContain('image-storage/serve');
-    expect(result.url).toContain('storageKey=');
+    expect(result[0].mediaId).toBeDefined();
+    expect(result[0].feature).toBe('products');
+    expect(result[0].mimeType).toBe('image/png');
+    expect(result[0].sizeBytes).toBeGreaterThan(0);
+    expect(result[0].storageKey).toMatch(/\d{4}\/\d{2}\/[0-9a-f-]+\/original\.webp/);
+    expect(result[0].url).toContain('image-storage/serve');
+    expect(result[0].url).toContain('storageKey=');
 
-    const filePath = join(assetsRoot, result.storageKey);
+    const filePath = join(assetsRoot, result[0].storageKey);
     expect(existsSync(filePath)).toBe(true);
     expect(readFileSync(filePath).length).toBeGreaterThan(0);
 
@@ -125,7 +125,7 @@ describe('image-storage integration (controller + service level)', () => {
     expect(prisma.mediaAsset.create).toHaveBeenCalledWith({
       data: {
         provider: 'local',
-        storageKey: result.storageKey,
+        storageKey: result[0].storageKey,
         mimeType: 'image/png',
         sizeBytes: expect.any(BigInt),
         width: null,
@@ -138,9 +138,9 @@ describe('image-storage integration (controller + service level)', () => {
   it('serves the exact bytes that were uploaded via service', async () => {
     const file = createMockFile('photo.png', pngBuffer());
 
-    const uploadResult = await controller.upload(file, { body: { feature: 'categories' } });
+    const uploadResult = await controller.upload([file], { body: { feature: 'categories' } });
 
-    const serveResult = await service.serve(uploadResult.storageKey);
+    const serveResult = await service.serve(uploadResult[0].storageKey);
 
     expect(serveResult.mimeType).toBe('image/png');
     expect(serveResult.size).toBeGreaterThan(0);
@@ -163,7 +163,7 @@ describe('image-storage integration (controller + service level)', () => {
     const file = createMockFile('test.png', pngBuffer());
 
     await expect(
-      controller.upload(file, { body: { feature: '../etc' } }),
+      controller.upload([file], { body: { feature: '../etc' } }),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 

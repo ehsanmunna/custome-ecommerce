@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, inject, OnInit } from '@angular/core';
 
 import {
   FormsModule,
@@ -19,6 +19,7 @@ import {
   isGlobalHttpError,
   extractErrorMessage,
 } from '../core/notifications/notification-messages';
+import { ImageService } from '../core/image-storage/image-storage.service';
 
 export interface MediaAsset {
   id: string;
@@ -30,8 +31,6 @@ export interface MediaAsset {
   height?: number;
   alt?: { bn?: string; en?: string };
   url?: string;
-  upload?: { url: string; method: string; headers: Record<string, string>; expiresAt: string };
-  variants?: Record<string, unknown>;
   createdAt: string;
 }
 
@@ -40,18 +39,6 @@ export interface MediaPage {
   total: number;
   page: number;
   pageSize: number;
-}
-
-export interface MediaUploadRequest {
-  fileName: string;
-  mimeType: string;
-  sizeBytes: number;
-  alt?: { bn?: string; en?: string };
-}
-
-export interface MediaUploadCompleteRequest {
-  width?: number;
-  height?: number;
 }
 
 @Component({
@@ -66,16 +53,16 @@ export class MediaListComponent implements OnInit {
   loading = false;
   error: string | null = null;
 
-  createModal = false;
-  completeModal = false;
-  creating = false;
-  completing = false;
-  pendingMedia: MediaAsset | null = null;
+  uploadModal = false;
+  uploading = false;
+
+  deleting = false;
+
+  imageUrls: Record<string, string> = {};
 
   private readonly destroyRef = inject(DestroyRef);
 
-  createForm: FormGroup;
-  completeForm: FormGroup;
+  uploadForm: FormGroup;
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
@@ -83,16 +70,18 @@ export class MediaListComponent implements OnInit {
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: AdminAuthConfig,
     private readonly notification: NotificationService,
+    private readonly imageService: ImageService,
   ) {
-    this.createForm = this.fb.group({
-      fileName: ['', Validators.required],
-      mimeType: ['image/jpeg', Validators.required],
-      sizeBytes: [0, Validators.required],
+    this.uploadForm = this.fb.group({
+      file: [null, Validators.required],
       altEn: [''],
     });
-    this.completeForm = this.fb.group({
-      width: [''],
-      height: [''],
+
+    this.destroyRef.onDestroy(() => {
+      for (const url of Object.values(this.imageUrls)) {
+        this.imageService.revokeObjectUrl(url);
+      }
+      this.imageUrls = {};
     });
   }
 
@@ -105,7 +94,7 @@ export class MediaListComponent implements OnInit {
     this.error = null;
     const token = this.auth.token;
     this.http
-      .get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+      .get<MediaPage>(`${this.config.apiBaseUrl}/v1/image-storage/list`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
@@ -119,6 +108,7 @@ export class MediaListComponent implements OnInit {
       .subscribe({
         next: (res) => {
           this.media = res?.items ?? [];
+          this.prefetchImages();
         },
         error: (err) => {
           this.loading = false;
@@ -130,52 +120,48 @@ export class MediaListComponent implements OnInit {
       });
   }
 
-  openCreateModal(): void {
-    this.createForm.reset({ fileName: '', mimeType: 'image/jpeg', sizeBytes: 0, altEn: '' });
-    this.createModal = true;
+  openUploadModal(): void {
+    this.uploadForm.reset({ altEn: '' });
+    this.uploadModal = true;
   }
 
-  closeCreateModal(): void {
-    this.createModal = false;
+  closeUploadModal(): void {
+    this.uploadModal = false;
   }
 
-  createMediaUpload(): void {
-    if (this.createForm.invalid) return;
-    this.creating = true;
+  uploadFile(): void {
+    if (this.uploadForm.invalid) return;
+    this.uploading = true;
     this.error = null;
     const token = this.auth.token;
-    const value = this.createForm.value;
-    const body: MediaUploadRequest = {
-      fileName: value.fileName,
-      mimeType: value.mimeType,
-      sizeBytes: value.sizeBytes,
-    };
-    if (value.altEn) {
-      body.alt = { en: value.altEn };
+    const formData = new FormData();
+    formData.append('file', this.uploadForm.value.file);
+    formData.append('feature', 'products');
+    if (this.uploadForm.value.altEn) {
+      formData.append('alt', JSON.stringify({ en: this.uploadForm.value.altEn }));
     }
     this.http
-      .post<MediaAsset>(`${this.config.apiBaseUrl}/v1/admin/media`, body, {
+      .post<MediaAsset>(`${this.config.apiBaseUrl}/v1/image-storage/upload`, formData, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        switchMap((res) => {
-          this.pendingMedia = res ?? null;
-          this.closeCreateModal();
-          this.completeModal = true;
-          return this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
+        switchMap((_res) => {
+          this.closeUploadModal();
+          return this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/image-storage/list`, {
             headers: { Authorization: `Bearer ${token}` },
           });
         }),
-        finalize(() => (this.creating = false)),
+        finalize(() => (this.uploading = false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.media = res?.items ?? [];
+          this.prefetchImages();
           this.notification.success(NOTIFICATION_MESSAGES.media.create);
         },
         error: (err) => {
-          this.creating = false;
+          this.uploading = false;
           this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.createFailed);
           if (!isGlobalHttpError(err?.status)) {
             this.notification.error(this.error);
@@ -184,76 +170,46 @@ export class MediaListComponent implements OnInit {
       });
   }
 
-  closeCompleteModal(): void {
-    this.completeModal = false;
-    this.pendingMedia = null;
-  }
-
-  completeMediaUpload(): void {
-    if (!this.pendingMedia) return;
-    this.completing = true;
+  deleteMedia(m: MediaAsset): void {
+    if (!confirm(`Delete "${m.key}"?`)) return;
+    this.deleting = true;
     this.error = null;
-    const token = this.auth.token;
-    const value = this.completeForm.value;
-    const body: MediaUploadCompleteRequest = {};
-    if (value.width) body.width = Number(value.width);
-    if (value.height) body.height = Number(value.height);
-    this.http
-      .post(`${this.config.apiBaseUrl}/v1/admin/media/${this.pendingMedia.id}/complete`, body, {
-        headers: { Authorization: `Bearer ${token}` },
+    this.imageService
+      .deleteMedia(m.id)
+      .then(() => {
+        this.media = this.media.filter((x) => x.id !== m.id);
+        const url = this.imageUrls[m.id];
+        if (url) {
+          this.imageService.revokeObjectUrl(url);
+          delete this.imageUrls[m.id];
+        }
+        this.deleting = false;
+        this.notification.success(NOTIFICATION_MESSAGES.media.delete);
       })
-      .pipe(
-        switchMap(() =>
-          this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ),
-        finalize(() => (this.completing = false)),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (res) => {
-          this.closeCompleteModal();
-          this.media = res?.items ?? [];
-          this.notification.success(NOTIFICATION_MESSAGES.media.complete);
-        },
-        error: (err) => {
-          this.completing = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.completeFailed);
-          if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
-          }
-        },
+      .catch((err) => {
+        this.deleting = false;
+        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
+        if (!isGlobalHttpError(err?.status)) {
+          this.notification.error(this.error);
+        }
       });
   }
 
-  deleteMedia(id: string): void {
-    if (!confirm('Delete this media?')) return;
-    this.error = null;
-    const token = this.auth.token;
-    this.http
-      .delete(`${this.config.apiBaseUrl}/v1/admin/media/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
+  private getImageUrl(m: MediaAsset): void {
+    if (!m.url || this.imageUrls[m.id]) return;
+    this.imageService
+      .fetch(m.url)
+      .then((blob) => {
+        this.imageUrls[m.id] = this.imageService.createObjectUrl(blob);
       })
-      .pipe(
-        switchMap(() =>
-          this.http.get<MediaPage>(`${this.config.apiBaseUrl}/v1/admin/media`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
-        ),
-        takeUntilDestroyed(this.destroyRef),
-      )
-      .subscribe({
-        next: (res) => {
-          this.media = res?.items ?? [];
-          this.notification.success(NOTIFICATION_MESSAGES.media.delete);
-        },
-        error: (err) => {
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
-          if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
-          }
-        },
+      .catch(() => {
+        // silently ignore failed image fetches
       });
+  }
+
+  private prefetchImages(): void {
+    for (const m of this.media) {
+      this.getImageUrl(m);
+    }
   }
 }

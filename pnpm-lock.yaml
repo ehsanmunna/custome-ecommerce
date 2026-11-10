@@ -178,6 +178,9 @@ importers:
 
   apps/storefront-starter:
     devDependencies:
+      shared-types:
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       typescript:
         specifier: 5.9.3
         version: 5.9.3

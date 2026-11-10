@@ -205,10 +205,10 @@ export class ImageStorageService {
     };
   }
 
-  async remove(storageKey: string): Promise<void> {
+  async remove(mediaId: string): Promise<void> {
     const mediaAsset = await this.prisma.mediaAsset.findUnique({
-      where: { provider_storageKey: { provider: 'local', storageKey } },
-      select: { id: true },
+      where: { id: mediaId },
+      select: { storageKey: true, id: true },
     });
 
     if (!mediaAsset) {
@@ -216,7 +216,7 @@ export class ImageStorageService {
     }
 
     try {
-      await this.adapter.delete(storageKey);
+      await this.adapter.delete(mediaAsset.storageKey);
     } catch (error) {
       this.logger.error(
         {
@@ -231,7 +231,7 @@ export class ImageStorageService {
     }
 
     await this.prisma.mediaAsset.delete({
-      where: { id: mediaAsset.id },
+      where: { id: mediaId },
     });
   }
 
