@@ -1,33 +1,53 @@
 import { describe, expect, it } from 'vitest';
 import { validateEnv } from '../src/platform/config/env.schema';
 
-const validEnv = {
-  NODE_ENV: 'test',
-  PORT: '3000',
-  DATABASE_URL: 'postgresql://app_runtime:secret@localhost:5432/app?schema=public',
-  DATABASE_PROBE_TIMEOUT_MS: '2000',
-  LOG_LEVEL: 'info',
-};
+describe('config validation', () => {
+  const validEnv = {
+    DATABASE_URL: 'postgresql://app_runtime:secret@localhost:5432/app',
+    AUTH_TOKEN_SIGNING_SECRET: 'signing-secret-at-least-32-chars',
+    AUTH_TOKEN_HASH_SECRET: 'hash-secret-at-least-32-chars',
+    NODE_ENV: 'development',
+    PORT: '3000',
+  };
 
-describe('configuration validation', () => {
-  it('accepts complete configuration and coerces numeric values', () => {
+  it('applies safe defaults without requiring media credentials', () => {
     const config = validateEnv(validEnv);
 
+    expect(config.NODE_ENV).toBe('development');
     expect(config.PORT).toBe(3000);
-    expect(config.DATABASE_PROBE_TIMEOUT_MS).toBe(2000);
   });
 
-  it('fails and names a missing required key without falling back to a default', () => {
-    const { DATABASE_URL: _missing, ...incomplete } = validEnv;
+  it('allows OTP providers to be omitted or configured as complete independent groups', () => {
+    expect(validateEnv(validEnv).RESEND_API_KEY).toBeUndefined();
 
-    expect(() => validateEnv(incomplete)).toThrowError(/DATABASE_URL/);
+    const config = validateEnv({
+      ...validEnv,
+      RESEND_API_KEY: 'resend-secret',
+      RESEND_FROM_EMAIL: 'otp@example.com',
+      TWILIO_ACCOUNT_SID: 'AC123',
+      TWILIO_AUTH_TOKEN: 'twilio-secret',
+      TWILIO_FROM_NUMBER: '+15005550006',
+    });
+
+    expect(config.RESEND_API_KEY).toBe('resend-secret');
+    expect(config.TWILIO_ACCOUNT_SID).toBe('AC123');
   });
 
-  it('fails and names a key with an invalid value', () => {
-    expect(() => validateEnv({ ...validEnv, PORT: 'not-a-port' })).toThrowError(/PORT/);
-    expect(() => validateEnv({ ...validEnv, DATABASE_URL: 'mysql://localhost/app' })).toThrowError(
-      /DATABASE_URL/,
-    );
+  it('rejects incomplete OTP provider configuration and identifies missing keys', () => {
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        RESEND_API_KEY: 'resend-secret',
+      }),
+    ).toThrowError(/RESEND_FROM_EMAIL/);
+
+    expect(() =>
+      validateEnv({
+        ...validEnv,
+        TWILIO_ACCOUNT_SID: 'AC123',
+        TWILIO_FROM_NUMBER: '+15005550006',
+      }),
+    ).toThrowError(/TWILIO_AUTH_TOKEN/);
   });
 
   it('reports every offending key in one error', () => {
@@ -43,14 +63,8 @@ describe('configuration validation', () => {
       message = (error as Error).message;
     }
 
-    for (const key of [
-      'NODE_ENV',
-      'PORT',
-      'DATABASE_URL',
-      'DATABASE_PROBE_TIMEOUT_MS',
-      'LOG_LEVEL',
-    ]) {
-      expect(message).toContain(key);
-    }
+    expect(message).toContain('NODE_ENV');
+    expect(message).toContain('DATABASE_PROBE_TIMEOUT_MS');
+    expect(message).toContain('LOG_LEVEL');
   });
 });

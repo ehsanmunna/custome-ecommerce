@@ -24,6 +24,11 @@ export async function bootstrap(): Promise<void> {
       ...config.describe(),
     });
 
+    app.enableCors({
+      origin: 'http://localhost:4200',
+      credentials: true,
+    });
+
     const schema = app.get(SchemaCompatibilityService);
     await schema.assertCompatible();
 

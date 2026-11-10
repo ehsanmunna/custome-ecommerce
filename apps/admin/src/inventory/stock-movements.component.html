@@ -1,0 +1,74 @@
+<div class="p-4 max-w-[1000px] mx-auto">
+  <nav class="mb-4 text-sm text-[var(--color-text-muted)]">
+    <a routerLink="/inventory" class="text-[var(--color-primary)] underline">Inventory</a> &gt;
+    Stock Movements
+  </nav>
+
+  <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Stock Movements Ledger</h1>
+
+  <div class="flex gap-2 mb-4 items-center flex-wrap">
+    <button
+      (click)="loadMovements()"
+      class="px-4 py-2 border-none rounded-md cursor-pointer border border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-primary)]/10"
+    >
+      Refresh
+    </button>
+  </div>
+
+  @if (error) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  }
+
+  @if (movements.length) {
+    <table class="w-full border-collapse mb-4">
+      <thead>
+        <tr>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Variant SKU
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Type
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Quantity
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Reason
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Status
+          </th>
+          <th
+            class="border border-[var(--color-border)] p-2 text-left bg-[var(--color-surface-secondary)]"
+          >
+            Created At
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (m of movements; track m) {
+          <tr>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.variantId }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.type }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.quantity }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.reason || '-' }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.status }}</td>
+            <td class="border border-[var(--color-border)] p-2 text-left">{{ m.createdAt }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  } @else {
+    <p class="text-[var(--color-text-muted)]">No stock movements found.</p>
+  }
+</div>

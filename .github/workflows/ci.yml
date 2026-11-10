@@ -34,6 +34,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: pnpm/action-setup@v4
         with:
@@ -46,6 +48,13 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Validate OpenAPI contract and generated SDK
+        run: |
+          pnpm contract:lint
+          pnpm contract:check
+          pnpm contract:test
+          pnpm --filter api-sdk generate:check
 
       - name: Create runtime and migration identities
         run: psql "$MIGRATION_DATABASE_URL" -f docker/initdb/01-roles.sql

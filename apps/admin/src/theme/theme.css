@@ -1,0 +1,50 @@
+:root {
+  /* Legacy aliases for screens that still use the pre-PrimeNG tokens. */
+  --color-primary: var(--p-primary-500, #2563eb);
+  --color-primary-foreground: var(--p-primary-contrast-color, #ffffff);
+  --color-danger: var(--p-red-500, #ef4444);
+  --color-danger-foreground: var(--p-red-50, #fef2f2);
+  --color-success: var(--p-green-500, #22c55e);
+  --color-success-foreground: var(--p-green-50, #f0fdf4);
+  --color-warning: var(--p-amber-500, #f59e0b);
+  --color-warning-foreground: var(--p-amber-50, #fffbeb);
+  --color-info: var(--p-cyan-500, #06b6d4);
+  --color-info-foreground: var(--p-cyan-50, #ecfeff);
+  --color-surface: var(--p-surface-0, #ffffff);
+  --color-surface-secondary: var(--p-surface-50, #f8fafc);
+  --color-text: var(--p-text-color, #1e293b);
+  --color-text-secondary: var(--p-text-muted-color, #64748b);
+  --color-text-muted: var(--p-text-muted-color, #64748b);
+  --color-border: var(--p-content-border-color, #e2e8f0);
+  --shadow-default: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.25rem;
+  --font-size-2xl: 1.5rem;
+
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --font-family: 'Inter', 'Hind Siliguri', system-ui, sans-serif;
+}
+
+html {
+  font-family: var(--font-family);
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface-secondary);
+  color: var(--color-text);
+}

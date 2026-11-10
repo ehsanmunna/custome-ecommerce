@@ -1,0 +1,63 @@
+enum CmsPublicationStatus {
+  draft
+  published
+  archived
+}
+
+model CmsPage {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt    DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  translations CmsPageTranslation[]
+
+  @@map("cms_pages")
+}
+
+model CmsPageTranslation {
+  pageId         String               @map("page_id") @db.Uuid
+  locale         ContentLocale
+  slug           String
+  title          String
+  content        Json                 @default("{}") @db.JsonB
+  seoTitle       String?              @map("seo_title")
+  seoDescription String?              @map("seo_description")
+  status         CmsPublicationStatus @default(draft)
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime             @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  page           CmsPage              @relation(fields: [pageId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([pageId, locale])
+  @@unique([locale, slug])
+  @@index([status])
+  @@map("cms_page_translations")
+}
+
+model CmsBanner {
+  id           String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  placementKey String                 @map("placement_key")
+  sortOrder    Int                    @default(0) @map("sort_order")
+  isActive     Boolean                @default(true) @map("is_active")
+  mediaAssetId String?                @map("media_asset_id") @db.Uuid
+  mediaAsset   MediaAsset?            @relation(fields: [mediaAssetId], references: [id], onDelete: SetNull, onUpdate: Cascade)
+  createdAt    DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime               @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  translations CmsBannerTranslation[]
+
+  @@index([placementKey, isActive, sortOrder])
+  @@index([mediaAssetId])
+  @@map("cms_banners")
+}
+
+model CmsBannerTranslation {
+  bannerId       String        @map("banner_id") @db.Uuid
+  locale         ContentLocale
+  title          String
+  body           String?
+  destinationUrl String?       @map("destination_url")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  banner         CmsBanner     @relation(fields: [bannerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([bannerId, locale])
+  @@map("cms_banner_translations")
+}

@@ -34,6 +34,19 @@ rules:
     - Use PostgreSQL with TypeORM or Prisma
     - API versioning at /v1
 
+  admin:
+    notification:
+      - "Never provide MessageService in components. Use NotificationService."
+      - "MessageService is provided once globally in app.config.ts."
+      - "Exactly one <p-toast> in the project, mounted in AdminShellComponent."
+      - "Components use NotificationService (success/error/warn/info), never MessageService directly."
+      - "Every create/update/delete shows a success toast; every failure shows an error toast."
+      - "Notify before router.navigate; never rely on streams that can be cancelled before next."
+      - "Every subscribe has next and error callbacks; error callback notifies the user."
+      - "HTTP interceptor handles global errors (401, 403, 5xx, network) once; components handle validation/business errors only."
+      - "Message strings kept in one place (constants/message map), not scattered."
+      - "Do not change UI layout, routes, or API contracts."
+
 operations:
   apply:
     guidance:
@@ -41,3 +54,5 @@ operations:
   archive:
     guidance:
       - Summarize the archive outcome before finishing
+githubCopilot:
+  cloudAgent: true

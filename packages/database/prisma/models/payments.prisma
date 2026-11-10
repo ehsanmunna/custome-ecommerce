@@ -1,0 +1,37 @@
+enum PaymentMethod {
+  cod
+  bkash
+  shurjopay
+}
+
+enum PaymentStatus {
+  pending
+  authorized
+  paid
+  failed
+  cancelled
+  refunded
+  partially_refunded
+}
+
+model Payment {
+  id                String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderId           String        @map("order_id") @db.Uuid
+  order             Order         @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  method            PaymentMethod
+  status            PaymentStatus @default(pending)
+  amountPoisha      Int           @map("amount_poisha")
+  providerReference String?       @map("provider_reference")
+  failureReason     String?       @map("failure_reason")
+  authorizedAt      DateTime?     @map("authorized_at") @db.Timestamptz(6)
+  paidAt            DateTime?     @map("paid_at") @db.Timestamptz(6)
+  failedAt          DateTime?     @map("failed_at") @db.Timestamptz(6)
+  cancelledAt       DateTime?     @map("cancelled_at") @db.Timestamptz(6)
+  refundedAt        DateTime?     @map("refunded_at") @db.Timestamptz(6)
+  createdAt         DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime      @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([orderId])
+  @@index([status])
+  @@map("payments")
+}

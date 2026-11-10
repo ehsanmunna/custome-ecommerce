@@ -1,0 +1,72 @@
+enum ReservationStatus {
+  active
+  released
+  committed
+  expired
+}
+
+enum ReservationReferenceType {
+  cart
+  order
+  manual
+}
+
+enum StockMovementType {
+  initial
+  adjustment
+  reservation
+  release
+  deduction
+  return
+}
+
+model InventoryItem {
+  variantId         String             @id @map("variant_id") @db.Uuid
+  variant           ProductVariant     @relation(fields: [variantId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+  quantityOnHand    Int                @default(0) @map("quantity_on_hand")
+  quantityReserved  Int                @default(0) @map("quantity_reserved")
+  lowStockThreshold Int                @default(0) @map("low_stock_threshold")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  reservations      StockReservation[]
+  movements         StockMovement[]
+
+  @@map("inventory_items")
+}
+
+model StockReservation {
+  id            String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  variantId     String                    @map("variant_id") @db.Uuid
+  inventoryItem InventoryItem             @relation(fields: [variantId], references: [variantId], onDelete: Restrict, onUpdate: Cascade)
+  quantity      Int
+  status        ReservationStatus         @default(active)
+  referenceType ReservationReferenceType? @map("reference_type")
+  referenceId   String?                   @map("reference_id") @db.Uuid
+  expiresAt     DateTime?                 @map("expires_at") @db.Timestamptz(6)
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime                  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([variantId])
+  @@index([status, expiresAt])
+  @@index([referenceType, referenceId])
+  @@map("stock_reservations")
+}
+
+model StockMovement {
+  id                String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  variantId         String                    @map("variant_id") @db.Uuid
+  inventoryItem     InventoryItem             @relation(fields: [variantId], references: [variantId], onDelete: Restrict, onUpdate: Cascade)
+  type              StockMovementType
+  onHandDelta       Int                       @map("on_hand_delta")
+  reservedDelta     Int                       @map("reserved_delta")
+  resultingOnHand   Int                       @map("resulting_on_hand")
+  resultingReserved Int                       @map("resulting_reserved")
+  referenceType     ReservationReferenceType? @map("reference_type")
+  referenceId       String?                   @map("reference_id") @db.Uuid
+  note              String?
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([variantId, createdAt])
+  @@index([referenceType, referenceId])
+  @@map("stock_movements")
+}

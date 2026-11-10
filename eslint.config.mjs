@@ -39,4 +39,15 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    files: [
+      'apps/admin/src/core/**/*.ts',
+      'apps/admin/src/layout/**/*.ts',
+      'apps/admin/src/shared/ui/**/*.ts',
+      'apps/admin/src/features/dashboard/**/*.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+    },
+  },
 );
