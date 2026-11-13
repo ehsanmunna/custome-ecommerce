@@ -15,6 +15,9 @@ context: |
   Milestone 1: Full API works testable without UI
   Milestone 2: Client can run business from admin panel
   Risks: Payment gateways (sandbox approvals), ShurjoPay/analytics may slip from v1
+  Admin UI: every admin list page uses this layout, top to bottom:
+  breadcrumb, header row (title left, "New" button right if needed),
+  search/filter bar, table. Use shared PageHeader and ListToolbar components.
 
   Open decisions (may affect scope):
   - SMS and email providers
@@ -27,12 +30,19 @@ rules:
   proposal:
     - Keep proposals under 500 words
     - Always include "Non-goals" section
+    - For any admin screen change, state that it follows the admin list page layout rule.
   specs:
     - Reference plan.md items where applicable
+    - Every admin list page requirement SHALL include a scenario that checks the block order (breadcrumb, header row, search/filter, table).
+  tasks:
+    - Admin page tasks must reuse shared layout components and must not create per-page layout markup.
   design:
     - Follow NestJS conventions (modules, controllers, services)
     - Use PostgreSQL with TypeORM or Prisma
     - API versioning at /v1
+  UI rules (mandatory for all generated code):
+    - Cancel button: no color, neutral/transparent (PrimeNG severity="secondary" with [text]="true").
+    - Save/Submit button: blue (PrimeNG severity="primary").
 
   admin:
     notification:
