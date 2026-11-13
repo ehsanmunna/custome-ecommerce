@@ -22,6 +22,7 @@ import { ReturnStatusComponent } from './returns/return-status.component';
 import { ShippingZoneListComponent } from './settings/shipping-zone-list.component';
 import { CouponListComponent } from './settings/coupon-list.component';
 import { AdminUsersListComponent } from './users/admin-users-list.component';
+import { AdminRolesListComponent } from './roles/admin-roles-list.component';
 import { PageListComponent } from './cms/page-list.component';
 import { BannerListComponent } from './cms/banner-list.component';
 import { SalesMetricsComponent } from './reporting/sales-metrics.component';
@@ -84,6 +85,7 @@ export const routes: Routes = [
       { path: 'settings/shipping-zones', component: ShippingZoneListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
       { path: 'settings/coupons', component: CouponListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
       { path: 'settings/users', component: AdminUsersListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
+      { path: 'settings/roles', component: AdminRolesListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
       { path: 'cms/pages', component: PageListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
       { path: 'cms/banners', component: BannerListComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },
       { path: 'reports/sales', component: SalesMetricsComponent, data: { roles: MANAGER_ROLES }, canActivate: [roleGuard] },

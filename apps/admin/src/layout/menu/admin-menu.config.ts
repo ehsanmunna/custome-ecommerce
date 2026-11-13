@@ -141,6 +141,13 @@ export const ADMIN_MENU: readonly AdminMenuItem[] = [
     roles: MANAGER_ROLES,
   },
   {
+    id: 'roles',
+    labelKey: 'menu.roles',
+    icon: 'pi pi-shield',
+    routerLink: '/settings/roles',
+    roles: MANAGER_ROLES,
+  },
+  {
     id: 'cms-pages',
         labelKey: 'menu.cmsPages',
         icon: 'pi pi-file',
