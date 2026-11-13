@@ -11,6 +11,7 @@ import { SettingsModule } from './settings/settings.module';
 import { CouponsModule } from './coupons/coupons.module';
 import { CmsModule } from './cms/cms.module';
 import { CustomersModule } from './customers/customers.module';
+import { AdminUsersModule } from './admin-users/admin-users.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { AppConfigModule } from './platform/config/app-config.module';
 import { DatabaseModule } from './platform/database/database.module';
@@ -26,6 +27,7 @@ import { SchemaModule } from './platform/schema/schema.module';
     SchemaModule,
     HealthModule,
     AuthModule,
+    AdminUsersModule,
     CartCheckoutModule,
     CatalogModule,
     InventoryModule,

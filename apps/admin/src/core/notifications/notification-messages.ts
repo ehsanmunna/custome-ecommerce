@@ -93,6 +93,16 @@ export const NOTIFICATION_MESSAGES = {
     updateFailed: 'Failed to update shipping zone',
     deleteFailed: 'Failed to delete shipping zone',
   },
+  adminUser: {
+    create: 'Administrator created',
+    update: 'Administrator updated',
+    disable: 'Administrator disabled',
+    enable: 'Administrator enabled',
+    createFailed: 'Failed to create administrator',
+    updateFailed: 'Failed to update administrator',
+    disableFailed: 'Failed to disable administrator',
+    enableFailed: 'Failed to enable administrator',
+  },
 } as const;
 
 export type NotificationMessageKey = keyof typeof NOTIFICATION_MESSAGES;

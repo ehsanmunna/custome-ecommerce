@@ -126,15 +126,22 @@ export const ADMIN_MENU: readonly AdminMenuItem[] = [
         routerLink: '/settings/shipping-zones',
         roles: MANAGER_ROLES,
       },
-      {
-        id: 'coupons',
-        labelKey: 'menu.coupons',
-        icon: 'pi pi-ticket',
-        routerLink: '/settings/coupons',
-        roles: MANAGER_ROLES,
-      },
-      {
-        id: 'cms-pages',
+  {
+    id: 'coupons',
+    labelKey: 'menu.coupons',
+    icon: 'pi pi-ticket',
+    routerLink: '/settings/coupons',
+    roles: MANAGER_ROLES,
+  },
+  {
+    id: 'users',
+    labelKey: 'menu.users',
+    icon: 'pi pi-user',
+    routerLink: '/settings/users',
+    roles: MANAGER_ROLES,
+  },
+  {
+    id: 'cms-pages',
         labelKey: 'menu.cmsPages',
         icon: 'pi pi-file',
         routerLink: '/cms/pages',

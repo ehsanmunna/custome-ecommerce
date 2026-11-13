@@ -23,6 +23,7 @@ const permissions = [
   { key: 'admin.users.create', groupKey: 'admin-users', description: 'Create administrators' },
   { key: 'admin.users.update', groupKey: 'admin-users', description: 'Update administrators' },
   { key: 'admin.users.delete', groupKey: 'admin-users', description: 'Delete administrators' },
+  { key: 'admin.users.disable', groupKey: 'admin-users', description: 'Disable or enable administrators' },
   { key: 'admin.roles.read', groupKey: 'roles', description: 'View roles and permissions' },
   { key: 'admin.roles.create', groupKey: 'roles', description: 'Create roles' },
   { key: 'admin.roles.update', groupKey: 'roles', description: 'Update roles' },

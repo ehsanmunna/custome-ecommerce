@@ -41,6 +41,15 @@ Each client gets their own storefront and their own database.
    contract tests and run on staging first.
 9. No caching layer for now. Do not add Redis or search caching.
 
+10. No page may skip or reorder these blocks.
+11. Use the shared `PageHeader`, `ListToolbar`, and table components. Do not
+  rebuild the layout per page.
+12. No "New" button row below the title. It is always in the header row.
+13. If a page has no create action, the header row has the title only.
+14. Pages without search or filter (rare) omit that block; the order of the
+  remaining blocks stays the same.
+15. Detail and form pages keep breadcrumb, then title; the content follows.
+
 ## Domain decisions (v1)
 - Product variants: unstructured attributes (JSONB), with attribute
   definitions per category so the admin form and filters stay consistent.
@@ -68,3 +77,12 @@ Each client gets their own storefront and their own database.
 - Every requirement has at least one scenario.
 - Tests: contract tests against the OpenAPI spec; integration tests for the
   checkout and stock-reservation flow.
+
+## Admin UI layout rule
+Every admin list page SHALL use this order, top to bottom:
+
+1. Breadcrumb
+2. Page header row: title on the left. If the page has a create action,
+   the "New <item>" button sits on the right of the same row.
+3. Search and filter bar
+4. Data table (with pagination)
