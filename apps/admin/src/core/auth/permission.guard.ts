@@ -3,7 +3,7 @@ import type { CanActivateFn } from '@angular/router';
 import { Router } from '@angular/router';
 import { AuthService } from '../../auth/auth.service';
 
-export const roleGuard: CanActivateFn = (route, state) => {
+export const permissionGuard: CanActivateFn = (route, state) => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
@@ -13,12 +13,18 @@ export const roleGuard: CanActivateFn = (route, state) => {
     });
   }
 
-  const roles = route.data['roles'];
-  if (!isStringArray(roles) || roles.length === 0 || auth.hasAnyRole(roles)) {
+  const permissions = route.data['permissions'];
+  if (!isStringArray(permissions) || permissions.length === 0) {
     return true;
   }
 
-  return router.createUrlTree(['/forbidden']);
+  const mode: unknown = route.data['permissionMode'];
+  const permitted =
+    mode === 'any'
+      ? auth.hasAnyPermission(permissions)
+      : permissions.every((permission) => auth.hasPermission(permission));
+
+  return permitted ? true : router.createUrlTree(['/forbidden']);
 };
 
 function isStringArray(value: unknown): value is string[] {

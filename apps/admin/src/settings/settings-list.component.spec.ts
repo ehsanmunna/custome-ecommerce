@@ -1,10 +1,19 @@
 import '@angular/compiler';
+import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { ShippingZoneListComponent } from './shipping-zone-list.component';
 import { CouponListComponent } from './coupon-list.component';
 import { AuthService } from '../auth/auth.service';
 import { defaultAdminAuthConfig, AdminAuthConfig } from '../auth/auth.config';
 import { FormBuilder } from '@angular/forms';
+
+// Components call `inject(DestroyRef)` in field initializers, so they must be
+// constructed inside an injection context even when a spec uses `new`.
+const testInjector = Injector.create({
+  providers: [{ provide: DestroyRef, useValue: { onDestroy: () => () => {} } }],
+});
+const create = <T>(factory: () => T): T => runInInjectionContext(testInjector, factory);
 
 // Mock localStorage and window for node environment
 const localStorageMock = (() => {
@@ -29,38 +38,35 @@ Object.defineProperty(globalThis, 'confirm', { value: () => true, writable: true
 
 class MockHttpClient {
   private responses: Record<string, any> = {};
+  private errors: Record<string, any> = {};
   private requests: Array<{ method: string; url: string; body?: any; headers?: Record<string, string> }> = [];
 
   setResponse(url: string, response: any) {
     this.responses[url] = response;
   }
 
-  setError(url: string, error: Error) {
-    this.responses[url] = error;
+  setError(url: string, error: unknown) {
+    this.errors[url] = error;
   }
 
-  private request<T>(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
+  private request(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
     this.requests.push({ method, url, body, headers: options?.headers });
-    const response = this.responses[url];
-    if (response instanceof Error) {
-      return { toPromise: () => Promise.reject(response), pipe: (_fn: any) => response as any };
+    if (url in this.errors) {
+      return throwError(() => this.errors[url]);
     }
-    return {
-      toPromise: () => Promise.resolve(response),
-      pipe: <R>(fn: (obs: T) => R) => fn(response),
-    };
+    return of(this.responses[url]);
   }
 
-  get<T>(url: string, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('GET', url, undefined, options);
+  get(url: string, options?: { headers?: Record<string, string> }): any {
+    return this.request('GET', url, undefined, options);
   }
 
-  post<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('POST', url, body, options);
+  post(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('POST', url, body, options);
   }
 
-  patch<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('PATCH', url, body, options);
+  patch(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('PATCH', url, body, options);
   }
 
   delete(url: string, options?: { headers?: Record<string, string> }): any {
@@ -97,7 +103,7 @@ describe('ShippingZoneListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ShippingZoneListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = create(() => new ShippingZoneListComponent(http as any, auth, new FormBuilder(), config, mockNotification));
   });
 
   afterEach(() => {
@@ -164,7 +170,7 @@ describe('CouponListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new CouponListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = create(() => new CouponListComponent(http as any, auth, new FormBuilder(), config, mockNotification));
   });
 
   afterEach(() => {

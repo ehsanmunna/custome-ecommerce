@@ -4,6 +4,7 @@ import { provideZonelessChangeDetection } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import {
   HttpClient,
+  HttpErrorResponse,
   provideHttpClient,
   withInterceptors,
 } from '@angular/common/http';
@@ -19,8 +20,9 @@ import { Router } from '@angular/router';
 import { firstValueFrom, of, Subject, throwError, type Observable } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN_AUTH_CONFIG, defaultAdminAuthConfig } from '../../auth/auth.config';
-import type { AuthSession } from '../../auth/auth.service';
+import type { AdminUser, AuthSession } from '../../auth/auth.service';
 import { AuthService } from '../../auth/auth.service';
+import { NotificationService } from '../notifications/notification.service';
 import { authInterceptor } from './auth.interceptor';
 import { MessageService } from 'primeng/api';
 
@@ -30,6 +32,7 @@ interface AuthMock {
   token: string | null;
   refreshTokenValue: string | null;
   refresh: () => Observable<AuthSession>;
+  refreshPermissions: () => Observable<AdminUser>;
   clear: () => void;
 }
 
@@ -40,10 +43,26 @@ interface RouterMock {
 
 const baseUrl = 'http://localhost:4000';
 const ordersUrl = `${baseUrl}/v1/admin/orders`;
+const meUrl = `${baseUrl}${defaultAdminAuthConfig.mePath}`;
 const refreshedSession: AuthSession = {
   accessToken: 'token-2',
   expiresIn: 3600,
 };
+const refreshedUser = {
+  id: 'admin-1',
+  email: 'admin@example.com',
+  displayName: 'Admin',
+  status: 'active',
+  role: {
+    id: 'role-1',
+    key: 'manager',
+    name: 'Manager',
+    scope: 'store',
+    system: true,
+    permissions: ['orders.read'],
+  },
+  permissions: ['orders.read'],
+} satisfies AdminUser;
 
 describe('authInterceptor', () => {
   let auth: AuthMock;
@@ -56,6 +75,7 @@ describe('authInterceptor', () => {
       token: 'token-1',
       refreshTokenValue: 'refresh-token-1',
       refresh: vi.fn(() => of(refreshedSession)),
+      refreshPermissions: vi.fn(() => of(refreshedUser)),
       clear: vi.fn(),
     };
     router = {
@@ -167,6 +187,75 @@ describe('authInterceptor', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/login'], {
       queryParams: { returnUrl: '/orders' },
     });
+  });
+
+  it('refreshes the permission snapshot after a 403 without retrying the denied request', async () => {
+    const result = firstValueFrom(http.get(ordersUrl));
+
+    const request = httpController.expectOne(ordersUrl);
+    request.flush({}, { status: 403, statusText: 'Forbidden' });
+
+    expect(auth.refreshPermissions).toHaveBeenCalledTimes(1);
+    httpController.expectNone(ordersUrl);
+    await expect(result).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('shares a single permission refresh across concurrent 403 responses', async () => {
+    const refreshSubject = new Subject<AdminUser>();
+    auth.refreshPermissions = vi.fn(() => refreshSubject.asObservable());
+
+    const firstResult = firstValueFrom(http.get(`${ordersUrl}?page=1`));
+    const secondResult = firstValueFrom(http.get(`${ordersUrl}?page=2`));
+
+    const firstRequest = httpController.expectOne(`${ordersUrl}?page=1`);
+    const secondRequest = httpController.expectOne(`${ordersUrl}?page=2`);
+    firstRequest.flush({}, { status: 403, statusText: 'Forbidden' });
+    secondRequest.flush({}, { status: 403, statusText: 'Forbidden' });
+
+    expect(auth.refreshPermissions).toHaveBeenCalledTimes(1);
+
+    refreshSubject.next(refreshedUser);
+    refreshSubject.complete();
+
+    httpController.expectNone(`${ordersUrl}?page=1`);
+    httpController.expectNone(`${ordersUrl}?page=2`);
+    await expect(firstResult).rejects.toMatchObject({ status: 403 });
+    await expect(secondResult).rejects.toMatchObject({ status: 403 });
+  });
+
+  it('keeps the session and reports a failed permission refresh after a 403', async () => {
+    const notification = TestBed.inject(NotificationService);
+    const errorSpy = vi.spyOn(notification, 'error');
+    auth.refreshPermissions = vi.fn(() =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            error: { message: 'Refresh unavailable' },
+            status: 400,
+            statusText: 'Bad Request',
+          }),
+      ),
+    );
+
+    const result = firstValueFrom(http.get(ordersUrl));
+
+    const request = httpController.expectOne(ordersUrl);
+    request.flush({}, { status: 403, statusText: 'Forbidden' });
+
+    await expect(result).rejects.toMatchObject({ status: 403 });
+    expect(errorSpy).toHaveBeenCalledWith('Refresh unavailable');
+    expect(auth.clear).not.toHaveBeenCalled();
+    httpController.expectNone(ordersUrl);
+  });
+
+  it('does not refresh permissions when the authorization denial comes from an auth endpoint', async () => {
+    const result = firstValueFrom(http.get(meUrl));
+
+    const request = httpController.expectOne(meUrl);
+    request.flush({}, { status: 403, statusText: 'Forbidden' });
+
+    expect(auth.refreshPermissions).not.toHaveBeenCalled();
+    await expect(result).rejects.toMatchObject({ status: 403 });
   });
 
   it('does not attach the token to the login endpoint', () => {

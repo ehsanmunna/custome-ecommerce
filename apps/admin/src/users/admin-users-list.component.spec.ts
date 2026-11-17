@@ -44,7 +44,7 @@ class MockHttpClient {
     this.errors[this.key(method, url)] = error;
   }
 
-  private request<T>(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
+  private request(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
     this.requests.push({ method, url, body, headers: options?.headers });
     const key = this.key(method, url);
     const error = this.errors[key];
@@ -54,16 +54,16 @@ class MockHttpClient {
     return of(this.responses[key]);
   }
 
-  get<T>(url: string, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('GET', url, undefined, options);
+  get(url: string, options?: { headers?: Record<string, string> }): any {
+    return this.request('GET', url, undefined, options);
   }
 
-  post<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('POST', url, body, options);
+  post(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('POST', url, body, options);
   }
 
-  patch<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('PATCH', url, body, options);
+  patch(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('PATCH', url, body, options);
   }
 
   delete(url: string, options?: { headers?: Record<string, string> }): any {
@@ -291,13 +291,18 @@ describe('AdminUsersListComponent', () => {
 describe('AdminUsersListComponent row actions', () => {
   let http: MockHttpClient;
   let permissions: Set<string>;
+  let currentUser: { id: string } | null;
 
   const authStub = () => ({
     token: 'test-token',
     hasPermission: (permission: string) => permissions.has(permission),
+    currentUser: () => currentUser,
   });
 
-  const createFixture = (items: any[]) => {
+  const createFixture = (
+    items: any[],
+    setup?: (component: AdminUsersListComponent) => void,
+  ) => {
     http.setResponse('GET', `${baseUrl}/v1/admin/users`, listResponse(items));
     http.setResponse('GET', `${baseUrl}/v1/admin/roles`, { items: [], total: 0, page: 1, pageSize: 20 });
 
@@ -321,6 +326,7 @@ describe('AdminUsersListComponent row actions', () => {
     });
 
     const fixture = TestBed.createComponent(AdminUsersListComponent);
+    setup?.(fixture.componentInstance);
     fixture.detectChanges();
     return fixture;
   };
@@ -328,12 +334,19 @@ describe('AdminUsersListComponent row actions', () => {
   const actionButtons = (fixture: any): HTMLButtonElement[] =>
     Array.from(fixture.nativeElement.querySelectorAll('tbody button')) as HTMLButtonElement[];
 
+  const allButtons = (fixture: any): HTMLButtonElement[] =>
+    Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+
   const findButton = (fixture: any, label: string): HTMLButtonElement | undefined =>
     actionButtons(fixture).find((button) => button.textContent?.trim() === label);
+
+  const findAnyButton = (fixture: any, label: string): HTMLButtonElement | undefined =>
+    allButtons(fixture).find((button) => button.textContent?.trim() === label);
 
   beforeEach(() => {
     http = new MockHttpClient();
     permissions = new Set<string>();
+    currentUser = null;
     notification.success.mockClear();
     notification.error.mockClear();
   });
@@ -388,9 +401,55 @@ describe('AdminUsersListComponent row actions', () => {
     expect(findButton(fixture, 'Disable')).toBeUndefined();
   });
 
+  it('should hide the Add administrator action without the create permission', () => {
+    permissions.add('admin.users.update');
+
+    const fixture = createFixture([userFixture]);
+
+    expect(findAnyButton(fixture, 'Add administrator')).toBeUndefined();
+  });
+
+  it('should show the Add administrator action with the create permission', () => {
+    permissions.add('admin.users.create');
+
+    const fixture = createFixture([userFixture]);
+
+    expect(findAnyButton(fixture, 'Add administrator')).toBeDefined();
+  });
+
   it('should hide all row actions without update or disable permissions', () => {
     const fixture = createFixture([userFixture]);
 
     expect(actionButtons(fixture).length).toBe(0);
+  });
+
+  it('should hide Disable on the signed-in administrator and keep it for others', () => {
+    permissions.add('admin.users.update');
+    permissions.add('admin.users.disable');
+    currentUser = { id: 'user-self' };
+
+    const self = { ...userFixture, id: 'user-self', email: 'self@example.com' };
+    const other = { ...userFixture, id: 'user-2', email: 'other@example.com' };
+    const fixture = createFixture([self, other]);
+    const rows = Array.from(fixture.nativeElement.querySelectorAll('tbody tr')) as HTMLElement[];
+    const rowLabels = (row: HTMLElement) =>
+      Array.from(row.querySelectorAll('button')).map((button) => button.textContent?.trim());
+
+    expect(rowLabels(rows[0])).toEqual(['Edit']);
+    expect(rowLabels(rows[1])).toEqual(['Edit', 'Disable']);
+  });
+
+  it('should lock status editing for the signed-in administrator', () => {
+    permissions.add('admin.users.update');
+    currentUser = { id: 'user-self' };
+
+    const fixture = createFixture([], (component) => {
+      component.editModal = true;
+      component.editingUser = { ...userFixture, id: 'user-self' };
+    });
+
+    const element: HTMLElement = fixture.nativeElement;
+    expect(element.querySelector('app-admin-user-form')).not.toBeNull();
+    expect(element.querySelector('app-admin-user-form select[formcontrolname="status"]')).toBeNull();
   });
 });

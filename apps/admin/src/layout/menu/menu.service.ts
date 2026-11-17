@@ -1,30 +1,34 @@
 import { computed, inject, Injectable } from '@angular/core';
 import { AuthService } from '../../auth/auth.service';
+import { type PermissionRequirement } from '../../core/auth/admin-permissions';
 import { ADMIN_MENU, type AdminMenuItem } from './admin-menu.config';
 
 @Injectable({ providedIn: 'root' })
 export class MenuService {
   private readonly auth = inject(AuthService);
 
-  readonly menu = computed(() => filterMenuByRole(ADMIN_MENU, this.auth.roleKey));
+  readonly menu = computed(() => filterMenuByPermission(ADMIN_MENU, this.auth.permissionSet()));
 }
 
-export function filterMenuByRole(
+export function filterMenuByPermission(
   entries: readonly AdminMenuItem[],
-  roleKey: string | null,
+  granted: ReadonlySet<string>,
 ): AdminMenuItem[] {
-  if (!roleKey) return [];
+  if (granted.size === 0) return [];
 
   return entries.flatMap((entry) => {
-    if (!entry.roles.includes(roleKey)) return [];
+    if (!isPermitted(entry, granted)) return [];
 
     const { children: childEntries, ...rest } = entry;
-    const children = childEntries ? filterMenuByRole(childEntries, roleKey) : [];
-    return [
-      {
-        ...rest,
-        ...(children.length > 0 ? { children } : {}),
-      },
-    ];
+    if (!childEntries || childEntries.length === 0) return [rest];
+
+    const children = filterMenuByPermission(childEntries, granted);
+    return [children.length > 0 ? { ...rest, children } : rest];
   });
+}
+
+function isPermitted(entry: PermissionRequirement, granted: ReadonlySet<string>): boolean {
+  return entry.permissionMode === 'any'
+    ? entry.permissions.some((permission) => granted.has(permission))
+    : entry.permissions.every((permission) => granted.has(permission));
 }

@@ -60,8 +60,10 @@ export class OrderDetailComponent implements OnInit {
     @Inject(HttpClient) private readonly http: HttpClient,
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
-    private readonly route: ActivatedRoute,
-  ) {}
+    @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
+  ) {
+    this.orderId = this.route.snapshot.paramMap.get('orderId');
+  }
 
   ngOnInit(): void {
     if (!this.orderId) {

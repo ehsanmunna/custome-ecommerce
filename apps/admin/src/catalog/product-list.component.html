@@ -17,7 +17,7 @@
     >
       Search
     </button>
-    @if (auth.hasPermission('catalog.products.create')) {
+    @if (auth.hasPermission(permissions.catalog.products.create)) {
       <button
         (click)="openCreateModal()"
         class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -92,7 +92,7 @@
               {{ p.variants[0].price.toFixed(2) || '-' }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">
-              @if (auth.hasPermission('catalog.products.update')) {
+              @if (auth.hasPermission(permissions.catalog.products.update)) {
                 <button
                   (click)="openEditModal(p)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -100,7 +100,7 @@
                   Edit
                 </button>
               }
-              @if (auth.hasPermission('catalog.products.delete')) {
+              @if (auth.hasPermission(permissions.catalog.products.delete)) {
                 <button
                   (click)="deleteProduct(p.id)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"
@@ -201,7 +201,8 @@
               class="w-full p-2 border border-[var(--color-border)] rounded-md"
             />
           </div>
-          <div class="mb-3">
+          @if (auth.hasPermission(permissions.media.create)) {
+            <div class="mb-3">
               <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]"
                 >Add New Image</label
               >
@@ -212,10 +213,11 @@
                 (change)="onMediaFileSelected($event)"
                 class="w-full p-2 border border-[var(--color-border)] rounded-md"
               />
-            <p class="text-xs text-[var(--color-text-muted)] mt-1">
-              Upload a new image and it will be added to mediaIds.
-            </p>
-          </div>
+              <p class="text-xs text-[var(--color-text-muted)] mt-1">
+                Upload a new image and it will be added to mediaIds.
+              </p>
+            </div>
+          }
           <div class="mb-3 mt-2">
             <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]"
               >Selected Images</label
@@ -228,13 +230,15 @@
                     [alt]="m.key"
                     class="w-16 h-16 object-cover border border-[var(--color-border)] rounded-md"
                   />
-                  <button
-                    (click)="deleteMedia(m.id)"
-                    [disabled]="uploadingMedia"
-                    class="absolute -top-1 -right-1 bg-[var(--color-danger)] text-[var(--color-danger-foreground)] text-xs font-bold px-1.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    ×
-                  </button>
+                  @if (auth.hasPermission(permissions.media.delete)) {
+                    <button
+                      (click)="deleteMedia(m.id)"
+                      [disabled]="uploadingMedia"
+                      class="absolute -top-1 -right-1 bg-[var(--color-danger)] text-[var(--color-danger-foreground)] text-xs font-bold px-1.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      ×
+                    </button>
+                  }
                 </div>
               }
             </div>

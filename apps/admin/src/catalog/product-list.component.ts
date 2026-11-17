@@ -13,6 +13,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { NotificationService } from '../core/notifications/notification.service';
 import {
   NOTIFICATION_MESSAGES,
@@ -137,6 +138,8 @@ export class ProductListComponent implements OnInit {
 
   createForm: FormGroup;
   editForm: FormGroup;
+
+  protected readonly permissions = ADMIN_PERMISSIONS;
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,

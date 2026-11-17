@@ -18,7 +18,7 @@
         <option [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name || c.id }}</option>
       }
     </select>
-    @if (auth.hasPermission('catalog.attributes.create')) {
+    @if (auth.hasPermission(permissions.catalog.categories.update)) {
       <button
         (click)="openCreateModal()"
         [disabled]="!selectedCategoryId"

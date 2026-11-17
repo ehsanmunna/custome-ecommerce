@@ -55,6 +55,11 @@ describeDatabase('database migrations', () => {
       '20261024000000_auth_sessions',
       '20261025000000_catalog_translation_descriptions',
       ORDER_HISTORY_MIGRATION,
+      '20261027000000_order_return_status_history',
+      '20261101000000_admin_permissions_format_fix',
+      '20261107083000_add_local_media_provider_enum',
+      '20261107083001_set_local_media_provider_default',
+      '20261115000000_permission_catalog_reconciliation',
     ]);
     expect(ledger[0]?.checksum).toBeTruthy();
     expect(ledger[0]?.finished_at).toBeTruthy();
@@ -148,7 +153,7 @@ describeDatabase('database migrations', () => {
 
     const row = await readProbeRow();
     expect(row?.name).toBe('customer data');
-    expect(await readSchemaVersion()).toBe('20261027000000_add_note');
+    expect(await readSchemaVersion()).toBe(EXPECTED_SCHEMA_VERSION);
   });
 
   it('backfills initial order history when the corrective migration reaches an existing schema', async () => {
@@ -207,7 +212,7 @@ describeDatabase('database migrations', () => {
         ),
       ).rejects.toMatchObject({ code: '23505' });
     });
-    expect(await readSchemaVersion()).toBe(ORDER_HISTORY_MIGRATION);
+    expect(await readSchemaVersion()).toBe(EXPECTED_SCHEMA_VERSION);
   });
 
   it('rolls back a failed migration and keeps the previous schema version', async () => {
@@ -236,7 +241,7 @@ describeDatabase('database migrations', () => {
       '20261025000000_catalog_translation_descriptions',
       ORDER_HISTORY_MIGRATION,
     ]);
-    expect(await readSchemaVersion()).toBe(EXPECTED_SCHEMA_VERSION);
+    expect(await readSchemaVersion()).toBe(ORDER_HISTORY_MIGRATION);
 
     const rolledBack = await withClient(migrationUrl!, async (client) => {
       const result = await client.query(

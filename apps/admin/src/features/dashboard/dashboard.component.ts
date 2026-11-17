@@ -86,29 +86,50 @@ import { LowStockWidgetComponent } from './widgets/low-stock-widget.component';
           </div>
         </div>
       } @else {
-        <app-stat-cards-widget
-          [orders]="widgetState('orders')"
-          [revenue]="widgetState('revenue')"
-          [newCustomers]="widgetState('newCustomers')"
-          [lowStockCount]="widgetState('lowStockCount')"
-        />
+        @if (
+          store.canView('orders') ||
+          store.canView('revenue') ||
+          store.canView('newCustomers') ||
+          store.canView('lowStockCount')
+        ) {
+          <app-stat-cards-widget
+            [orders]="widgetState('orders')"
+            [revenue]="widgetState('revenue')"
+            [newCustomers]="widgetState('newCustomers')"
+            [lowStockCount]="widgetState('lowStockCount')"
+            [showOrders]="store.canView('orders')"
+            [showRevenue]="store.canView('revenue')"
+            [showNewCustomers]="store.canView('newCustomers')"
+            [showLowStock]="store.canView('lowStockCount')"
+          />
+        }
 
         <div class="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div class="lg:col-span-2">
-            <app-revenue-chart-widget [state]="widgetState('revenueChart')" (retry)="load()" />
-          </div>
-          <div>
-            <app-recent-orders-widget [state]="widgetState('recentOrders')" (retry)="load()" />
-          </div>
-          <div>
-            <app-top-products-widget [state]="widgetState('topProducts')" (retry)="load()" />
-          </div>
-          <div>
-            <app-order-status-widget [state]="widgetState('orderStatus')" (retry)="load()" />
-          </div>
-          <div>
-            <app-low-stock-widget [state]="widgetState('lowStockAlerts')" (retry)="load()" />
-          </div>
+          @if (store.canView('revenueChart')) {
+            <div class="lg:col-span-2">
+              <app-revenue-chart-widget [state]="widgetState('revenueChart')" (retry)="load()" />
+            </div>
+          }
+          @if (store.canView('recentOrders')) {
+            <div>
+              <app-recent-orders-widget [state]="widgetState('recentOrders')" (retry)="load()" />
+            </div>
+          }
+          @if (store.canView('topProducts')) {
+            <div>
+              <app-top-products-widget [state]="widgetState('topProducts')" (retry)="load()" />
+            </div>
+          }
+          @if (store.canView('orderStatus')) {
+            <div>
+              <app-order-status-widget [state]="widgetState('orderStatus')" (retry)="load()" />
+            </div>
+          }
+          @if (store.canView('lowStockAlerts')) {
+            <div>
+              <app-low-stock-widget [state]="widgetState('lowStockAlerts')" (retry)="load()" />
+            </div>
+          }
         </div>
       }
     </div>

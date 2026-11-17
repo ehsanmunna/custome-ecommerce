@@ -142,7 +142,15 @@ export class AdminUsersService {
     return this.toAdminUserOutput(user);
   }
 
-  async updateAdminUser(userId: string, input: AdminUserUpdateInput): Promise<AdminUserOutput> {
+  async updateAdminUser(
+    userId: string,
+    input: AdminUserUpdateInput,
+    actorId: string,
+  ): Promise<AdminUserOutput> {
+    if (input.status === 'disabled' && userId === actorId) {
+      throw new ConflictException('Cannot disable your own account');
+    }
+
     const existing = await this.prisma.adminUser.findUnique({
       where: { id: userId },
       include: {
@@ -185,7 +193,11 @@ export class AdminUsersService {
     return this.toAdminUserOutput(user);
   }
 
-  async disableAdminUser(userId: string): Promise<void> {
+  async disableAdminUser(userId: string, actorId: string): Promise<void> {
+    if (userId === actorId) {
+      throw new ConflictException('Cannot disable your own account');
+    }
+
     const user = await this.prisma.adminUser.findUnique({
       where: { id: userId },
       select: { id: true, status: true },

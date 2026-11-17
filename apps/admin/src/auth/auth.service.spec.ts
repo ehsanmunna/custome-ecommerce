@@ -231,6 +231,79 @@ describe('AuthService', () => {
     });
   });
 
+  it('should refresh the permission snapshot without a reload', async () => {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
+      accessToken: 'access-token-123',
+      refreshToken: 'refresh-token-123',
+      expiresIn: 3600,
+      user: adminUser(['analytics.read']),
+    });
+    await firstValueFrom(service.login('admin@example.com', 'password123'));
+
+    expect(service.hasPermission('analytics.read')).toBe(true);
+    expect(service.hasPermission('orders.read')).toBe(false);
+    expect(service.permissionSet().has('analytics.read')).toBe(true);
+
+    http.setResponse(`${baseUrl}/v1/admin/auth/me`, adminUser(['orders.read', 'inventory.read']));
+
+    const refreshed = await firstValueFrom(service.refreshPermissions());
+
+    expect(refreshed.permissions).toEqual(['orders.read', 'inventory.read']);
+    expect(service.currentUser()?.permissions).toEqual(['orders.read', 'inventory.read']);
+    expect(service.hasPermission('analytics.read')).toBe(false);
+    expect(service.hasPermission('orders.read')).toBe(true);
+    expect(service.hasAnyPermission(['analytics.read', 'inventory.read'])).toBe(true);
+    expect(service.permissionSet()).toEqual(new Set(['orders.read', 'inventory.read']));
+  });
+
+  it('should keep the last permission snapshot when a refresh fails', async () => {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
+      accessToken: 'access-token-123',
+      refreshToken: 'refresh-token-123',
+      expiresIn: 3600,
+      user: adminUser(['analytics.read']),
+    });
+    await firstValueFrom(service.login('admin@example.com', 'password123'));
+
+    http.setResponse(`${baseUrl}/v1/admin/auth/me`, new Error('Network unavailable'));
+
+    await expect(firstValueFrom(service.refreshPermissions())).rejects.toThrow(
+      'Failed to load current user',
+    );
+
+    expect(service.hasPermission('analytics.read')).toBe(true);
+    expect(service.currentUser()?.permissions).toEqual(['analytics.read']);
+    expect(service.isAuthenticated).toBe(true);
+  });
+
+  it('should derive permissions reactively from the current user signal', () => {
+    expect(service.hasPermission('analytics.read')).toBe(false);
+
+    service['currentUserState'].set(adminUser(['analytics.read']));
+    expect(service.hasPermission('analytics.read')).toBe(true);
+
+    service['currentUserState'].set(adminUser(['orders.read']));
+    expect(service.hasPermission('analytics.read')).toBe(false);
+    expect(service.hasPermission('orders.read')).toBe(true);
+  });
+
+  it('should clear the permission snapshot on logout', async () => {
+    http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
+      accessToken: 'access-token-123',
+      refreshToken: 'refresh-token-123',
+      expiresIn: 3600,
+      user: adminUser(['analytics.read']),
+    });
+    await firstValueFrom(service.login('admin@example.com', 'password123'));
+
+    http.setResponse(`${baseUrl}/v1/admin/auth/logout`, null);
+    await firstValueFrom(service.logout());
+
+    expect(service.currentUser()).toBeNull();
+    expect(service.permissionSet().size).toBe(0);
+    expect(service.hasPermission('analytics.read')).toBe(false);
+  });
+
   it('should clear tokens on logout', async () => {
     // Login first
     http.setResponse(`${baseUrl}/v1/admin/auth/login`, {
@@ -277,9 +350,6 @@ describe('AuthService', () => {
     expect(restored.user?.email).toBe('admin@example.com');
     expect(restored.roleKey).toBe('owner');
     expect(restored.role?.name).toBe('Owner');
-    expect(restored.hasRole('owner')).toBe(true);
-    expect(restored.hasAnyRole(['manager', 'owner'])).toBe(true);
-    expect(restored.hasAnyRole(['manager'])).toBe(false);
     expect(restored.hasPermission('analytics.read')).toBe(true);
     expect(restored.hasAnyPermission(['orders.read', 'analytics.read'])).toBe(true);
   });

@@ -1,13 +1,28 @@
 import { inject } from '@angular/core';
 import { HttpErrorResponse, type HttpInterceptorFn } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { catchError, defer, finalize, from, type Observable, shareReplay, switchMap, throwError } from 'rxjs';
-import { AuthService, type AuthSession } from '../../auth/auth.service';
+import {
+  catchError,
+  defer,
+  finalize,
+  from,
+  of,
+  type Observable,
+  shareReplay,
+  switchMap,
+  throwError,
+} from 'rxjs';
+import { AuthService, type AdminUser, type AuthSession } from '../../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../../auth/auth.config';
 import { NotificationService } from '../notifications/notification.service';
-import { isGlobalHttpError, extractErrorMessage } from '../notifications/notification-messages';
+import {
+  isGlobalHttpError,
+  extractErrorMessage,
+  NOTIFICATION_MESSAGES,
+} from '../notifications/notification-messages';
 
 let refreshInFlight: Observable<AuthSession> | null = null;
+let permissionRefreshInFlight: Observable<AdminUser> | null = null;
 
 export const authInterceptor: HttpInterceptorFn = (request, next) => {
   const auth = inject(AuthService);
@@ -48,6 +63,37 @@ export const authInterceptor: HttpInterceptorFn = (request, next) => {
         );
       }
 
+      if (
+        error instanceof HttpErrorResponse &&
+        error.status === 403 &&
+        isApiRequest &&
+        !isPublicAuthRequest &&
+        token
+      ) {
+        // A denial can mean the snapshot is stale. Refresh it once, then
+        // surface the original error without retrying the denied request.
+        notification.error(
+          extractErrorMessage(error, 'An unexpected error occurred.'),
+        );
+
+        return refreshPermissionSnapshot(auth).pipe(
+          catchError((refreshError: unknown) => {
+            const status =
+              refreshError instanceof HttpErrorResponse ? refreshError.status : undefined;
+            if (!isGlobalHttpError(status)) {
+              notification.error(
+                extractErrorMessage(
+                  refreshError,
+                  NOTIFICATION_MESSAGES.permission.refreshFailed,
+                ),
+              );
+            }
+            return of(null);
+          }),
+          switchMap(() => throwError(() => error)),
+        );
+      }
+
       if (error instanceof HttpErrorResponse && isGlobalHttpError(error.status)) {
         notification.error(
           extractErrorMessage(error, 'An unexpected error occurred.'),
@@ -70,6 +116,19 @@ function refreshSession(auth: AuthService): Observable<AuthSession> {
   }
 
   return refreshInFlight;
+}
+
+function refreshPermissionSnapshot(auth: AuthService): Observable<AdminUser> {
+  if (!permissionRefreshInFlight) {
+    permissionRefreshInFlight = defer(() => from(auth.refreshPermissions())).pipe(
+      finalize(() => {
+        permissionRefreshInFlight = null;
+      }),
+      shareReplay({ bufferSize: 1, refCount: false }),
+    );
+  }
+
+  return permissionRefreshInFlight;
 }
 
 function failSession(

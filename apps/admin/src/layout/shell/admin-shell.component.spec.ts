@@ -6,6 +6,7 @@ import {
   signal,
   type WritableSignal,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
 import {
   BrowserDynamicTestingModule,
@@ -18,10 +19,12 @@ import {
   TranslocoTestingModule,
 } from '@jsverse/transloco';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { type AdminUser } from '../../auth/auth.service';
 import { AuthService } from '../../auth/auth.service';
 import { ClientConfigService } from '../../core/config/client-config.service';
 import { type ClientConfig } from '../../core/config/client-config.model';
+import { NotificationService } from '../../core/notifications/notification.service';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { BreakpointService } from '../breakpoint.service';
 import { LayoutService } from '../layout.service';
@@ -150,7 +153,7 @@ const adminUser: AdminUser = {
     system: true,
     permissions: [],
   },
-  permissions: [],
+  permissions: ['analytics.read', 'orders.read'],
 };
 
 function shellRoot(harness: RouterTestingHarness): HTMLElement {
@@ -173,6 +176,7 @@ describe('AdminShellComponent', () => {
   let isDesktop: WritableSignal<boolean>;
   let clientConfig: WritableSignal<ClientConfig>;
   let logout: ReturnType<typeof vi.fn>;
+  let refreshPermissions: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     window.localStorage.clear();
@@ -185,6 +189,7 @@ describe('AdminShellComponent', () => {
       defaultLanguage: 'en',
     });
     logout = vi.fn().mockResolvedValue(undefined);
+    refreshPermissions = vi.fn(() => of(adminUser));
 
     TestBed.configureTestingModule({
       imports: [
@@ -211,7 +216,9 @@ describe('AdminShellComponent', () => {
             user: adminUser,
             role: adminUser.role,
             roleKey: adminUser.role.key,
+            permissionSet: signal(new Set(adminUser.permissions)),
             logout,
+            refreshPermissions,
           },
         },
       ],
@@ -223,6 +230,33 @@ describe('AdminShellComponent', () => {
     window.localStorage.clear();
     document.documentElement.className = '';
     document.body.style.overflow = '';
+  });
+
+  it('refreshes the permission snapshot when the shell initializes', async () => {
+    await RouterTestingHarness.create('/dashboard');
+
+    expect(refreshPermissions).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps rendering with the previous snapshot when the refresh fails', async () => {
+    refreshPermissions.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            error: { message: 'Refresh failed' },
+            status: 400,
+            statusText: 'Bad Request',
+          }),
+      ),
+    );
+    const notification = TestBed.inject(NotificationService);
+    const errorSpy = vi.spyOn(notification, 'error');
+
+    const harness = await RouterTestingHarness.create('/dashboard');
+
+    expect(errorSpy).toHaveBeenCalledWith('Refresh failed');
+    expect(shellRoot(harness).querySelector('[data-testid="admin-sidebar"]')).not.toBeNull();
+    expect(shellRoot(harness).querySelector('[data-testid="marker"]')).not.toBeNull();
   });
 
   it('renders the topbar, sidebar, menu, and routed content', async () => {

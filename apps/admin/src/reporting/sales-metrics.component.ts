@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { catchError, EMPTY, finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -27,13 +28,13 @@ export interface AnalyticsOverview {
 
       <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Sales Metrics</h1>
 
-      @if (!auth.hasPermission('analytics.read')) {
+      @if (!auth.hasPermission(permissions.analytics.read)) {
         <div class="text-[var(--color-danger)] mb-4">
           You do not have permission to view sales metrics.
         </div>
       }
 
-      @if (auth.hasPermission('analytics.read')) {
+      @if (auth.hasPermission(permissions.analytics.read)) {
         <div class="flex gap-2 mb-4 items-center flex-wrap">
           <label class="flex items-center gap-1">
             <span class="text-sm font-medium text-[var(--color-text-secondary)]">From</span>
@@ -108,6 +109,7 @@ export class SalesMetricsComponent implements OnInit {
   error: string | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly permissions = ADMIN_PERMISSIONS;
 
   from = '';
   to = '';

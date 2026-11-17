@@ -11,6 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NotificationService } from '../core/notifications/notification.service';
@@ -41,6 +42,8 @@ export class ReturnStatusComponent implements OnInit {
 
   statusForm: FormGroup;
   allowedNextStatuses: string[] = [];
+
+  protected readonly permissions = ADMIN_PERMISSIONS;
 
   loading = false;
   changing = false;

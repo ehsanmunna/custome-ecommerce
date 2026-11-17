@@ -1,9 +1,11 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { forkJoin, of, Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
-import type { DashboardRange, RecentOrder, RevenuePoint, TopProduct, LowStockAlert, OrderStatusCount, DashboardOverview } from './dashboard.models';
+import type { DashboardRange, RecentOrder, RevenuePoint, TopProduct, LowStockAlert, OrderStatusCount, DashboardOverview, DashboardWidget } from './dashboard.models';
+import { dashboardWidgetPermission } from './dashboard.models';
 import { HttpDashboardDataSource } from './http-dashboard-data-source';
 import { SampleDashboardDataSource } from './sample-dashboard-data-source';
+import { AuthService } from '../../auth/auth.service';
 
 export type AsyncStatus = 'loading' | 'ready' | 'empty' | 'error';
 
@@ -18,6 +20,7 @@ interface AsyncResult<T> {
 export class DashboardService {
   private readonly http = inject(HttpDashboardDataSource);
   private readonly sample = inject(SampleDashboardDataSource);
+  private readonly auth = inject(AuthService);
 
   private readonly range = signal<DashboardRange>('7');
 
@@ -27,33 +30,36 @@ export class DashboardService {
     this.range.set(range);
   }
 
-  loadOverview(): Observable<DashboardOverview> {
-    return forkJoin([
-      this.loadOverviewWidget('orders'),
-      this.loadOverviewWidget('revenue'),
-      this.loadNewCustomers(),
-      this.loadLowStockCount(),
-      this.loadRevenueChart(),
-      this.loadRecentOrders(),
-      this.loadTopProducts(),
-      this.loadOrderStatus(),
-      this.loadLowStockAlerts(),
-    ]).pipe(
-      map((results: unknown[]) => {
-        const [orders, revenue, newCustomers, lowStockCount, revenueChart, recentOrders, topProducts, orderStatus, lowStockAlerts] = results;
-        return {
-          orders,
-          revenue,
-          newCustomers,
-          lowStockCount,
-          revenueChart,
-          recentOrders,
-          topProducts,
-          orderStatus,
-          lowStockAlerts,
-        };
-      })
-    ) as Observable<DashboardOverview>;
+  canView(widget: DashboardWidget): boolean {
+    return this.auth.hasPermission(dashboardWidgetPermission(widget));
+  }
+
+  loadOverview(): Observable<Partial<DashboardOverview>> {
+    const loaders: Partial<Record<DashboardWidget, Observable<unknown>>> = {};
+
+    if (this.canView('orders')) {
+      loaders.orders = this.loadOverviewWidget('orders');
+      loaders.revenue = this.loadOverviewWidget('revenue');
+      loaders.revenueChart = this.loadRevenueChart();
+      loaders.topProducts = this.loadTopProducts();
+    }
+    if (this.canView('newCustomers')) {
+      loaders.newCustomers = this.loadNewCustomers();
+    }
+    if (this.canView('lowStockCount')) {
+      loaders.lowStockCount = this.loadLowStockCount();
+      loaders.lowStockAlerts = this.loadLowStockAlerts();
+    }
+    if (this.canView('recentOrders')) {
+      loaders.recentOrders = this.loadRecentOrders();
+      loaders.orderStatus = this.loadOrderStatus();
+    }
+
+    if (Object.keys(loaders).length === 0) {
+      return of({});
+    }
+
+    return forkJoin(loaders) as Observable<Partial<DashboardOverview>>;
   }
 
   private loadOverviewWidget(type: 'orders' | 'revenue'): Observable<AsyncResult<{ today: { orderCount: number; revenue: number }; yesterday: { orderCount: number; revenue: number } }>> {

@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -11,13 +10,15 @@ import {
   Patch,
   Post,
   Query,
+  Req,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { AuthAccess } from '../auth/auth-access.decorator';
+import type { AuthenticatedRequest } from '../auth/auth.types';
 import { AdminUsersService } from './admin-users.service';
 import {
   adminUserCreateSchema,
   adminUserUpdateSchema,
-  adminUserIdParamSchema,
   adminUsersQuerySchema,
   parseAdminUserInput,
 } from './admin-users.schemas';
@@ -54,9 +55,10 @@ export class AdminUsersController {
   update(
     @Param('userId', new ParseUUIDPipe({ errorHttpStatusCode: HttpStatus.NOT_FOUND })) userId: string,
     @Body() body: unknown,
+    @Req() request: AuthenticatedRequest,
   ) {
     const input = parseAdminUserInput(adminUserUpdateSchema, body);
-    return this.adminUsers.updateAdminUser(userId, input);
+    return this.adminUsers.updateAdminUser(userId, input, this.adminId(request));
   }
 
   @Post('users/:userId/disable')
@@ -64,7 +66,15 @@ export class AdminUsersController {
   @AuthAccess({ access: 'admin', permission: 'admin.users.disable', scope: 'store' })
   async disable(
     @Param('userId', new ParseUUIDPipe({ errorHttpStatusCode: HttpStatus.NOT_FOUND })) userId: string,
+    @Req() request: AuthenticatedRequest,
   ): Promise<void> {
-    await this.adminUsers.disableAdminUser(userId);
+    await this.adminUsers.disableAdminUser(userId, this.adminId(request));
+  }
+
+  private adminId(request: AuthenticatedRequest): string {
+    if (request.auth?.identityType !== 'admin') {
+      throw new UnauthorizedException('An authenticated administrator is required');
+    }
+    return request.auth.subjectId;
   }
 }

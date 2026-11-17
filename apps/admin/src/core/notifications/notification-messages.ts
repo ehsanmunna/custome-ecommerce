@@ -103,6 +103,17 @@ export const NOTIFICATION_MESSAGES = {
     disableFailed: 'Failed to disable administrator',
     enableFailed: 'Failed to enable administrator',
   },
+  role: {
+    create: 'Role created',
+    update: 'Role updated',
+    delete: 'Role deleted',
+    createFailed: 'Failed to create role',
+    updateFailed: 'Failed to update role',
+    deleteFailed: 'Failed to delete role',
+  },
+  permission: {
+    refreshFailed: 'Failed to refresh permissions',
+  },
 } as const;
 
 export type NotificationMessageKey = keyof typeof NOTIFICATION_MESSAGES;

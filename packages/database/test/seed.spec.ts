@@ -53,6 +53,18 @@ describe('seed bootstrap configuration', () => {
   });
 });
 
+describe('canonical admin permission catalog', () => {
+  it('contains the enforced endpoint keys and excludes unenforced keys', () => {
+    expect(SEEDED_ADMIN_PERMISSION_KEYS).toContain('image-storage.read');
+    expect(SEEDED_ADMIN_PERMISSION_KEYS).toContain('admin.users.disable');
+    expect(SEEDED_ADMIN_PERMISSION_KEYS).not.toContain('media.read');
+    expect(SEEDED_ADMIN_PERMISSION_KEYS).not.toContain('admin.users.delete');
+    expect(SEEDED_ADMIN_PERMISSION_KEYS).not.toContain('shipping.shipments.read');
+    expect(SEEDED_ADMIN_PERMISSION_KEYS).not.toContain('shipping.shipments.create');
+    expect(new Set(SEEDED_ADMIN_PERMISSION_KEYS).size).toBe(SEEDED_ADMIN_PERMISSION_KEYS.length);
+  });
+});
+
 describe('admin role grant reconciliation', () => {
   it('translates legacy grants, replaces them only on baseline roles, and preserves custom grants', async () => {
     const legacyGrants = [
@@ -158,6 +170,10 @@ describeDatabase('database seed operation', () => {
     expect(managerPermissions.has('customers.read')).toBe(true);
     expect(managerPermissions.has('admin.roles.read')).toBe(true);
     expect(managerPermissions.has('orders_manage')).toBe(true);
+    expect(managerPermissions.has('image-storage.read')).toBe(true);
+    expect(managerPermissions.has('media.create')).toBe(true);
+    expect(managerPermissions.has('media.read')).toBe(false);
+    expect(managerPermissions.has('admin.users.disable')).toBe(false);
     expect(managerPermissions.has('admin.roles.create')).toBe(false);
     expect(managerPermissions.has('admin.users.create')).toBe(false);
     expect(grants.staff).toEqual(
@@ -167,11 +183,15 @@ describeDatabase('database seed operation', () => {
         'catalog.brands.read',
         'catalog.categories.read',
         'catalog.products.read',
-        'media.read',
+        'image-storage.read',
         'inventory.read',
         'orders.read',
       ]),
     );
+    expect(ownerPermissions.has('admin.users.disable')).toBe(true);
+    expect(ownerPermissions.has('image-storage.read')).toBe(true);
+    expect(ownerPermissions.has('media.read')).toBe(false);
+    expect(ownerPermissions.has('admin.users.delete')).toBe(false);
     expect(grants.support).toEqual(
       new Set(['admin.auth.logout', 'admin.auth.read', 'orders.read', 'customers.read']),
     );
@@ -293,15 +313,16 @@ describeDatabase('database seed operation', () => {
   });
 
   it('rejects incompatible permission groups and rolls back role creation', async () => {
-    await client.adminPermission.create({
-      data: { key: 'catalog.brands.read', groupKey: 'inventory' },
+    await client.adminPermission.update({
+      where: { key: 'catalog.brands.read' },
+      data: { groupKey: 'inventory' },
     });
 
     await expect(seedDatabase(client, null)).rejects.toThrow(
       'Baseline permission "catalog.brands.read" exists in incompatible group "inventory".',
     );
     expect(await client.adminRole.count()).toBe(0);
-    expect(await client.adminPermission.count()).toBe(1);
+    expect(await client.adminPermission.count()).toBe(SEEDED_ADMIN_PERMISSION_KEYS.length);
   });
 
   it('creates only the first owner administrator with an Argon2id hash', async () => {

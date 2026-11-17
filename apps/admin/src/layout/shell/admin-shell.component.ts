@@ -10,7 +10,14 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ToastModule } from 'primeng/toast';
 import { filter } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService } from '../../auth/auth.service';
+import { NotificationService } from '../../core/notifications/notification.service';
+import {
+  extractErrorMessage,
+  isGlobalHttpError,
+  NOTIFICATION_MESSAGES,
+} from '../../core/notifications/notification-messages';
 import { PreferencesService } from '../../core/preferences/preferences.service';
 import { LayoutService } from '../layout.service';
 import { SidebarComponent } from '../sidebar/sidebar.component';
@@ -116,11 +123,13 @@ export class AdminShellComponent {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthService);
   private readonly preferences = inject(PreferencesService);
+  private readonly notification = inject(NotificationService);
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
     this.preferences.restore(this.auth.user?.id ?? null);
     this.layout.onRouteChange(this.router.url);
+    this.refreshPermissions();
 
     this.router.events
       .pipe(
@@ -128,6 +137,21 @@ export class AdminShellComponent {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe((event) => this.layout.onRouteChange(event.urlAfterRedirects));
+  }
+
+  private refreshPermissions(): void {
+    this.auth.refreshPermissions().subscribe({
+      error: (error: unknown) => {
+        // The interceptor already reports global failures. A refresh is a
+        // best-effort update: keep the last snapshot and let the shell render.
+        const status = error instanceof HttpErrorResponse ? error.status : undefined;
+        if (!isGlobalHttpError(status)) {
+          this.notification.error(
+            extractErrorMessage(error, NOTIFICATION_MESSAGES.permission.refreshFailed),
+          );
+        }
+      },
+    });
   }
 
   @HostListener('document:keydown.escape')

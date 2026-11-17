@@ -32,6 +32,51 @@ A rolling deploy may briefly run API instances whose expected version is older t
 schema. Only run migrations after the previous API build is no longer serving, or use expand/contract
 so both builds remain compatible.
 
+## Permission catalog reconciliation
+
+The admin permission catalog is the set of permission keys required by protected admin operations.
+`packages/database/src/seed.ts` is the canonical source: the migration
+`20261115000000_permission_catalog_reconciliation` inserts missing keys, grants the new baseline
+permissions, translates legacy grants, and removes keys no operation enforces. The seed then
+reconciles baseline role grants and stays idempotent, so a drifted installation converges without
+manual SQL.
+
+Only two seeded keys are reserved, because the console shows notification settings before the
+notification-administration endpoints ship:
+
+- `notifications.read`
+- `notifications.test`
+
+Every other seeded key must be required by a protected admin operation or a console check. The API
+test `test/permission-catalog.spec.ts` fails when the OpenAPI contract, controller declarations,
+seed, or console constants disagree.
+
+To reconcile an existing installation:
+
+1. Snapshot the database as in the deployment order above.
+2. Apply the migration and reseed with the migration identity available:
+   ```bash
+   pnpm db:migrate
+   pnpm db:seed
+   ```
+3. Verify the catalog and baseline grants. The owner holds every key; manager holds operational keys
+   plus `image-storage.read` and `admin.roles.read`; staff holds read-only catalog, media, inventory,
+   and order keys; support holds read-only order and customer keys. Custom-role grants survive, and a
+   role holding the legacy `media_read` grant gains `image-storage.read`.
+   ```sql
+   SELECT r.key AS role, p.key AS permission
+   FROM admin_role_permissions rp
+   JOIN admin_roles r ON r.id = rp.role_id
+   JOIN admin_permissions p ON p.id = rp.permission_id
+   WHERE p.key IN ('image-storage.read', 'admin.users.disable')
+   ORDER BY 1, 2;
+   ```
+4. Run `pnpm db:seed` a second time and confirm the catalog and grants do not change.
+
+Keys removed by the migration (`media.read`, `admin.users.delete`, `shipping.shipments.read`,
+`shipping.shipments.create`) are deleted from the catalog with their grants. Legacy rows such as
+`media_read` stay on custom roles so no administrator silently loses a grant they still see.
+
 ## Rollback: restore the snapshot
 
 v1 has no down migrations. A migration mistake is handled by restoring the pre-migration snapshot,

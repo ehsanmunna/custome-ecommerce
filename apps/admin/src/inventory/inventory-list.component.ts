@@ -5,7 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG, AdminAuthConfig } from '../auth/auth.config';
-import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
+import { catchError, EMPTY, finalize, map, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 export interface InventoryItem {
@@ -75,10 +75,12 @@ export class InventoryListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        switchMap(() =>
-          this.http.get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }),
+        switchMap((inventory) =>
+          this.http
+            .get<VariantPage>(`${this.config.apiBaseUrl}/v1/admin/products`, {
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            .pipe(map((variants) => ({ inventory, variants }))),
         ),
         catchError((err: any) => {
           this.error = err?.message ?? 'Failed to load inventory';
@@ -88,12 +90,13 @@ export class InventoryListComponent implements OnInit {
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
-        next: (res) => {
-          const variants: Variant[] = ((res?.items as any[]) ?? []).flatMap(
+        next: ({ inventory, variants }) => {
+          this.inventory = inventory?.items ?? [];
+          const flattened: Variant[] = ((variants?.items as any[]) ?? []).flatMap(
             (p: any) => p.variants || [],
           );
           this.variantSkus = {};
-          for (const v of variants) {
+          for (const v of flattened) {
             this.variantSkus[v.id] = v.sku;
           }
         },

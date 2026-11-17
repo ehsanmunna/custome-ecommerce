@@ -11,6 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NotificationService } from '../core/notifications/notification.service';
@@ -51,6 +52,8 @@ export class OrderStatusComponent implements OnInit {
   statusForm: FormGroup;
   allowedNextStatuses: string[] = [];
 
+  protected readonly permissions = ADMIN_PERMISSIONS;
+
   private readonly destroyRef = inject(DestroyRef);
 
   constructor(
@@ -58,10 +61,11 @@ export class OrderStatusComponent implements OnInit {
     @Inject(AuthService) readonly auth: AuthService,
     @Inject(FormBuilder) private readonly fb: FormBuilder,
     @Inject(ADMIN_AUTH_CONFIG) private readonly config: { apiBaseUrl: string },
-    private readonly route: ActivatedRoute,
+    @Inject(ActivatedRoute) private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly notification: NotificationService,
   ) {
+    this.orderId = this.route.snapshot.paramMap.get('orderId');
     this.statusForm = this.fb.group({
       status: ['', Validators.required],
       note: [''],
