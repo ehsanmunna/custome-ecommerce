@@ -136,8 +136,16 @@ export class RolesService {
       throw new NotFoundException(`Role "${roleId}" not found`);
     }
 
-    if (existing.isSystem && input.scope !== undefined && input.scope !== existing.scope) {
-      throw new ConflictException('Cannot change scope of a system role');
+    if (existing.isSystem) {
+      if (input.scope !== undefined && input.scope !== existing.scope) {
+        throw new ConflictException('Cannot change scope of a system role');
+      }
+      if (input.key !== undefined && input.key !== existing.key) {
+        throw new ConflictException('Cannot change key of a system role');
+      }
+      if (input.name !== undefined && input.name !== existing.name) {
+        throw new ConflictException('Cannot change name of a system role');
+      }
     }
 
     if (input.permissionKeys !== undefined) {

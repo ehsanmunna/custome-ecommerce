@@ -31,6 +31,16 @@ const existingRole: Role = {
   permissions: ['admin.roles.read'],
 };
 
+const systemRole: Role = {
+  id: 'role-owner',
+  key: 'owner',
+  name: 'Owner',
+  description: 'Store owner',
+  scope: 'store',
+  system: true,
+  permissions: ['admin.roles.read'],
+};
+
 @Component({
   standalone: true,
   imports: [AdminRoleFormComponent],
@@ -162,8 +172,39 @@ describe('AdminRoleFormComponent', () => {
     });
 
     const keyInput = fixture.nativeElement.querySelector('#role-key') as HTMLInputElement;
+    const nameInput = fixture.nativeElement.querySelector('#role-name') as HTMLInputElement;
     expect(keyInput.readOnly).toBe(true);
+    expect(nameInput.readOnly).toBe(false);
     expect(fixture.nativeElement.querySelector('.form-scope')?.textContent?.trim()).toBe('Store');
+  });
+
+  it('keeps a system role name immutable while its grants stay editable', () => {
+    const { fixture, host, form } = createFixture((host) => {
+      host.mode = 'edit';
+      host.role = systemRole;
+    });
+
+    const nameInput = fixture.nativeElement.querySelector('#role-name') as HTMLInputElement;
+    expect(nameInput.readOnly).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('System role names cannot be changed.');
+
+    const productCheckbox = (
+      Array.from(
+        fixture.nativeElement.querySelectorAll('.permission-option'),
+      ) as HTMLElement[]
+    )
+      .find((option) => option.textContent?.includes('catalog.products.read'))
+      ?.querySelector('.permission-checkbox') as HTMLInputElement;
+    expect(productCheckbox.disabled).toBe(false);
+    productCheckbox.click();
+    form.submit();
+
+    expect(host.saved).toEqual({
+      key: 'owner',
+      name: 'Owner',
+      description: 'Store owner',
+      permissionKeys: expect.arrayContaining(['admin.roles.read', 'catalog.products.read']),
+    });
   });
 
   it('groups permissions by catalog group and preselects the current grants', () => {

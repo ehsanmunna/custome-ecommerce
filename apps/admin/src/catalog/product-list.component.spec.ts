@@ -1,10 +1,20 @@
 import '@angular/compiler';
+import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { ProductListComponent } from './product-list.component';
 import { AuthService } from '../auth/auth.service';
 import { defaultAdminAuthConfig, AdminAuthConfig } from '../auth/auth.config';
 import { FormBuilder } from '@angular/forms';
 import { MediaListComponent } from './media-list.component';
+import { HttpErrorResponse } from '@angular/common/http';
+
+// Components call `inject(DestroyRef)` in field initializers, so they must be
+// constructed inside an injection context even when a spec uses `new`.
+const testInjector = Injector.create({
+  providers: [{ provide: DestroyRef, useValue: { onDestroy: () => () => {} } }],
+});
+const create = <T>(factory: () => T): T => runInInjectionContext(testInjector, factory);
 
 // Mock localStorage and window for node environment
 const localStorageMock = (() => {
@@ -29,38 +39,35 @@ Object.defineProperty(globalThis, 'confirm', { value: () => true, writable: true
 
 class MockHttpClient {
   private responses: Record<string, any> = {};
+  private errors: Record<string, any> = {};
   private requests: Array<{ method: string; url: string; body?: any; headers?: Record<string, string> }> = [];
 
   setResponse(url: string, response: any) {
     this.responses[url] = response;
   }
 
-  setError(url: string, error: Error) {
-    this.responses[url] = error;
+  setError(url: string, error: unknown) {
+    this.errors[url] = error;
   }
 
-  private request<T>(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
+  private request(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
     this.requests.push({ method, url, body, headers: options?.headers });
-    const response = this.responses[url];
-    if (response instanceof Error) {
-      return { toPromise: () => Promise.reject(response), pipe: (_fn: any) => response as any };
+    if (url in this.errors) {
+      return throwError(() => this.errors[url]);
     }
-    return {
-      toPromise: () => Promise.resolve(response),
-      pipe: <R>(fn: (obs: T) => R) => fn(response),
-    };
+    return of(this.responses[url]);
   }
 
-  get<T>(url: string, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('GET', url, undefined, options);
+  get(url: string, options?: { headers?: Record<string, string> }): any {
+    return this.request('GET', url, undefined, options);
   }
 
-  post<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('POST', url, body, options);
+  post(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('POST', url, body, options);
   }
 
-  patch<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('PATCH', url, body, options);
+  patch(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('PATCH', url, body, options);
   }
 
   delete(url: string, options?: { headers?: Record<string, string> }): any {
@@ -78,6 +85,16 @@ class MockHttpClient {
 
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
+
+const uploadFailed = new HttpErrorResponse({
+  status: 500,
+  error: { message: 'Upload failed' },
+});
+
+const productValidationError = new HttpErrorResponse({
+  status: 400,
+  error: { message: 'Validation failed' },
+});
 
 const mockNotification = {
   success: () => {},
@@ -104,7 +121,7 @@ describe('ProductListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService);
+    component = create(() => new ProductListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService));
   });
 
   afterEach(() => {
@@ -144,7 +161,7 @@ describe('ProductListComponent', () => {
 
     http.setResponse(`${baseUrl}/v1/admin/products`, { id: 'prod-new', categoryId: 'cat-1', status: 'draft', content: {}, variants: [], media: [] });
 
-    component.createForm.setValue({
+    component.createForm.patchValue({
       categoryId: 'cat-1',
       brandId: '',
       status: 'draft',
@@ -152,6 +169,7 @@ describe('ProductListComponent', () => {
       slugEn: 'new-product',
       variantSku: 'SKU-002',
       variantPrice: 1500,
+      mediaIds: [],
     });
     await component.createProduct();
 
@@ -165,9 +183,9 @@ describe('ProductListComponent', () => {
     http.setResponse(`${baseUrl}/v1/admin/brands`, { items: [], total: 0, page: 1, pageSize: 20 });
     await component.ngOnInit();
 
-    http.setError(`${baseUrl}/v1/admin/products`, new Error('Validation failed'));
+    http.setError(`${baseUrl}/v1/admin/products`, productValidationError);
 
-    component.createForm.setValue({
+    component.createForm.patchValue({
       categoryId: 'cat-1',
       brandId: '',
       status: 'draft',
@@ -175,6 +193,7 @@ describe('ProductListComponent', () => {
       slugEn: 'new-product',
       variantSku: 'SKU-002',
       variantPrice: 1500,
+      mediaIds: [],
     });
     await component.createProduct();
 
@@ -207,7 +226,7 @@ describe('MediaListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new MediaListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService);
+    component = create(() => new MediaListComponent(http as any, auth, new FormBuilder(), config, mockNotification, mockImageService));
   });
 
   afterEach(() => {
@@ -239,7 +258,7 @@ describe('MediaListComponent', () => {
   });
 
   it('should handle media upload failure', async () => {
-    http.setError(`${baseUrl}/v1/image-storage/upload`, new Error('Upload failed'));
+    http.setError(`${baseUrl}/v1/image-storage/upload`, uploadFailed);
 
     component.uploadForm.setValue({
       file: new File(['test'], 'image.jpg', { type: 'image/jpeg' }),
@@ -267,7 +286,7 @@ describe('InventoryListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new InventoryListComponent(http as any, auth, config);
+    component = create(() => new InventoryListComponent(http as any, auth, config));
   });
 
   afterEach(() => {
@@ -298,12 +317,22 @@ describe('InventoryListComponent', () => {
       page: 1,
       pageSize: 20,
     });
+    http.setResponse(`${baseUrl}/v1/admin/products`, {
+      items: [
+        { id: 'prod-1', variants: [{ id: 'var-1', sku: 'SKU-1' }] },
+        { id: 'prod-2', variants: [{ id: 'var-2', sku: 'SKU-2' }] },
+      ],
+      total: 2,
+      page: 1,
+      pageSize: 20,
+    });
 
     await component.ngOnInit();
 
     expect(component.inventory.length).toBe(2);
     expect(component.inventory[0].lowStock).toBe(false);
     expect(component.inventory[1].lowStock).toBe(true);
+    expect(component.variantSkus['var-1']).toBe('SKU-1');
   });
 
   it('should filter to low stock items only', async () => {
@@ -343,7 +372,7 @@ describe('InventoryAdjustmentComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new InventoryAdjustmentComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = create(() => new InventoryAdjustmentComponent(http as any, auth, new FormBuilder(), config, mockNotification));
   });
 
   afterEach(() => {
@@ -438,7 +467,7 @@ describe('InventoryReservationComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new InventoryReservationComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = create(() => new InventoryReservationComponent(http as any, auth, new FormBuilder(), config, mockNotification));
   });
 
   afterEach(() => {
@@ -476,7 +505,7 @@ describe('InventoryReservationComponent', () => {
       source: 'manual',
     });
 
-    component.createForm.setValue({
+    component.createForm.patchValue({
       variantId: 'var-1',
       quantity: 3,
       expiresAt: '',
@@ -499,7 +528,7 @@ describe('StockMovementsComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new StockMovementsComponent(http as any, auth, config);
+    component = create(() => new StockMovementsComponent(http as any, auth, config));
   });
 
   afterEach(() => {
@@ -532,7 +561,7 @@ describe('StockMovementsComponent', () => {
     await component.ngOnInit();
 
     expect(component.movements.length).toBe(2);
-    expect(component.movements[0].type).toBe('reservation');
-    expect(component.movements[1].type).toBe('release');
+    expect(component.movements[0].type).toBe('Reservation');
+    expect(component.movements[1].type).toBe('Release');
   });
 });

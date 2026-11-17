@@ -14,6 +14,7 @@ import { TranslocoPipe } from '@jsverse/transloco';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { NotificationService } from '../core/notifications/notification.service';
 import { NOTIFICATION_MESSAGES, extractErrorMessage } from '../core/notifications/notification-messages';
 
@@ -96,7 +97,7 @@ export interface AdminRole {
                 <p class="form-error">Select a role.</p>
               }
             </div>
-            @if (mode === 'edit') {
+            @if (mode === 'edit' && !lockStatus) {
               <div class="form-field">
                 <label class="form-label">Status</label>
                 <select formControlName="status" class="form-select">
@@ -215,6 +216,7 @@ export class AdminUserFormComponent implements OnInit {
   @Input() saving = false;
   @Input() roles: AdminRole[] = [];
   @Input() user: AdminUser | null = null;
+  @Input() lockStatus = false;
 
   @Output() save = new EventEmitter<{ email?: string; password?: string; displayName: string; status?: 'active' | 'disabled'; roleId: string }>();
   @Output() cancel = new EventEmitter<void>();
@@ -258,7 +260,7 @@ export class AdminUserFormComponent implements OnInit {
     this.save.emit({
       ...(this.mode === 'create' ? { email: value.email, password: value.password } : {}),
       displayName: value.displayName,
-      ...(this.mode === 'edit' ? { status: value.status } : {}),
+      ...(this.mode === 'edit' && !this.lockStatus ? { status: value.status } : {}),
       roleId: value.roleId,
     });
   }
@@ -283,12 +285,14 @@ export class AdminUserFormComponent implements OnInit {
       </h1>
 
       <div class="flex items-center gap-2 mb-4">
-        <p-button
-          label="Add administrator"
-          severity="primary"
-          [disabled]="creating || updating || saving"
-          (onClick)="openCreateModal()"
-        ></p-button>
+        @if (auth.hasPermission(permissions.users.create)) {
+          <p-button
+            label="Add administrator"
+            severity="primary"
+            [disabled]="creating || updating || saving"
+            (onClick)="openCreateModal()"
+          ></p-button>
+        }
       </div>
 
       @if (error) {
@@ -327,7 +331,7 @@ export class AdminUserFormComponent implements OnInit {
                 </span>
               </td>
               <td class="py-3 text-left">
-                @if (auth.hasPermission('admin.users.update')) {
+                @if (auth.hasPermission(permissions.users.update)) {
                   <button
                     type="button"
                     class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -338,7 +342,7 @@ export class AdminUserFormComponent implements OnInit {
                   </button>
                 }
                 @if (user.status === 'active') {
-                  @if (auth.hasPermission('admin.users.disable')) {
+                  @if (auth.hasPermission(permissions.users.disable) && !isSelf(user)) {
                     <button
                       type="button"
                       class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"
@@ -349,7 +353,7 @@ export class AdminUserFormComponent implements OnInit {
                     </button>
                   }
                 } @else {
-                  @if (auth.hasPermission('admin.users.update')) {
+                  @if (auth.hasPermission(permissions.users.update)) {
                     <button
                       type="button"
                       class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"
@@ -402,6 +406,7 @@ export class AdminUserFormComponent implements OnInit {
         [user]="editingUser"
         [roles]="roles"
         [saving]="creating || updating"
+        [lockStatus]="editingUser ? isSelf(editingUser) : false"
         (save)="onFormSave($event)"
         (cancel)="closeModal()"
       ></app-admin-user-form>
@@ -429,6 +434,7 @@ export class AdminUsersListComponent implements OnInit {
 
   private readonly http: HttpClient;
   readonly auth: AuthService;
+  protected readonly permissions = ADMIN_PERMISSIONS;
   private readonly config: { apiBaseUrl: string };
   private readonly notification: NotificationService;
   private readonly fb: FormBuilder;
@@ -525,6 +531,10 @@ export class AdminUsersListComponent implements OnInit {
     this.saving = false;
     this.creating = false;
     this.updating = false;
+  }
+
+  isSelf(user: AdminUser): boolean {
+    return this.auth.currentUser()?.id === user.id;
   }
 
   onFormSave(value: { email?: string; password?: string; displayName: string; status?: 'active' | 'disabled'; roleId: string }): void {

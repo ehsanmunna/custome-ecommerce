@@ -36,7 +36,6 @@ export interface ReturnPage {
   pageSize: number;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const RETURN_STATUSES = ['requested', 'approved', 'rejected', 'received', 'refunded', 'cancelled'];
 
 @Component({

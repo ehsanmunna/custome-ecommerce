@@ -1,10 +1,20 @@
 import '@angular/compiler';
+import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { PageListComponent } from './page-list.component';
 import { BannerListComponent } from './banner-list.component';
 import { AuthService } from '../auth/auth.service';
 import { defaultAdminAuthConfig, AdminAuthConfig } from '../auth/auth.config';
 import { FormBuilder } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+
+// Components call `inject(DestroyRef)` in field initializers, so they must be
+// constructed inside an injection context even when a spec uses `new`.
+const testInjector = Injector.create({
+  providers: [{ provide: DestroyRef, useValue: { onDestroy: () => () => {} } }],
+});
+const create = <T>(factory: () => T): T => runInInjectionContext(testInjector, factory);
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
@@ -28,38 +38,35 @@ Object.defineProperty(globalThis, 'confirm', { value: () => true, writable: true
 
 class MockHttpClient {
   private responses: Record<string, any> = {};
+  private errors: Record<string, any> = {};
   private requests: Array<{ method: string; url: string; body?: any; headers?: Record<string, string> }> = [];
 
   setResponse(url: string, response: any) {
     this.responses[url] = response;
   }
 
-  setError(url: string, error: Error) {
-    this.responses[url] = error;
+  setError(url: string, error: unknown) {
+    this.errors[url] = error;
   }
 
-  private request<T>(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
+  private request(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
     this.requests.push({ method, url, body, headers: options?.headers });
-    const response = this.responses[url];
-    if (response instanceof Error) {
-      return { toPromise: () => Promise.reject(response), pipe: (_fn: any) => response as any };
+    if (url in this.errors) {
+      return throwError(() => this.errors[url]);
     }
-    return {
-      toPromise: () => Promise.resolve(response),
-      pipe: <R>(fn: (obs: T) => R) => fn(response),
-    };
+    return of(this.responses[url]);
   }
 
-  get<T>(url: string, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('GET', url, undefined, options);
+  get(url: string, options?: { headers?: Record<string, string> }): any {
+    return this.request('GET', url, undefined, options);
   }
 
-  post<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('POST', url, body, options);
+  post(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('POST', url, body, options);
   }
 
-  patch<T>(url: string, body: any, options?: { headers?: Record<string, string> }): any {
-    return this.request<T>('PATCH', url, body, options);
+  patch(url: string, body: any, options?: { headers?: Record<string, string> }): any {
+    return this.request('PATCH', url, body, options);
   }
 
   delete(url: string, options?: { headers?: Record<string, string> }): any {
@@ -77,6 +84,11 @@ class MockHttpClient {
 
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
+
+const forbiddenError = new HttpErrorResponse({
+  status: 403,
+  error: { message: 'Forbidden: insufficient permissions' },
+});
 
 const mockNotification = {
   success: () => {},
@@ -96,7 +108,7 @@ describe('PageListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new PageListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = create(() => new PageListComponent(http as any, auth, new FormBuilder(), config, mockNotification));
   });
 
   afterEach(() => {
@@ -163,7 +175,7 @@ describe('PageListComponent', () => {
   });
 
   it('should handle permission-denied page creation', async () => {
-    http.setError(`${baseUrl}/v1/admin/pages`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/pages`, forbiddenError);
 
     component.createForm.setValue({
       titleEn: 'Restricted',
@@ -202,7 +214,7 @@ describe('BannerListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new BannerListComponent(http as any, auth, new FormBuilder(), config, mockNotification);
+    component = create(() => new BannerListComponent(http as any, auth, new FormBuilder(), config, mockNotification));
   });
 
   afterEach(() => {
@@ -283,7 +295,7 @@ describe('BannerListComponent', () => {
   });
 
   it('should handle permission-denied banner creation', async () => {
-    http.setError(`${baseUrl}/v1/admin/banners`, new Error('Forbidden: insufficient permissions'));
+    http.setError(`${baseUrl}/v1/admin/banners`, forbiddenError);
 
     component.createForm.setValue({
       placement: 'restricted',

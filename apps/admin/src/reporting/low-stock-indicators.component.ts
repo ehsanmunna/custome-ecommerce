@@ -4,6 +4,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { catchError, EMPTY, finalize } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -35,13 +36,13 @@ export interface InventoryPage {
 
       <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Low Stock Indicators</h1>
 
-      @if (!auth.hasPermission('inventory.read')) {
+      @if (!auth.hasPermission(permissions.inventory.read)) {
         <div class="text-[var(--color-danger)] mb-4">
           You do not have permission to view low-stock indicators.
         </div>
       }
 
-      @if (auth.hasPermission('inventory.read')) {
+      @if (auth.hasPermission(permissions.inventory.read)) {
         <div class="flex gap-2 mb-4 items-center flex-wrap">
           <button
             (click)="loadLowStock()"
@@ -124,6 +125,7 @@ export class LowStockIndicatorsComponent implements OnInit {
   error: string | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
+  protected readonly permissions = ADMIN_PERMISSIONS;
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,

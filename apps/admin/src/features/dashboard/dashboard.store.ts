@@ -1,6 +1,14 @@
 import { inject, Injectable, signal, computed } from '@angular/core';
 import { DashboardService } from './dashboard.service';
-import type { DashboardRange, AsyncState, DashboardOverview } from './dashboard.models';
+import {
+  DASHBOARD_WIDGETS,
+  dashboardWidgetPermission,
+  type AsyncState,
+  type DashboardRange,
+  type DashboardOverview,
+  type DashboardWidget,
+} from './dashboard.models';
+import { AuthService } from '../../auth/auth.service';
 
 export interface DashboardWidgetState {
   orders: AsyncState<{ today: { orderCount: number; revenue: number }; yesterday: { orderCount: number; revenue: number } }>;
@@ -17,8 +25,9 @@ export interface DashboardWidgetState {
 @Injectable({ providedIn: 'root' })
 export class DashboardStore {
   private readonly service = inject(DashboardService);
+  private readonly auth = inject(AuthService);
 
-  private readonly _state = signal<DashboardWidgetState | null>(null);
+  private readonly _state = signal<Partial<DashboardOverview> | null>(null);
   private readonly _loading = signal(false);
   private readonly _error = signal<string | null>(null);
 
@@ -26,24 +35,21 @@ export class DashboardStore {
   readonly loading = computed(() => this._loading());
   readonly error = computed(() => this._error());
   readonly range = computed(() => this.service.dashboardRange());
+  readonly visibleWidgets = computed<DashboardWidget[]>(() =>
+    DASHBOARD_WIDGETS.filter((widget) => this.canView(widget)),
+  );
+
+  canView(widget: DashboardWidget): boolean {
+    return this.auth.hasPermission(dashboardWidgetPermission(widget));
+  }
 
   load(): void {
     this._loading.set(true);
     this._error.set(null);
 
     this.service.loadOverview().subscribe({
-      next: (overview: DashboardOverview) => {
-        this._state.set({
-          orders: { status: 'ready', data: overview.orders.data },
-          revenue: { status: 'ready', data: overview.revenue.data },
-          newCustomers: { status: 'ready', data: overview.newCustomers.data, isSample: overview.newCustomers.isSample },
-          lowStockCount: { status: 'ready', data: overview.lowStockCount.data },
-          revenueChart: { status: 'ready', data: overview.revenueChart.data, isSample: overview.revenueChart.isSample },
-          recentOrders: { status: 'ready', data: overview.recentOrders.data },
-          topProducts: { status: 'ready', data: overview.topProducts.data, isSample: overview.topProducts.isSample },
-          orderStatus: { status: 'ready', data: overview.orderStatus.data },
-          lowStockAlerts: { status: 'ready', data: overview.lowStockAlerts.data },
-        });
+      next: (overview: Partial<DashboardOverview>) => {
+        this._state.set(overview);
       },
       error: (err: unknown) => {
         const message = err instanceof Error ? err.message : 'Failed to load dashboard';
@@ -64,9 +70,5 @@ export class DashboardStore {
     if (!s) return false;
     const widgetState = s[widget] as { isSample?: boolean } | undefined;
     return widgetState?.isSample === true;
-  }
-
-  hasPermission(_permission: string): boolean {
-    return true;
   }
 }

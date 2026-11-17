@@ -18,38 +18,46 @@ export interface OverviewAsyncState {
   imports: [StatCardComponent, TranslocoPipe],
   template: `
     <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-      <app-stat-card
-        [value]="ordersValue()"
-        [label]="'dashboard.ordersToday' | transloco"
-        [icon]="'pi pi-shopping-cart'"
-        [delta]="ordersDelta()"
-        [deltaDirection]="ordersDeltaDirection()"
-        [status]="orders().status"
-        (retry)="onRetry('orders')"
-      />
-      <app-stat-card
-        [value]="revenueValue()"
-        [label]="'dashboard.revenueToday' | transloco"
-        [icon]="'pi pi-money-bill'"
-        [delta]="revenueDelta()"
-        [deltaDirection]="revenueDeltaDirection()"
-        [status]="revenue().status"
-        (retry)="onRetry('revenue')"
-      />
-      <app-stat-card
-        [value]="newCustomersValue()"
-        [label]="'dashboard.newCustomers' | transloco"
-        [icon]="'pi pi-user-plus'"
-        [status]="newCustomers().status"
-        (retry)="onRetry('newCustomers')"
-      />
-      <app-stat-card
-        [value]="lowStockValue()"
-        [label]="'dashboard.lowStockProducts' | transloco"
-        [icon]="'pi pi-exclamation-triangle'"
-        [status]="lowStockCount().status"
-        (retry)="onRetry('lowStockCount')"
-      />
+      @if (showOrders()) {
+        <app-stat-card
+          [value]="ordersValue()"
+          [label]="'dashboard.ordersToday' | transloco"
+          [icon]="'pi pi-shopping-cart'"
+          [delta]="ordersDelta()"
+          [deltaDirection]="ordersDeltaDirection()"
+          [status]="orders().status"
+          (retry)="onRetry('orders')"
+        />
+      }
+      @if (showRevenue()) {
+        <app-stat-card
+          [value]="revenueValue()"
+          [label]="'dashboard.revenueToday' | transloco"
+          [icon]="'pi pi-money-bill'"
+          [delta]="revenueDelta()"
+          [deltaDirection]="revenueDeltaDirection()"
+          [status]="revenue().status"
+          (retry)="onRetry('revenue')"
+        />
+      }
+      @if (showNewCustomers()) {
+        <app-stat-card
+          [value]="newCustomersValue()"
+          [label]="'dashboard.newCustomers' | transloco"
+          [icon]="'pi pi-user-plus'"
+          [status]="newCustomers().status"
+          (retry)="onRetry('newCustomers')"
+        />
+      }
+      @if (showLowStock()) {
+        <app-stat-card
+          [value]="lowStockValue()"
+          [label]="'dashboard.lowStockProducts' | transloco"
+          [icon]="'pi pi-exclamation-triangle'"
+          [status]="lowStockCount().status"
+          (retry)="onRetry('lowStockCount')"
+        />
+      }
     </div>
   `,
 })
@@ -67,6 +75,10 @@ export class StatCardsWidgetComponent {
     data?: number;
     error?: string;
   }>();
+  readonly showOrders = input(true);
+  readonly showRevenue = input(true);
+  readonly showNewCustomers = input(true);
+  readonly showLowStock = input(true);
   readonly retry = output<string>();
 
   readonly ordersValue = computed(() => {

@@ -26,8 +26,9 @@
     </div>
   }
 
-  <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Reservation</h2>
-  <form
+  @if (auth.hasPermission(permissions.inventory.adjust)) {
+    <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Create Reservation</h2>
+    <form
     [formGroup]="createForm"
     (ngSubmit)="createReservation()"
     class="flex gap-2 mb-6 items-end flex-wrap"
@@ -61,12 +62,13 @@
     </div>
     <button
       type="submit"
-      [disabled]="createForm.invalid || creating || !auth.hasPermission('inventory.adjust')"
+      [disabled]="createForm.invalid || creating || !auth.hasPermission(permissions.inventory.adjust)"
       class="px-4 py-2 border-none rounded-md cursor-pointer opacity-60:cursor-not-allowed bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
     >
       Create Reservation
     </button>
   </form>
+  }
 
   <h2 class="mt-0 text-lg font-semibold text-[var(--color-text)]">Existing Reservations</h2>
   @if (reservations.length) {
@@ -127,7 +129,7 @@
               {{ r.expiresAt || '-' }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">
-              @if (r.status === 'active' && auth.hasPermission('inventory.adjust')) {
+              @if (r.status === 'active' && auth.hasPermission(permissions.inventory.adjust)) {
                 <button
                   (click)="releaseReservation(r.id)"
                   [disabled]="processingId === r.id"
@@ -136,7 +138,7 @@
                   Release
                 </button>
               }
-              @if (r.status === 'active' && auth.hasPermission('inventory.adjust')) {
+              @if (r.status === 'active' && auth.hasPermission(permissions.inventory.adjust)) {
                 <button
                   (click)="commitReservation(r.id)"
                   [disabled]="processingId === r.id"

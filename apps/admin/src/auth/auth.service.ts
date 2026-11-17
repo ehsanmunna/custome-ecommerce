@@ -1,5 +1,5 @@
-import { Inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { computed, Inject, Injectable, signal } from '@angular/core';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { catchError, Observable, of, tap, throwError } from 'rxjs';
 import type { components } from 'api-sdk';
 import { ADMIN_AUTH_CONFIG, type AdminAuthConfig } from './auth.config';
@@ -21,7 +21,12 @@ export class AuthService {
   private accessToken: string | null = null;
   private refreshToken: string | null = null;
   private expiresAt: number | null = null;
-  private currentUser: AdminUser | null = null;
+
+  private readonly currentUserState = signal<AdminUser | null>(null);
+  readonly currentUser = this.currentUserState.asReadonly();
+  readonly permissionSet = computed(
+    () => new Set<string>(this.currentUserState()?.permissions ?? []),
+  );
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,
@@ -42,15 +47,15 @@ export class AuthService {
 
     const storedUser = this.storage.getItem(this.config.userStorageKey);
     if (storedUser === null) {
-      this.currentUser = null;
+      this.currentUserState.set(null);
       return;
     }
 
     try {
       const parsedUser: unknown = JSON.parse(storedUser);
-      this.currentUser = isAdminUser(parsedUser) ? parsedUser : null;
+      this.currentUserState.set(isAdminUser(parsedUser) ? parsedUser : null);
     } catch {
-      this.currentUser = null;
+      this.currentUserState.set(null);
     }
   }
 
@@ -75,8 +80,8 @@ export class AuthService {
       this.storage.removeItem(this.config.expiryStorageKey);
     }
 
-    if (this.currentUser) {
-      this.storage.setItem(this.config.userStorageKey, JSON.stringify(this.currentUser));
+    if (this.currentUserState()) {
+      this.storage.setItem(this.config.userStorageKey, JSON.stringify(this.currentUserState()));
     } else {
       this.storage.removeItem(this.config.userStorageKey);
     }
@@ -105,27 +110,19 @@ export class AuthService {
   }
 
   get user(): AdminUser | null {
-    return this.currentUser;
+    return this.currentUserState();
   }
 
   get role(): AdminRole | null {
-    return this.currentUser?.role ?? null;
+    return this.currentUserState()?.role ?? null;
   }
 
   get roleKey(): string | null {
     return this.role?.key ?? null;
   }
 
-  hasRole(role: string): boolean {
-    return this.roleKey === role;
-  }
-
-  hasAnyRole(roles: readonly string[]): boolean {
-    return this.roleKey !== null && roles.includes(this.roleKey);
-  }
-
   hasPermission(permission: string): boolean {
-    return this.currentUser?.permissions?.includes(permission) ?? false;
+    return this.permissionSet().has(permission);
   }
 
   hasAnyPermission(permissions: readonly string[]): boolean {
@@ -167,13 +164,25 @@ export class AuthService {
       headers: { Authorization: `Bearer ${this.accessToken}` },
     }).pipe(
       tap((user) => {
-        this.currentUser = user;
+        this.currentUserState.set(user);
         this.persistToStorage();
       }),
-      catchError((error) => {
-        throw new Error('Failed to load current user: ' + (error instanceof Error ? error.message : String(error)));
+      catchError((error: unknown) => {
+        if (error instanceof HttpErrorResponse) {
+          // Preserve the response so callers can distinguish request failures
+          // from transport errors and report them consistently.
+          return throwError(() => error);
+        }
+        throw new Error(
+          'Failed to load current user: ' + (error instanceof Error ? error.message : String(error)),
+        );
       })
     );
+  }
+
+  refreshPermissions(): Observable<AdminUser> {
+    // `me()` keeps the last known snapshot when the request fails.
+    return this.me();
   }
 
   logout(): Observable<void> {
@@ -198,7 +207,7 @@ export class AuthService {
     this.accessToken = null;
     this.refreshToken = null;
     this.expiresAt = null;
-    this.currentUser = null;
+    this.currentUserState.set(null);
     this.persistToStorage();
   }
 
@@ -209,7 +218,7 @@ export class AuthService {
       ? Date.now() + session.expiresIn * 1000
       : null;
     if (session.user) {
-      this.currentUser = session.user;
+      this.currentUserState.set(session.user);
     }
     this.persistToStorage();
   }

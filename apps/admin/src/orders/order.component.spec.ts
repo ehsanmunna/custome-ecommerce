@@ -1,11 +1,21 @@
 import '@angular/compiler';
+import { DestroyRef, Injector, runInInjectionContext } from '@angular/core';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { OrderListComponent } from './order-list.component';
 import { OrderDetailComponent } from './order-detail.component';
 import { OrderStatusComponent } from './order-status.component';
 import { AuthService } from '../auth/auth.service';
 import { defaultAdminAuthConfig, AdminAuthConfig } from '../auth/auth.config';
 import { FormBuilder } from '@angular/forms';
+import { HttpErrorResponse } from '@angular/common/http';
+
+// Components call `inject(DestroyRef)` in field initializers, so they must be
+// constructed inside an injection context even when a spec uses `new`.
+const testInjector = Injector.create({
+  providers: [{ provide: DestroyRef, useValue: { onDestroy: () => () => {} } }],
+});
+const create = <T>(factory: () => T): T => runInInjectionContext(testInjector, factory);
 
 // Mock localStorage and window for node environment
 const localStorageMock = (() => {
@@ -30,26 +40,23 @@ Object.defineProperty(globalThis, 'confirm', { value: () => true, writable: true
 
 class MockHttpClient {
   private responses: Record<string, any> = {};
+  private errors: Record<string, any> = {};
   private requests: Array<{ method: string; url: string; body?: any; headers?: Record<string, string> }> = [];
 
   setResponse(url: string, response: any) {
     this.responses[url] = response;
   }
 
-  setError(url: string, error: Error) {
-    this.responses[url] = error;
+  setError(url: string, error: unknown) {
+    this.errors[url] = error;
   }
 
   private request(method: string, url: string, body?: any, options?: { headers?: Record<string, string> }): any {
     this.requests.push({ method, url, body, headers: options?.headers });
-    const response = this.responses[url];
-    if (response instanceof Error) {
-      return { toPromise: () => Promise.reject(response), pipe: (_fn: any) => response as any };
+    if (url in this.errors) {
+      return throwError(() => this.errors[url]);
     }
-    return {
-      toPromise: () => Promise.resolve(response),
-      pipe: <R>(fn: (obs: any) => R) => fn(response),
-    };
+    return of(this.responses[url]);
   }
 
   get(url: string, options?: { headers?: Record<string, string> }): any {
@@ -72,6 +79,11 @@ class MockHttpClient {
 const baseUrl = 'http://localhost:4000';
 const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl };
 
+const invalidTransition = new HttpErrorResponse({
+  status: 422,
+  error: { message: 'Invalid transition' },
+});
+
 const mockNotification = {
   success: () => {},
   error: () => {},
@@ -90,7 +102,7 @@ describe('OrderListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new OrderListComponent(http as any, auth, config);
+    component = create(() => new OrderListComponent(http as any, auth, config));
   });
 
   afterEach(() => {
@@ -159,7 +171,7 @@ describe('OrderDetailComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new OrderDetailComponent(http as any, auth, config, { snapshot: { paramMap: { get: () => 'order-1' } } } as any);
+    component = create(() => new OrderDetailComponent(http as any, auth, config, { snapshot: { paramMap: { get: () => 'order-1' } } } as any));
   });
 
   afterEach(() => {
@@ -235,7 +247,7 @@ describe('OrderStatusComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new OrderStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'order-1' } } } as any, {} as any, mockNotification);
+    component = create(() => new OrderStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'order-1' } } } as any, {} as any, mockNotification));
   });
 
   afterEach(() => {
@@ -288,7 +300,7 @@ describe('OrderStatusComponent', () => {
     });
     await component.loadOrder();
 
-    http.setError(`${baseUrl}/v1/admin/orders/order-1/status`, new Error('Invalid transition'));
+    http.setError(`${baseUrl}/v1/admin/orders/order-1/status`, invalidTransition);
 
     component.statusForm.setValue({ status: 'returned', note: '' });
     await component.changeStatus();
@@ -318,7 +330,7 @@ describe('ReturnListComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ReturnListComponent(http as any, auth, config);
+    component = create(() => new ReturnListComponent(http as any, auth, config));
   });
 
   afterEach(() => {
@@ -386,7 +398,7 @@ describe('ReturnStatusComponent', () => {
     auth.clear();
     localStorage.clear();
 
-    component = new ReturnStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'ret-1' } } } as any, {} as any, mockNotification);
+    component = create(() => new ReturnStatusComponent(http as any, auth, new FormBuilder(), config, { snapshot: { paramMap: { get: () => 'ret-1' } } } as any, {} as any, mockNotification));
   });
 
   afterEach(() => {
@@ -440,7 +452,7 @@ describe('ReturnStatusComponent', () => {
     });
     await component.loadReturn();
 
-    http.setError(`${baseUrl}/v1/admin/returns/ret-1/status`, new Error('Invalid transition'));
+    http.setError(`${baseUrl}/v1/admin/returns/ret-1/status`, invalidTransition);
 
     component.statusForm.setValue({ status: 'refunded', note: '' });
     await component.changeStatus();

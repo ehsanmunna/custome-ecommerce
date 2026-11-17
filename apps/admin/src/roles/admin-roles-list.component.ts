@@ -5,6 +5,7 @@ import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
 import { ButtonModule } from 'primeng/button';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { NotificationService } from '../core/notifications/notification.service';
 import {
   extractErrorMessage,
@@ -35,7 +36,7 @@ type RoleTypeFilter = 'all' | 'system' | 'custom';
   template: `
     <div class="mx-auto max-w-[1200px] p-4">
       <app-page-header title="Roles" [breadcrumbs]="breadcrumbs">
-        @if (auth.hasPermission('admin.roles.create')) {
+        @if (auth.hasPermission(permissionKeys.roles.create)) {
           <p-button
             label="New role"
             severity="primary"
@@ -100,10 +101,10 @@ type RoleTypeFilter = 'all' | 'system' | 'custom';
                 </td>
                 <td class="py-3 text-[var(--color-text)]">{{ role.permissions.length }}</td>
                 <td class="py-3 text-left">
-                  @if (auth.hasPermission('admin.roles.update')) {
+                  @if (auth.hasPermission(permissionKeys.roles.update)) {
                     <button type="button" class="role-edit" (click)="openEditModal(role)">Edit</button>
                   }
-                  @if (auth.hasPermission('admin.roles.delete') && !role.system) {
+                  @if (auth.hasPermission(permissionKeys.roles.delete) && !role.system) {
                     <button
                       type="button"
                       class="role-delete"
@@ -166,6 +167,7 @@ export class AdminRolesListComponent implements OnInit {
 
   private readonly http: HttpClient;
   readonly auth: AuthService;
+  protected readonly permissionKeys = ADMIN_PERMISSIONS;
   private readonly config: { apiBaseUrl: string };
   private readonly notification: NotificationService;
 
@@ -279,7 +281,11 @@ export class AdminRolesListComponent implements OnInit {
       this.http
         .patch(`${this.config.apiBaseUrl}/v1/admin/roles/${roleId}`, body, { headers })
         .subscribe({
-          next: () => this.finishSave(NOTIFICATION_MESSAGES.role.update),
+          next: () =>
+            this.finishSave(
+              NOTIFICATION_MESSAGES.role.update,
+              roleId === this.auth.role?.id,
+            ),
           error: (err: unknown) => {
             this.saving = false;
             this.reportError(err, NOTIFICATION_MESSAGES.role.updateFailed);
@@ -305,11 +311,28 @@ export class AdminRolesListComponent implements OnInit {
     });
   }
 
-  private finishSave(message: string): void {
+  private finishSave(message: string, refreshOwnPermissions = false): void {
     this.saving = false;
     this.closeModal();
     this.notification.success(message);
     this.loadRoles();
+
+    if (refreshOwnPermissions) {
+      this.refreshOwnPermissions();
+    }
+  }
+
+  private refreshOwnPermissions(): void {
+    this.auth.refreshPermissions().subscribe({
+      error: (error: unknown) => {
+        const status = error instanceof HttpErrorResponse ? error.status : undefined;
+        if (!isGlobalHttpError(status)) {
+          this.notification.error(
+            extractErrorMessage(error, NOTIFICATION_MESSAGES.permission.refreshFailed),
+          );
+        }
+      },
+    });
   }
 
   deleteRole(role: Role): void {

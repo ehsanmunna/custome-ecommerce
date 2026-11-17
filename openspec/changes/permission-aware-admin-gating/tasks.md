@@ -1,0 +1,50 @@
+# Tasks
+
+## 1. Reconcile the permission catalog and data
+
+- [x] 1.1 Update `packages/database/src/seed.ts` to add `image-storage.read`, retain `admin.users.disable`, remove the unenforced `media.read` and `admin.users.delete` keys, grant `image-storage.read` to owner, manager, and staff, and translate legacy `media_read` and `media_manage` grants. Verify with a seed unit test asserting the canonical key list and each baseline role's grants.
+- [x] 1.2 Add the catalog consistency test comparing OpenAPI `x-required-permission` values, controller `permission` declarations, seeded keys, and console constants, with `notifications.read` and `notifications.test` as the only reserved entries. Verify the test fails when a key is removed from one layer and passes with `pnpm --filter api test`.
+- [x] 1.3 Add the Prisma migration that inserts missing catalog rows, grants the baseline permissions, translates legacy custom-role grants, and deletes the grant rows and catalog rows for the removed keys. Verify by applying `pnpm db:migrate` and `pnpm db:seed` to a database seeded from the previous revision, then compare catalog and grants against the canonical seed.
+- [x] 1.4 Document the reserved permission keys and the migration and reseed procedure in `docs/database-operations.md`. Verify the documented commands run as written on a drifted database copy.
+
+## 2. Align the API role contract and protections
+
+- [x] 2.1 Tighten `roleKeySchema` in `apps/api/src/roles/roles.schemas.ts` to `^[a-z][a-z0-9_]*$` and update the roles API tests to assert validation errors for hyphens, dots, uppercase letters, and leading digits. Verify `pnpm --filter api test` passes and a rejected key returns 400 rather than 500.
+- [x] 2.2 Reject system-role key and name changes and system-role deletion in the roles service while keeping grant edits available to `admin.roles.update`. Verify with service tests covering rejected rename, rejected delete, and an accepted grant update.
+- [x] 2.3 Reject an administrator disabling their own account in the administrator API using the authenticated administrator's identity. Verify with an API test that self-disable fails and disabling another administrator succeeds.
+- [x] 2.4 Update the OpenAPI role-key documentation and any affected contract examples. Verify `pnpm contract:check` and `pnpm contract:lint` pass.
+
+## 3. Build the console permission foundation
+
+- [x] 3.1 Add the typed `ADMIN_PERMISSIONS` constant map in `apps/admin/src/core/auth/` and replace literal permission strings in routes, menu, and action checks with those constants. Verify the admin typecheck passes and no route or menu entry contains a raw permission string.
+- [x] 3.2 Convert the current administrator identity in `AuthService` to a signal-backed snapshot, expose a reactive permission set and `refreshPermissions()`, and keep `hasPermission`/`hasAnyPermission` reading the signal. Verify auth service tests cover restore, refresh success, refresh failure retaining the last snapshot, and signal-driven permission changes.
+- [x] 3.3 Replace `roleGuard` and the route `roles` metadata with the permission guard and route requirements from `design.md`, including the any-of dashboard and settings requirements. Verify guard tests cover allowed, denied, unauthenticated, and any-of cases, and update the route declaration tests.
+- [x] 3.4 Replace menu `roles` fields with the matching permission requirements, filter the tree from the reactive snapshot, and omit groups with no visible children. Verify the menu tests cover permitted entries, hidden entries, empty groups, and menu-route permission parity.
+- [x] 3.5 Refresh the permission snapshot when the authenticated shell initializes, once after a 403 authorization denial, and after saving a role that includes the administrator's own role. Verify interceptor and roles-save tests show updated navigation and actions without a reload, with no automatic retry loop on denial.
+- [x] 3.6 Update `docs/adminuserflow.md` to describe permission-based navigation, action visibility, and snapshot refresh. Verify the documented behavior matches the implemented route and menu mapping.
+
+## 4. Gate page actions
+
+- [x] 4.1 Gate product and variant create, edit, delete, and media-attach actions in the catalog product and variant screens on their API permissions, reusing the existing shared layout components. Verify component tests show read-only rendering without write permissions and available actions with them.
+- [x] 4.2 Gate category, attribute, brand, and media upload/delete actions on their API permissions without changing page layout. Verify component tests cover read-only and permitted states for each screen.
+- [x] 4.3 Gate inventory adjustment and reservation actions, order status actions, and return status actions on their API permissions. Verify component tests cover read-only and permitted states and that denied API responses report failure rather than success.
+- [x] 4.4 Gate general settings updates, shipping-zone and coupon create/update/delete, and CMS page and banner create/update/delete actions on their API permissions. Verify component tests cover read-only and permitted states for each screen. General settings is API-only: the console has no settings update form, so `settings.update` has no surface to gate; the settings home is navigation-only.
+- [x] 4.5 Hide self-disable and system-role delete or rename actions in the administrator and role screens while keeping system-role grant editing for `admin.roles.update`. Verify component tests cover the hidden actions, the allowed grant edit, and the existing read/create/update gating.
+- [x] 4.6 Add a cross-page test asserting affected list pages keep the breadcrumb, header row, search/filter bar, and table order in both read-only and writable states. Verify `pnpm --filter admin test` passes. `src/list-layout.spec.ts` covers 14 list pages in read-only and writable states (28 tests). `pnpm --filter admin test` now passes 256/256; restoring it required refreshing five stale specs (`catalog/product-list`, `cms/cms-list`, `orders/order`, `reporting/reporting`, `settings/settings-list`) whose mocks predated `inject(DestroyRef)` and Observable-based HTTP, and fixing three real bugs found there: order detail/status never read `orderId` from the route, the inventory list never assigned its loaded rows, and stock-movement types mapped statuses that the API never returns.
+
+## 5. Gate dashboard widgets
+
+- [x] 5.1 Add the widget-to-permission mapping from `design.md` to the dashboard store, expose `canView`, and make the dashboard data source request data only for permitted widgets. Verify store and data-source tests assert no unauthorized API call is made. `DASHBOARD_WIDGET_PERMISSIONS`/`dashboardWidgetPermission()` live in `dashboard.models.ts`; `DashboardService.canView`/`loadOverview()` and `DashboardStore.canView`/`visibleWidgets` use them, and `loadOverview()` requests only permitted widget data. `dashboard-gating.spec.ts` (10 tests) asserts widget→permission mapping, per-snapshot request filtering, an empty result with no request when no dashboard permission is held, and store state/`canView` behavior.
+- [x] 5.2 Render only permitted dashboard widgets, keeping permitted widgets' independent loading and error states and preserving the existing grid classes. Verify dashboard tests cover analytics-only, orders-only, inventory-only, mixed, and no-permission snapshots. `dashboard.component.ts` gates the stat-card block and each widget cell on `store.canView(...)` and passes per-card visibility to `stat-cards-widget`; `dashboard.component.spec.ts` (6 tests) covers analytics-only, orders-only, inventory-only, mixed, and no-permission snapshots plus the preserved `grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4` and `mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6` classes (widget children are stubbed because JIT TestBed cannot bind their signal inputs).
+- [x] 5.3 Verify a restricted widget cannot surface protected values or turn the whole dashboard into an error state. Verify the dashboard test suite covers a denied or failed restricted request alongside successful permitted widgets. `dashboard.component.spec.ts` asserts a failed permitted widget stays local while other permitted widgets render, and that restricted low-stock values never appear in the DOM and do not set the store error.
+
+## 6. Integration verification
+
+- [ ] 6.1 Run `pnpm typecheck`, `pnpm test`, `pnpm lint`, and `pnpm contract:check` and verify all pass.
+- [ ] 6.2 Verify the permission matrix for owner, manager, staff, support, and a custom role on both a migrated database and a freshly seeded database: visible routes and menu entries, hidden actions, direct navigation denial, dashboard widgets, and media access. Record the results with the change.
+- [ ] 6.3 Verify the admin application build with `pnpm --filter admin build:app` and confirm the permission guard, menu filtering, and widget gating work in the built application.
+
+## Workflow follow-up
+
+- Before archiving this change, reconcile `add-sakai-admin-shell-and-dashboard` so its role-based menu requirement is replaced with permission metadata, or archive in an order that leaves the durable `admin-console` spec permission-based.
+- Archive this change after the permission matrix and review requirements are satisfied, then verify the archived specs.

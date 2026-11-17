@@ -1,7 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { z } from 'zod';
 
-export const roleKeySchema = z.string().trim().min(1).max(200).regex(/^[a-z][a-z0-9_.-]*$/);
+export const roleKeySchema = z.string().trim().min(1).max(200).regex(/^[a-z][a-z0-9_]*$/);
 
 export const roleInputSchema = z
   .object({

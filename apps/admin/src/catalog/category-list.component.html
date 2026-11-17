@@ -6,7 +6,7 @@
   <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Categories</h1>
 
   <div class="flex gap-2 mb-4 items-center flex-wrap">
-    @if (auth.hasPermission('catalog.categories.create')) {
+    @if (auth.hasPermission(permissions.catalog.categories.create)) {
       <button
         (click)="openCreateModal()"
         class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -33,7 +33,7 @@
               >{{ c.status }}</span
             >
             <div class="flex gap-1">
-              @if (auth.hasPermission('catalog.categories.update')) {
+              @if (auth.hasPermission(permissions.catalog.categories.update)) {
                 <button
                   (click)="openEditModal(c)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -41,7 +41,7 @@
                   Edit
                 </button>
               }
-              @if (auth.hasPermission('catalog.categories.delete')) {
+              @if (auth.hasPermission(permissions.catalog.categories.delete)) {
                 <button
                   (click)="deleteCategory(c.id)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"

@@ -1,4 +1,5 @@
 import type { components } from 'api-sdk';
+import { ADMIN_PERMISSIONS } from '../../core/auth/admin-permissions';
 
 export type DashboardRange = '7' | '30' | '90';
 
@@ -81,6 +82,29 @@ export interface DashboardOverview {
   topProducts: AsyncState<TopProduct[]>;
   orderStatus: AsyncState<OrderStatusCount[]>;
   lowStockAlerts: AsyncState<LowStockAlert[]>;
+}
+
+/** Permission each dashboard widget's data request requires. */
+export const DASHBOARD_WIDGET_PERMISSIONS = {
+  orders: ADMIN_PERMISSIONS.analytics.read,
+  revenue: ADMIN_PERMISSIONS.analytics.read,
+  revenueChart: ADMIN_PERMISSIONS.analytics.read,
+  topProducts: ADMIN_PERMISSIONS.analytics.read,
+  newCustomers: ADMIN_PERMISSIONS.customers.read,
+  recentOrders: ADMIN_PERMISSIONS.orders.read,
+  orderStatus: ADMIN_PERMISSIONS.orders.read,
+  lowStockCount: ADMIN_PERMISSIONS.inventory.read,
+  lowStockAlerts: ADMIN_PERMISSIONS.inventory.read,
+} as const;
+
+export type DashboardWidget = keyof typeof DASHBOARD_WIDGET_PERMISSIONS;
+
+export const DASHBOARD_WIDGETS = Object.keys(
+  DASHBOARD_WIDGET_PERMISSIONS,
+) as DashboardWidget[];
+
+export function dashboardWidgetPermission(widget: DashboardWidget): string {
+  return DASHBOARD_WIDGET_PERMISSIONS[widget];
 }
 
 import { Observable } from 'rxjs';

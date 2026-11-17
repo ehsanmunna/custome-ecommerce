@@ -6,7 +6,7 @@
   <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Banners</h1>
 
   <div class="flex gap-2 mb-4 items-center flex-wrap">
-    @if (auth.hasPermission('cms.banners.create')) {
+    @if (auth.hasPermission(permissions.cms.banners.create)) {
       <button
         (click)="openCreateModal()"
         class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -63,7 +63,7 @@
               {{ b.active ? 'Yes' : 'No' }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">
-              @if (auth.hasPermission('cms.banners.update')) {
+              @if (auth.hasPermission(permissions.cms.banners.update)) {
                 <button
                   (click)="openEditModal(b)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -71,7 +71,7 @@
                   Edit
                 </button>
               }
-              @if (auth.hasPermission('cms.banners.delete')) {
+              @if (auth.hasPermission(permissions.cms.banners.delete)) {
                 <button
                   (click)="deleteBanner(b.id)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"

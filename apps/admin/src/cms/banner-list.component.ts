@@ -11,6 +11,7 @@ import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth/auth.service';
 import { ADMIN_AUTH_CONFIG } from '../auth/auth.config';
+import { ADMIN_PERMISSIONS } from '../core/auth/admin-permissions';
 import { catchError, EMPTY, finalize, switchMap } from 'rxjs';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NotificationService } from '../core/notifications/notification.service';
@@ -71,6 +72,8 @@ export class BannerListComponent implements OnInit {
   editForm: FormGroup;
 
   readonly localeBannerTitle = localeBannerTitle;
+
+  protected readonly permissions = ADMIN_PERMISSIONS;
 
   constructor(
     @Inject(HttpClient) private readonly http: HttpClient,

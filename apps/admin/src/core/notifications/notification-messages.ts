@@ -111,6 +111,9 @@ export const NOTIFICATION_MESSAGES = {
     updateFailed: 'Failed to update role',
     deleteFailed: 'Failed to delete role',
   },
+  permission: {
+    refreshFailed: 'Failed to refresh permissions',
+  },
 } as const;
 
 export type NotificationMessageKey = keyof typeof NOTIFICATION_MESSAGES;

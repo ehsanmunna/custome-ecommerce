@@ -11,7 +11,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { of, throwError } from 'rxjs';
 import { AdminRolesListComponent } from './admin-roles-list.component';
-import { AuthService } from '../auth/auth.service';
+import { AuthService, type AdminUser } from '../auth/auth.service';
 import {
   ADMIN_AUTH_CONFIG,
   defaultAdminAuthConfig,
@@ -54,15 +54,15 @@ class MockHttpClient {
     return of(this.responses[key]);
   }
 
-  get<T>(url: string): any {
+  get(url: string): any {
     return this.request('GET', url);
   }
 
-  post<T>(url: string, body: any): any {
+  post(url: string, body: any): any {
     return this.request('POST', url, body);
   }
 
-  patch<T>(url: string, body: any): any {
+  patch(url: string, body: any): any {
     return this.request('PATCH', url, body);
   }
 
@@ -90,6 +90,20 @@ const config: AdminAuthConfig = { ...defaultAdminAuthConfig, apiBaseUrl: baseUrl
 
 const rolesUrl = (page = 1) => `${baseUrl}/v1/admin/roles?page=${page}&pageSize=100`;
 const permissionsUrl = (page = 1) => `${baseUrl}/v1/admin/permissions?page=${page}&pageSize=100`;
+const meUrl = `${baseUrl}${defaultAdminAuthConfig.mePath}`;
+
+function signInAs(auth: AuthService, role: Role, permissions: string[]): void {
+  const user: AdminUser = {
+    id: 'admin-1',
+    email: 'admin@example.com',
+    displayName: 'Admin',
+    status: 'active',
+    role,
+    permissions,
+  };
+  auth['accessToken'] = 'test-token';
+  auth['currentUserState'].set(user);
+}
 
 const notification = {
   success: vi.fn(),
@@ -330,6 +344,78 @@ describe('AdminRolesListComponent data loading', () => {
     expect(notification.success).toHaveBeenCalledWith(NOTIFICATION_MESSAGES.role.create);
     expect(component.createModal).toBe(false);
     expect(component.error).toBe('Refresh failed');
+  });
+
+  it('refreshes the administrator snapshot after saving their own role', () => {
+    http.setResponse('GET', rolesUrl(), metaResponse([ownerRole]));
+    seedCatalog(http);
+    http.setResponse('PATCH', `${baseUrl}/v1/admin/roles/role-owner`, {});
+    http.setResponse('GET', meUrl, {
+      id: 'admin-1',
+      email: 'admin@example.com',
+      displayName: 'Admin',
+      status: 'active',
+      role: ownerRole,
+      permissions: ['admin.roles.read', 'catalog.products.read'],
+    });
+    signInAs(auth, ownerRole, ['admin.roles.read', 'admin.roles.update']);
+
+    component.ngOnInit();
+    component.openEditModal(ownerRole);
+    http.clearRequests();
+    component.onSave({
+      key: 'owner',
+      name: 'Owner',
+      permissionKeys: ['admin.roles.read', 'catalog.products.read'],
+    });
+
+    expect(http.getLastRequest('GET', meUrl)).toBeDefined();
+    expect(auth.hasPermission('catalog.products.read')).toBe(true);
+    expect(auth.hasPermission('admin.roles.update')).toBe(false);
+    expect(notification.success).toHaveBeenCalledWith(NOTIFICATION_MESSAGES.role.update);
+  });
+
+  it('does not refresh the administrator snapshot after saving another role', () => {
+    http.setResponse('GET', rolesUrl(), metaResponse([ownerRole, staffRole]));
+    seedCatalog(http);
+    http.setResponse('PATCH', `${baseUrl}/v1/admin/roles/role-staff`, {});
+    signInAs(auth, ownerRole, ['admin.roles.read', 'admin.roles.update']);
+
+    component.ngOnInit();
+    component.openEditModal(staffRole);
+    http.clearRequests();
+    component.onSave({
+      key: 'staff',
+      name: 'Support staff',
+      permissionKeys: ['admin.roles.read'],
+    });
+
+    expect(http.getLastRequest('GET', meUrl)).toBeUndefined();
+    expect(auth.hasPermission('admin.roles.update')).toBe(true);
+  });
+
+  it('reports a failed own-role refresh without discarding the save', () => {
+    http.setResponse('GET', rolesUrl(), metaResponse([ownerRole]));
+    seedCatalog(http);
+    http.setResponse('PATCH', `${baseUrl}/v1/admin/roles/role-owner`, {});
+    http.setError(
+      'GET',
+      meUrl,
+      new HttpErrorResponse({ error: { message: 'Snapshot unavailable' }, status: 400 }),
+    );
+    signInAs(auth, ownerRole, ['admin.roles.read']);
+
+    component.ngOnInit();
+    component.openEditModal(ownerRole);
+    component.onSave({
+      key: 'owner',
+      name: 'Owner',
+      permissionKeys: ['admin.roles.read'],
+    });
+
+    expect(notification.success).toHaveBeenCalledWith(NOTIFICATION_MESSAGES.role.update);
+    expect(notification.error).toHaveBeenCalledWith('Snapshot unavailable');
+    expect(auth.hasPermission('admin.roles.read')).toBe(true);
   });
 
   it('filters roles by name or key and by type', () => {

@@ -143,12 +143,31 @@ export interface paths {
         get: operations["getAdminUser"];
         put?: never;
         post?: never;
-        /** Delete an administrator */
-        delete: operations["deleteAdminUser"];
+        delete?: never;
         options?: never;
         head?: never;
         /** Update an administrator */
         patch: operations["updateAdminUser"];
+        trace?: never;
+    };
+    "/admin/users/{userId}/disable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Disable an administrator
+         * @description Marks the administrator account as disabled without deleting it. An administrator cannot disable their own account.
+         */
+        post: operations["disableAdminUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/customers": {
@@ -243,68 +262,6 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/media": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List media assets */
-        get: operations["listMedia"];
-        put?: never;
-        /**
-         * Create a media upload
-         * @description Upload transport and provider details are determined by the media feature.
-         */
-        post: operations["createMediaUpload"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/media/{mediaId}/complete": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mediaId: components["parameters"]["MediaId"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Complete a media upload
-         * @description Verifies the uploaded R2 object and records its authoritative metadata.
-         */
-        post: operations["completeMediaUpload"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/media/{mediaId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mediaId: components["parameters"]["MediaId"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete a media record and schedule object cleanup */
-        delete: operations["deleteMedia"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1168,24 +1125,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/shipments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List shipments */
-        get: operations["listShipments"];
-        put?: never;
-        /** Create a shipment record for an order */
-        post: operations["createShipment"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/storefront/orders/{orderId}/tracking": {
         parameters: {
             query?: never;
@@ -1531,7 +1470,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/image-storage/serve/{feature}/{filename}": {
+    "/image-storage/serve": {
         parameters: {
             query?: never;
             header?: never;
@@ -1540,12 +1479,46 @@ export interface paths {
         };
         /**
          * Serve a stored image
-         * @description Return the stored image file content for the given feature and filename.
+         * @description Return the stored image file content for the given storage key.
          */
         get: operations["serveImage"];
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/image-storage/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List media assets */
+        get: operations["listMedia"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/image-storage/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a stored image */
+        delete: operations["deleteImage"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1680,6 +1653,7 @@ export interface components {
         };
         Role: {
             id: components["schemas"]["Id"];
+            /** @description Lowercase role identifier; letters, digits, and underscores only. */
             key: string;
             name: string;
             description?: string;
@@ -1689,6 +1663,7 @@ export interface components {
             permissions: string[];
         };
         RoleInput: {
+            /** @description Lowercase role identifier; letters, digits, and underscores only. */
             key: string;
             name: string;
             description?: string;
@@ -1704,8 +1679,7 @@ export interface components {
         };
         MediaAsset: {
             id: components["schemas"]["Id"];
-            /** @constant */
-            provider: "r2";
+            provider: string;
             key: string;
             mimeType: string;
             sizeBytes: number;
@@ -1717,46 +1691,8 @@ export interface components {
             };
             /** Format: uri */
             readonly url?: string;
-            upload?: components["schemas"]["MediaUploadInstruction"];
-            variants?: components["schemas"]["MediaVariants"];
             /** Format: date-time */
             createdAt: string;
-        };
-        MediaUploadInstruction: {
-            /** Format: uri */
-            url: string;
-            /** @constant */
-            method: "PUT";
-            headers: {
-                [key: string]: string;
-            };
-            /** Format: date-time */
-            expiresAt: string;
-        };
-        MediaVariant: {
-            /** Format: uri */
-            url: string;
-            width: number;
-        };
-        MediaVariants: {
-            thumbnail?: components["schemas"]["MediaVariant"];
-            card?: components["schemas"]["MediaVariant"];
-            detail?: components["schemas"]["MediaVariant"];
-            large?: components["schemas"]["MediaVariant"];
-        };
-        MediaUploadRequest: {
-            fileName: string;
-            mimeType: string;
-            sizeBytes: number;
-            alt?: {
-                bn?: string;
-                en?: string;
-            };
-        };
-        /** @description Supplied image dimensions must be positive and provided together or omitted. */
-        MediaUploadCompleteRequest: {
-            width?: number;
-            height?: number;
         };
         Category: {
             id: components["schemas"]["Id"];
@@ -2162,10 +2098,6 @@ export interface components {
             /** Format: date-time */
             deliveredAt?: string;
         };
-        ShipmentInput: {
-            orderId: components["schemas"]["Id"];
-            codAmount: components["schemas"]["Money"];
-        };
         ShippingParcelRequest: {
             orderId: components["schemas"]["Id"];
             customerName: string;
@@ -2393,16 +2325,14 @@ export interface components {
             items: components["schemas"]["Notification"][];
         };
         ImageUploadResponse: {
+            /** Format: uuid */
+            mediaId: string;
             /** Format: uri */
             url: string;
             feature: string;
-            filename: string;
+            storageKey: string;
             mimeType: string;
             sizeBytes: number;
-        };
-        ImageServeResponse: {
-            mimeType: string;
-            size: number;
         };
     };
     responses: {
@@ -2426,7 +2356,6 @@ export interface components {
         UserId: components["schemas"]["Id"];
         RoleId: components["schemas"]["Id"];
         BrandId: components["schemas"]["Id"];
-        MediaId: components["schemas"]["Id"];
         CategoryId: components["schemas"]["Id"];
         ProductId: components["schemas"]["Id"];
         VariantId: components["schemas"]["Id"];
@@ -2663,27 +2592,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    deleteAdminUser: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                userId: components["parameters"]["UserId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Administrator deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     updateAdminUser: {
         parameters: {
             query?: never;
@@ -2707,6 +2615,27 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AdminUser"];
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    disableAdminUser: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                userId: components["parameters"]["UserId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Administrator disabled. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };
@@ -2883,105 +2812,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PermissionPage"];
                 };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    listMedia: {
-        parameters: {
-            query?: {
-                /** @description One-based page number. Defaults to 1. */
-                page?: components["parameters"]["Page"];
-                /** @description Number of records per page. Defaults to 20; maximum is 100. Larger values are rejected. */
-                pageSize?: components["parameters"]["PageSize"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated media assets. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MediaPage"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    createMediaUpload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MediaUploadRequest"];
-            };
-        };
-        responses: {
-            /** @description Upload instruction and media record. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MediaAsset"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    completeMediaUpload: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mediaId: components["parameters"]["MediaId"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MediaUploadCompleteRequest"];
-            };
-        };
-        responses: {
-            /** @description Verified media record. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MediaAsset"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    deleteMedia: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mediaId: components["parameters"]["MediaId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Media record deleted. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
             default: components["responses"]["Problem"];
         };
@@ -4587,57 +4417,6 @@ export interface operations {
             default: components["responses"]["Problem"];
         };
     };
-    listShipments: {
-        parameters: {
-            query?: {
-                /** @description One-based page number. Defaults to 1. */
-                page?: components["parameters"]["Page"];
-                /** @description Number of records per page. Defaults to 20; maximum is 100. Larger values are rejected. */
-                pageSize?: components["parameters"]["PageSize"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated shipments. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ShipmentPage"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
-    createShipment: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ShipmentInput"];
-            };
-        };
-        responses: {
-            /** @description Shipment created. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Shipment"];
-                };
-            };
-            default: components["responses"]["Problem"];
-        };
-    };
     getOrderTracking: {
         parameters: {
             query?: {
@@ -5302,12 +5081,11 @@ export interface operations {
     };
     serveImage: {
         parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                feature: string;
-                filename: string;
+            query: {
+                storageKey: string;
             };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;
@@ -5320,6 +5098,53 @@ export interface operations {
                 content: {
                     "image/*": string;
                 };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    listMedia: {
+        parameters: {
+            query?: {
+                /** @description One-based page number. Defaults to 1. */
+                page?: components["parameters"]["Page"];
+                /** @description Number of records per page. Defaults to 20; maximum is 100. Larger values are rejected. */
+                pageSize?: components["parameters"]["PageSize"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated media assets. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaPage"];
+                };
+            };
+            default: components["responses"]["Problem"];
+        };
+    };
+    deleteImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Image deleted. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             default: components["responses"]["Problem"];
         };

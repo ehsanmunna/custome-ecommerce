@@ -91,10 +91,10 @@ export class StockMovementsComponent implements OnInit {
   }
 
   mapType(status: string): string {
-    if (status === 'pending') return 'Adjustment';
-    if (status === 'confirmed') return 'Reservation';
+    if (status === 'active') return 'Reservation';
     if (status === 'released') return 'Release';
     if (status === 'committed') return 'Commit';
+    if (status === 'expired') return 'Expired';
     return status;
   }
 }

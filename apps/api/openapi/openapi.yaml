@@ -55,11 +55,12 @@ x-implemented-operations:
   - GET /admin/inventory/reservations
   - POST /admin/inventory/reservations
   - PATCH /admin/inventory/reservations/{reservationId}/status
-  - GET /admin/media
-  - POST /admin/media
-  - POST /admin/media/{mediaId}/complete
-  - DELETE /admin/media/{mediaId}
   - GET /admin/permissions
+  - GET /admin/users
+  - POST /admin/users
+  - GET /admin/users/{userId}
+  - PATCH /admin/users/{userId}
+  - POST /admin/users/{userId}/disable
   - GET /admin/roles
   - POST /admin/roles
   - PATCH /admin/roles/{roleId}
@@ -103,13 +104,13 @@ x-implemented-operations:
   - POST /image-storage/upload
   - GET /image-storage/serve
   - GET /image-storage/list
+  - DELETE /image-storage/{id}
 tags:
   - name: Health
   - name: Admin authentication
   - name: Admin users
   - name: Admin customers
   - name: Roles and permissions
-  - name: Media
   - name: Storefront catalog
   - name: Admin catalog
   - name: Inventory
@@ -334,17 +335,21 @@ paths:
                 $ref: '#/components/schemas/AdminUser'
         default:
           $ref: '#/components/responses/Problem'
-    delete:
-      operationId: deleteAdminUser
+  /admin/users/{userId}/disable:
+    post:
+      operationId: disableAdminUser
       tags: [Admin users]
-      summary: Delete an administrator
+      summary: Disable an administrator
+      description: Marks the administrator account as disabled without deleting it. An administrator cannot disable their own account.
       security:
         - bearerAuth: []
       x-access: admin
-      x-required-permission: admin.users.delete
+      x-required-permission: admin.users.disable
+      parameters:
+        - $ref: '#/components/parameters/UserId'
       responses:
         '204':
-          description: Administrator deleted.
+          description: Administrator disabled.
         default:
           $ref: '#/components/responses/Problem'
   /admin/customers:
@@ -504,88 +509,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PermissionPage'
-        default:
-          $ref: '#/components/responses/Problem'
-  /admin/media:
-    get:
-      operationId: listMedia
-      tags: [Media]
-      summary: List media assets
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
-      security:
-        - bearerAuth: []
-      x-access: admin
-      x-required-permission: media.read
-      responses:
-        '200':
-          description: Paginated media assets.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MediaPage'
-        default:
-          $ref: '#/components/responses/Problem'
-    post:
-      operationId: createMediaUpload
-      tags: [Media]
-      summary: Create a media upload
-      description: Upload transport and provider details are determined by the media feature.
-      security:
-        - bearerAuth: []
-      x-access: admin
-      x-required-permission: media.create
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MediaUploadRequest'
-      responses:
-        '201':
-          description: Upload instruction and media record.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MediaAsset'
-        default:
-          $ref: '#/components/responses/Problem'
-    post:
-      operationId: completeMediaUpload
-      tags: [Media]
-      summary: Complete a media upload
-      description: Verifies the uploaded R2 object and records its authoritative metadata.
-      security:
-        - bearerAuth: []
-      x-access: admin
-      x-required-permission: media.create
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MediaUploadCompleteRequest'
-      responses:
-        '200':
-          description: Verified media record.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MediaAsset'
-        default:
-          $ref: '#/components/responses/Problem'
-    delete:
-      operationId: deleteMedia
-      tags: [Media]
-      summary: Delete a media record and schedule object cleanup
-      security:
-        - bearerAuth: []
-      x-access: admin
-      x-required-permission: media.delete
-      responses:
-        '204':
-          description: Media record deleted.
         default:
           $ref: '#/components/responses/Problem'
   /storefront/categories:
@@ -1991,50 +1914,6 @@ paths:
                 $ref: '#/components/schemas/ShippingZone'
         default:
           $ref: '#/components/responses/Problem'
-  /admin/shipments:
-    get:
-      operationId: listShipments
-      tags: [Shipping]
-      summary: List shipments
-      parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/PageSize'
-      security:
-        - bearerAuth: []
-      x-access: admin
-      x-required-permission: shipping.shipments.read
-      responses:
-        '200':
-          description: Paginated shipments.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ShipmentPage'
-        default:
-          $ref: '#/components/responses/Problem'
-    post:
-      operationId: createShipment
-      tags: [Shipping]
-      summary: Create a shipment record for an order
-      security:
-        - bearerAuth: []
-      x-access: admin
-      x-required-permission: shipping.shipments.create
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ShipmentInput'
-      responses:
-        '201':
-          description: Shipment created.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Shipment'
-        default:
-          $ref: '#/components/responses/Problem'
   /storefront/orders/{orderId}/tracking:
     get:
       operationId: getOrderTracking
@@ -2608,7 +2487,7 @@ paths:
       security:
         - bearerAuth: []
       x-access: admin
-      x-required-permission: image-storage.create
+      x-required-permission: media.create
       requestBody:
         required: true
         content:
@@ -2684,6 +2563,26 @@ paths:
                 $ref: '#/components/schemas/MediaPage'
         default:
           $ref: '#/components/responses/Problem'
+  /image-storage/{id}:
+    delete:
+      operationId: deleteImage
+      tags: [ImageStorage]
+      summary: Delete a stored image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/Id'
+      security:
+        - bearerAuth: []
+      x-access: admin
+      x-required-permission: media.delete
+      responses:
+        '204':
+          description: Image deleted.
+        default:
+          $ref: '#/components/responses/Problem'
 components:
   securitySchemes:
     bearerAuth:
@@ -2732,12 +2631,6 @@ components:
         $ref: '#/components/schemas/Id'
     BrandId:
       name: brandId
-      in: path
-      required: true
-      schema:
-        $ref: '#/components/schemas/Id'
-    MediaId:
-      name: mediaId
       in: path
       required: true
       schema:
@@ -3099,7 +2992,8 @@ components:
           $ref: '#/components/schemas/Id'
         key:
           type: string
-          pattern: '^[a-z][a-z0-9_.-]*$'
+          description: Lowercase role identifier; letters, digits, and underscores only.
+          pattern: '^[a-z][a-z0-9_]*$'
         name:
           type: string
         description:
@@ -3119,7 +3013,8 @@ components:
       properties:
         key:
           type: string
-          pattern: '^[a-z][a-z0-9_.-]*$'
+          description: Lowercase role identifier; letters, digits, and underscores only.
+          pattern: '^[a-z][a-z0-9_]*$'
         name:
           type: string
           minLength: 1
@@ -4044,14 +3939,6 @@ components:
         deliveredAt:
           type: string
           format: date-time
-    ShipmentInput:
-      type: object
-      required: [orderId, codAmount]
-      properties:
-        orderId:
-          $ref: '#/components/schemas/Id'
-        codAmount:
-          $ref: '#/components/schemas/Money'
     ShippingParcelRequest:
       type: object
       required:
@@ -4662,14 +4549,5 @@ components:
         mimeType:
           type: string
         sizeBytes:
-          type: integer
-          minimum: 0
-    ImageServeResponse:
-      type: object
-      required: [mimeType, size]
-      properties:
-        mimeType:
-          type: string
-        size:
           type: integer
           minimum: 0

@@ -9,7 +9,7 @@
   </h1>
 
   <div class="flex gap-2 mb-4 items-center flex-wrap">
-    @if (auth.hasPermission('catalog.products.update')) {
+    @if (auth.hasPermission(permissions.catalog.products.update)) {
       <button
         (click)="openCreateModal()"
         class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -80,7 +80,7 @@
               }
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">
-              @if (auth.hasPermission('catalog.products.update')) {
+              @if (auth.hasPermission(permissions.catalog.products.update)) {
                 <button
                   (click)="openEditModal(v)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
@@ -88,7 +88,7 @@
                   Edit
                 </button>
               }
-              @if (auth.hasPermission('catalog.products.update')) {
+              @if (auth.hasPermission(permissions.catalog.products.update)) {
                 <button
                   (click)="deleteVariant(v.id)"
                   class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"

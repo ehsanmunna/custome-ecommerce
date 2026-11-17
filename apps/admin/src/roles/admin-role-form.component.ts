@@ -54,7 +54,16 @@ export interface PermissionGroup {
 
             <div class="form-field">
               <label class="form-label" for="role-name">Name</label>
-              <input id="role-name" type="text" formControlName="name" class="form-input" />
+              <input
+                id="role-name"
+                type="text"
+                formControlName="name"
+                class="form-input"
+                [readOnly]="isSystem"
+              />
+              @if (isSystem) {
+                <p class="form-hint">System role names cannot be changed.</p>
+              }
               @if (form.get('name')?.invalid && form.get('name')?.touched) {
                 <p class="form-error">Name is required (maximum 200 characters).</p>
               }
@@ -321,6 +330,10 @@ export class AdminRoleFormComponent implements OnInit {
     return this.mode === 'edit';
   }
 
+  get isSystem(): boolean {
+    return this.role?.system === true;
+  }
+
   get permissionGroups(): PermissionGroup[] {
     const groups = new Map<string, Permission[]>();
 
@@ -350,7 +363,7 @@ export class AdminRoleFormComponent implements OnInit {
         [
           Validators.required,
           Validators.maxLength(200),
-          Validators.pattern(/^[a-z][a-z0-9_.-]*$/),
+          Validators.pattern(/^[a-z][a-z0-9_]*$/),
         ],
       ],
       name: [this.role?.name ?? '', [Validators.required, Validators.maxLength(200)]],
