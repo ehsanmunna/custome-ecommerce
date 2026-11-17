@@ -14,7 +14,7 @@ database and a drifted database reconciled by the permission-catalog migration.
 | --- | --- |
 | `cd apps/admin; npx vitest run src/permission-matrix.spec.ts` | 23 passed (23) |
 | `pnpm --filter database test -- test/permission-matrix.spec.ts` | 3 passed (3) |
-| `pnpm --filter admin test` | 272 passed (272) in 30 files before the matrix spec; matrix spec adds 23 |
+| `pnpm --filter admin test` | 296 passed (296) in 31 files (includes both new specs) |
 | `pnpm --filter admin typecheck` | passed |
 | `pnpm --filter database typecheck` | passed |
 | `pnpm --filter admin lint` | passed |
