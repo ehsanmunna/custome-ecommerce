@@ -72,7 +72,7 @@ export const routes: Routes = [
         path: 'dashboard',
         data: DASHBOARD_ACCESS,
         canActivate: [permissionGuard],
-        loadComponent: () => import('./dashboard/dashboard.component').then(m => m.DashboardComponent),
+        loadComponent: () => import('./features/dashboard/dashboard.component').then(m => m.DashboardComponent),
       },
       {
         path: 'customers',

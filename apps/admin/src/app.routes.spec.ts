@@ -90,4 +90,12 @@ describe('admin route permission requirements', () => {
       expect(route.canActivate, `route ${route.path}`).toEqual([permissionGuard]);
     }
   });
+
+  it('lazy-loads the permission-gated dashboard page', async () => {
+    const dashboard = protectedRoutes.find((route) => route.path === 'dashboard');
+
+    expect(dashboard?.loadComponent).toBeTypeOf('function');
+    const { DashboardComponent } = await import('./features/dashboard/dashboard.component');
+    await expect(dashboard?.loadComponent?.()).resolves.toBe(DashboardComponent);
+  });
 });
