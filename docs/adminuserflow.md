@@ -46,7 +46,7 @@ Access: public
 **Flow** (`AuthService.adminPasswordLogin`):
 
 1. Find `adminUser` by email
-2. Verify argon2id/scrypt password hash
+2. Verify scrypt password hash
 3. Check `status === 'active'`
 4. Create `auth_session` + `auth_refresh_token`
 5. Issue HS256 JWT access token
@@ -155,7 +155,7 @@ The admin console authorizes every protected route, navigation entry, and page a
 
 - Every protected route declares `data.permissions` (`string[]`) and `data.permissionMode` (`'all' | 'any'`, default `'all'`).
 - `permissionGuard` checks authentication first. An unauthenticated visitor is sent to `/login` with `returnUrl`; an authenticated administrator who lacks the requirement is sent to `/forbidden`.
-- The dashboard route requires any of `analytics.read`, `orders.read`, `inventory.read`, or `customers.read`. The settings route likewise accepts any settings-area read permission. All other routes require their single declared read or action permission.
+- The dashboard route requires any of `analytics.read`, `orders.read`, `inventory.read`, or `customers.read`. The settings route accepts any of `settings.read`, `shipping.zones.read`, `promotions.coupons.read`, `admin.users.read`, `admin.roles.read`, `cms.pages.read`, `cms.banners.read`, `analytics.read`, or `inventory.read`. All other routes require their single declared read or action permission.
 - Direct navigation is denied even when the corresponding menu entry is hidden.
 
 ### Navigation
@@ -275,7 +275,7 @@ Returns a paginated list of all available permissions with `key`, `description`,
 | Role | Scope | Permissions |
 |------|-------|-------------|
 | **owner** | store | Every key in the canonical catalog |
-| **manager** | store | Admin session, catalog, media, inventory, order/return, customer-read, settings, shipping, coupons, CMS, notifications, and analytics operations, plus `media` write and `orders_manage`; `admin.roles.read` and `image-storage.read`; no administrator management and no role create/update/delete |
+| **manager** | store | Admin session, catalog, media, inventory, order/return, customer-read, settings, shipping, coupons, CMS, notifications, and analytics operations, plus media write (`media.create`, `media.delete`) and `orders_manage`; `admin.roles.read` and `image-storage.read`; no administrator management and no role create/update/delete |
 | **staff** | store | Admin session, read-only catalog (`catalog.brands.read`, `catalog.categories.read`, `catalog.products.read`), `image-storage.read`, `inventory.read`, and `orders.read` |
 | **support** | store | Admin session, `orders.read`, and `customers.read` |
 
@@ -299,7 +299,8 @@ Every other admin endpoint follows the same guard pattern:
 | Catalog | brands, categories, products, attributes, variants | `catalog.brands.*`, `catalog.categories.*`, `catalog.products.*` |
 | Media | image list/serve, upload, delete | `image-storage.read`, `media.create`, `media.delete` |
 | Inventory | inventory, adjustments, reservations | `inventory.read`, `inventory.adjust` |
-| Orders | list/detail, status transitions, returns, parcel creation | `orders.read`, `orders.status.update`, `orders.returns.read`, `orders.returns.update`, `orders_manage` |
+| Orders | list/detail, status transitions, returns | `orders.read`, `orders.status.update`, `orders.returns.read`, `orders.returns.update` |
+| Shipping | create shipping parcel | `orders_manage` |
 | Customer support | `GET /admin/customers`, `GET /admin/customers/{customerId}` | `customers.read` |
 | Settings | general settings, shipping zones, coupons | `settings.read`, `settings.update`, `shipping.zones.*`, `promotions.coupons.*` |
 | CMS | pages and banners | `cms.pages.*`, `cms.banners.*` |
