@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -48,10 +48,10 @@ export interface OrderPage {
 })
 export class OrderListComponent implements OnInit {
 
-  orders: Order[] = [];
+  orders = signal<Order[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   statusFilter = '';
 
@@ -68,8 +68,8 @@ export class OrderListComponent implements OnInit {
   }
 
   loadOrders(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const url = new URL(`${this.config.apiBaseUrl}/v1/admin/orders`);
     if (this.statusFilter) url.searchParams.set('status', this.statusFilter);
@@ -77,14 +77,14 @@ export class OrderListComponent implements OnInit {
       headers: { Authorization: `Bearer ${token}` },
     }).pipe(
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load orders';
+        this.error.set(err?.message ?? 'Failed to load orders');
         return EMPTY;
       }),
-      finalize(() => this.loading = false),
+      finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (res) => {
-        this.orders = res?.items ?? [];
+        this.orders.set(res?.items ?? []);
       }
     });
   }

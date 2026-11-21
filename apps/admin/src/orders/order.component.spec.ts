@@ -131,9 +131,9 @@ describe('OrderListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.orders.length).toBe(1);
-    expect(component.orders[0].number).toBe('ORD-001');
-    expect(component.orders[0].status).toBe('pending');
+    expect(component.orders().length).toBe(1);
+    expect(component.orders()[0].number).toBe('ORD-001');
+    expect(component.orders()[0].status).toBe('pending');
   });
 
   it('should filter orders by status', async () => {
@@ -156,7 +156,7 @@ describe('OrderListComponent', () => {
 
     await component.loadOrders();
 
-    expect(component.error).toBe('Server error');
+    expect(component.error()).toBe('Server error');
   });
 });
 
@@ -220,11 +220,11 @@ describe('OrderDetailComponent', () => {
 
     await component.loadOrder();
 
-    expect(component.order).not.toBeNull();
-    expect(component.order?.number).toBe('ORD-001');
-    expect(component.order?.status).toBe('confirmed');
-    expect(component.order?.items.length).toBe(1);
-    expect(component.order?.history.length).toBe(1);
+    expect(component.order()).not.toBeNull();
+    expect(component.order()?.number).toBe('ORD-001');
+    expect(component.order()?.status).toBe('confirmed');
+    expect(component.order()?.items.length).toBe(1);
+    expect(component.order()?.history.length).toBe(1);
   });
 
   it('should handle order detail load failure', async () => {
@@ -232,7 +232,7 @@ describe('OrderDetailComponent', () => {
 
     await component.loadOrder();
 
-    expect(component.error).toBe('Not found');
+    expect(component.error()).toBe('Not found');
   });
 });
 
@@ -263,7 +263,7 @@ describe('OrderStatusComponent', () => {
 
     await component.loadOrder();
 
-    expect(component.order?.status).toBe('pending');
+    expect(component.order()?.status).toBe('pending');
     expect(component.allowedNextStatuses).toContain('confirmed');
     expect(component.allowedNextStatuses).toContain('cancelled');
   });
@@ -288,8 +288,8 @@ describe('OrderStatusComponent', () => {
     const req = http.getLastRequest('PATCH', `${baseUrl}/v1/admin/orders/order-1/status`);
     expect(req).toBeDefined();
     expect(req!.body).toEqual({ status: 'confirmed', note: 'Payment confirmed' });
-    expect(component.error).toBeNull();
-    expect(component.success).toContain('confirmed');
+    expect(component.error()).toBeNull();
+    expect(component.success()).toContain('confirmed');
   });
 
   it('should handle status change failure', async () => {
@@ -305,7 +305,7 @@ describe('OrderStatusComponent', () => {
     component.statusForm.setValue({ status: 'returned', note: '' });
     await component.changeStatus();
 
-    expect(component.error).toBe('Invalid transition');
+    expect(component.error()).toBe('Invalid transition');
   });
 
   it('should not call API when form is invalid', async () => {
@@ -358,9 +358,9 @@ describe('ReturnListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.returns.length).toBe(1);
-    expect(component.returns[0].id).toBe('ret-1');
-    expect(component.returns[0].status).toBe('requested');
+    expect(component.returns().length).toBe(1);
+    expect(component.returns()[0].id).toBe('ret-1');
+    expect(component.returns()[0].status).toBe('requested');
   });
 
   it('should filter returns by status', async () => {
@@ -383,7 +383,7 @@ describe('ReturnListComponent', () => {
 
     await component.loadReturns();
 
-    expect(component.error).toBe('Server error');
+    expect(component.error()).toBe('Server error');
   });
 });
 
@@ -414,7 +414,7 @@ describe('ReturnStatusComponent', () => {
 
     await component.loadReturn();
 
-    expect(component.ret?.status).toBe('requested');
+    expect(component.ret()?.status).toBe('requested');
     expect(component.allowedNextStatuses).toContain('approved');
     expect(component.allowedNextStatuses).toContain('rejected');
     expect(component.allowedNextStatuses).toContain('cancelled');
@@ -440,8 +440,8 @@ describe('ReturnStatusComponent', () => {
     const req = http.getLastRequest('PATCH', `${baseUrl}/v1/admin/returns/ret-1/status`);
     expect(req).toBeDefined();
     expect(req!.body).toEqual({ status: 'approved', note: 'Verified defect' });
-    expect(component.error).toBeNull();
-    expect(component.success).toContain('approved');
+    expect(component.error()).toBeNull();
+    expect(component.success()).toContain('approved');
   });
 
   it('should handle return status change failure', async () => {
@@ -457,7 +457,7 @@ describe('ReturnStatusComponent', () => {
     component.statusForm.setValue({ status: 'refunded', note: '' });
     await component.changeStatus();
 
-    expect(component.error).toBe('Invalid transition');
+    expect(component.error()).toBe('Invalid transition');
   });
 
   it('should not call API when form is invalid', async () => {

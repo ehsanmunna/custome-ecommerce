@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -38,17 +38,17 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 })
 export class ReturnStatusComponent implements OnInit {
   returnId = '';
-  ret: { id: string; orderId: string; status: string } | null = null;
+  ret = signal<{ id: string; orderId: string; status: string } | null>(null);
 
   statusForm: FormGroup;
   allowedNextStatuses: string[] = [];
 
   protected readonly permissions = ADMIN_PERMISSIONS;
 
-  loading = false;
+  loading = signal(false);
   changing = false;
-  error: string | null = null;
-  success: string | null = null;
+  error = signal<string | null>(null);
+  success = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -70,15 +70,15 @@ export class ReturnStatusComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.returnId) {
-      this.error = 'No return ID specified';
+      this.error.set('No return ID specified');
       return;
     }
     this.loadReturn();
   }
 
   loadReturn(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<{ id: string; orderId: string; status: string }>(
@@ -87,36 +87,36 @@ export class ReturnStatusComponent implements OnInit {
       )
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load return';
+          this.error.set(err?.message ?? 'Failed to load return');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => (this.loading.set(false))),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           if (res) {
-            this.ret = res;
+            this.ret.set(res);
             const currentStatus = res.status;
             this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
             this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
           }
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load return');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load return'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
   }
 
   changeStatus(): void {
-    if (this.statusForm.invalid || !this.ret) return;
+    if (this.statusForm.invalid || !this.ret()) return;
     this.changing = true;
-    this.error = null;
-    this.success = null;
+    this.error.set(null);
+    this.success.set(null);
     const token = this.auth.token;
     const value = this.statusForm.value;
     const body: { status: string; note?: string } = { status: value.status };
@@ -137,8 +137,8 @@ export class ReturnStatusComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.success = `Return status updated to ${value.status}`;
-          this.ret = res;
+          this.success.set(`Return status updated to ${value.status}`);
+          this.ret.set(res);
           const currentStatus = res.status;
           this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
           this.statusForm.patchValue({ status: this.allowedNextStatuses[0] || '' });
@@ -146,9 +146,9 @@ export class ReturnStatusComponent implements OnInit {
         },
         error: (err) => {
           this.changing = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.returns.statusUpdateFailed);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.returns.statusUpdateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

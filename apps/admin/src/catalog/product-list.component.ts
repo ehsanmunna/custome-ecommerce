@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit, DestroyRef, inject } from '@angular/core';
+import { Component, Inject, OnInit, DestroyRef, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -116,22 +116,22 @@ export interface MediaAsset {
   templateUrl: './product-list.component.html',
 })
 export class ProductListComponent implements OnInit {
-  products: Product[] = [];
-  categories: Category[] = [];
-  brands: Brand[] = [];
-  media: MediaAsset[] = [];
-  categoryNames: Record<string, string> = {};
-  brandNames: Record<string, string> = {};
+  products = signal<Product[]>([]);
+  categories = signal<Category[]>([]);
+  brands = signal<Brand[]>([]);
+  media = signal<MediaAsset[]>([]);
+  categoryNames = signal<Record<string, string>>({});
+  brandNames = signal<Record<string, string>>({});
 
   searchQuery = '';
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   createModal = false;
   editModal = false;
-  creating = false;
-  updating = false;
-  uploadingMedia = false;
+  creating = signal(false);
+  updating = signal(false);
+  uploadingMedia = signal(false);
   editingProduct: Product | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
@@ -174,7 +174,7 @@ export class ProductListComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
@@ -185,23 +185,25 @@ export class ProductListComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.categories = res?.items ?? [];
-          this.categoryNames = {};
-          for (const c of this.categories) {
-            this.categoryNames[c.id] = c.content?.['en']?.name || c.content?.['bn']?.name || c.id;
+          const items = res?.items ?? [];
+          this.categories.set(items);
+          const names: Record<string, string> = {};
+          for (const c of items) {
+            names[c.id] = c.content?.['en']?.name || c.content?.['bn']?.name || c.id;
           }
+          this.categoryNames.set(names);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, 'Failed to load categories');
+          this.error.set(extractErrorMessage(err, 'Failed to load categories'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
   }
 
   loadBrands(): void {
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
@@ -212,28 +214,30 @@ export class ProductListComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.brands = res?.items ?? [];
-          this.brandNames = {};
-          for (const b of this.brands) {
-            this.brandNames[b.id] = b.content?.['en']?.name || b.content?.['bn']?.name || b.id;
+          const items = res?.items ?? [];
+          this.brands.set(items);
+          const names: Record<string, string> = {};
+          for (const b of items) {
+            names[b.id] = b.content?.['en']?.name || b.content?.['bn']?.name || b.id;
           }
+          this.brandNames.set(names);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, 'Failed to load brands');
+          this.error.set(extractErrorMessage(err, 'Failed to load brands'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
   }
 
   mediaName(id: string): string {
-    const m = this.media.find((x) => x.id === id);
+    const m = this.media().find((x) => x.id === id);
     return m ? m.url : id;
   }
 
   loadMedia(): void {
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<{ items: MediaAsset[] }>(`${this.config.apiBaseUrl}/v1/image-storage/list`, {
@@ -244,12 +248,12 @@ export class ProductListComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.media = res?.items ?? [];
+          this.media.set(res?.items ?? []);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, 'Failed to load media');
+          this.error.set(extractErrorMessage(err, 'Failed to load media'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -257,13 +261,13 @@ export class ProductListComponent implements OnInit {
 
   selectedMedia(): MediaAsset[] {
     const ids = this.createForm.get('mediaIds')?.value || [];
-    return this.media.filter((m) => ids.includes(m.id));
+    return this.media().filter((m) => ids.includes(m.id));
   }
 
   deleteMedia(mediaId: string): void {
     if (!confirm('Delete this image?')) return;
     this.imageService.deleteMedia(mediaId).then(() => {
-      this.media = this.media.filter((m) => m.id !== mediaId);
+      this.media.update((prev) => prev.filter((m) => m.id !== mediaId));
       const currentMediaIds = this.createForm.get('mediaIds')?.value || [];
       this.createForm.patchValue({
         mediaIds: currentMediaIds.filter((id: string) => id !== mediaId),
@@ -273,16 +277,16 @@ export class ProductListComponent implements OnInit {
       }
       this.notification.success(NOTIFICATION_MESSAGES.media.delete);
     }).catch((err) => {
-      this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
+      this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed));
       if (!isGlobalHttpError(err?.status)) {
-        this.notification.error(this.error);
+        this.notification.error(this.error()!);
       }
     });
   }
 
   loadProducts(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const url = new URL(`${this.config.apiBaseUrl}/v1/admin/products`);
     if (this.searchQuery) url.searchParams.set('search', this.searchQuery);
@@ -291,18 +295,18 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.products = res?.items ?? [];
+          this.products.set(res?.items ?? []);
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load products');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load products'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -313,8 +317,8 @@ export class ProductListComponent implements OnInit {
     const files = Array.from(input.files ?? []);
     if (files.length === 0) return;
 
-    this.uploadingMedia = true;
-    this.error = null;
+    this.uploadingMedia.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const formData = new FormData();
     for (const file of files) {
@@ -339,19 +343,19 @@ export class ProductListComponent implements OnInit {
             mimeType: res.mimeType,
             alt: {},
           }));
-          this.media = [...this.media, ...newMedia];
+          this.media.update((prev) => [...prev, ...newMedia]);
           const currentMediaIds = this.createForm.get('mediaIds')?.value || [];
           this.createForm.patchValue({
             mediaIds: [...currentMediaIds, ...results.map((res) => res.mediaId)],
           });
-          this.uploadingMedia = false;
+          this.uploadingMedia.set(false);
           this.notification.success(NOTIFICATION_MESSAGES.media.create);
         },
         error: (err) => {
-          this.uploadingMedia = false;
-          this.error = extractErrorMessage(err, 'Failed to upload media');
+          this.uploadingMedia.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to upload media'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -378,8 +382,8 @@ export class ProductListComponent implements OnInit {
 
   createProduct(): void {
     if (this.createForm.invalid) return;
-    this.creating = true;
-    this.error = null;
+    this.creating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body = {
@@ -410,7 +414,7 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        finalize(() => (this.creating = false)),
+        finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -419,10 +423,10 @@ export class ProductListComponent implements OnInit {
           this.notification.success(NOTIFICATION_MESSAGES.product.create);
         },
         error: (err) => {
-          this.creating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.product.createFailed);
+          this.creating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.product.createFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -445,8 +449,8 @@ export class ProductListComponent implements OnInit {
 
   updateProduct(): void {
     if (!this.editingProduct || this.editForm.invalid) return;
-    this.updating = true;
-    this.error = null;
+    this.updating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.editForm.value;
     const body = {
@@ -463,7 +467,7 @@ export class ProductListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })
       .pipe(
-        finalize(() => (this.updating = false)),
+        finalize(() => this.updating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
@@ -472,10 +476,10 @@ export class ProductListComponent implements OnInit {
           this.notification.success(NOTIFICATION_MESSAGES.product.update);
         },
         error: (err) => {
-          this.updating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.product.updateFailed);
+          this.updating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.product.updateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -483,7 +487,7 @@ export class ProductListComponent implements OnInit {
 
   deleteProduct(id: string): void {
     if (!confirm('Delete this product?')) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .delete(`${this.config.apiBaseUrl}/v1/admin/products/${id}`, {
@@ -497,9 +501,9 @@ export class ProductListComponent implements OnInit {
           this.notification.success(NOTIFICATION_MESSAGES.product.delete);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.product.deleteFailed);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.product.deleteFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

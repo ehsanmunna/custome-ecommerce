@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject } from '@angular/core';
+import { Component, DestroyRef, inject, signal } from '@angular/core';
 import {
   FormBuilder,
   FormGroup,
@@ -66,16 +66,16 @@ import { isGlobalHttpError, extractErrorMessage } from '../core/notifications/no
             }
           </div>
 
-          @if (error) {
-            <p class="mt-1 text-sm text-[var(--color-danger)]">{{ error }}</p>
+          @if (error()) {
+            <p class="mt-1 text-sm text-[var(--color-danger)]">{{ error() }}</p>
           }
 
           <button
             type="submit"
-            [disabled]="loading"
+            [disabled]="loading()"
             class="mt-2 w-full cursor-pointer rounded-md border-none bg-[var(--color-primary)] p-2 text-base text-[var(--color-primary-foreground)] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {{ (loading ? 'auth.signingIn' : 'auth.signIn') | transloco }}
+            {{ (loading() ? 'auth.signingIn' : 'auth.signIn') | transloco }}
           </button>
         </form>
       </div>
@@ -96,8 +96,8 @@ export class LoginComponent {
     password: ['', [Validators.required]],
   });
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   onSubmit(): void {
     if (this.form.invalid) {
@@ -105,14 +105,14 @@ export class LoginComponent {
       return;
     }
 
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
 
     const value = this.form.value;
     const email = value.email ?? '';
     const password = value.password ?? '';
     this.auth.login(email, password).pipe(
-      finalize(() => this.loading = false),
+      finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: () => {
@@ -121,9 +121,9 @@ export class LoginComponent {
       },
       error: (err) => {
         const generic = this.transloco.translate('auth.invalidCredentials') ?? 'Invalid credentials';
-        this.error = extractErrorMessage(err, generic);
+        this.error.set(extractErrorMessage(err, generic));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });

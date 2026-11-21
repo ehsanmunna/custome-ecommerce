@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, inject, OnInit } from '@angular/core';
+import { Component, DestroyRef, Inject, inject, OnInit, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -49,17 +49,17 @@ export interface MediaPage {
   templateUrl: './media-list.component.html',
 })
 export class MediaListComponent implements OnInit {
-  media: MediaAsset[] = [];
+  media = signal<MediaAsset[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   uploadModal = false;
-  uploading = false;
+  uploading = signal(false);
 
-  deleting = false;
+  deleting = signal(false);
 
-  imageUrls: Record<string, string> = {};
+  imageUrls = signal<Record<string, string>>({});
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -81,10 +81,10 @@ export class MediaListComponent implements OnInit {
     });
 
     this.destroyRef.onDestroy(() => {
-      for (const url of Object.values(this.imageUrls)) {
+      for (const url of Object.values(this.imageUrls())) {
         this.imageService.revokeObjectUrl(url);
       }
-      this.imageUrls = {};
+      this.imageUrls.set({});
     });
   }
 
@@ -93,8 +93,8 @@ export class MediaListComponent implements OnInit {
   }
 
   loadMedia(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<MediaPage>(`${this.config.apiBaseUrl}/v1/image-storage/list`, {
@@ -102,22 +102,22 @@ export class MediaListComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load media';
+          this.error.set(err?.message ?? 'Failed to load media');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.media = res?.items ?? [];
+          this.media.set(res?.items ?? []);
           this.prefetchImages();
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load media');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load media'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -134,8 +134,8 @@ export class MediaListComponent implements OnInit {
 
   uploadFile(): void {
     if (this.uploadForm.invalid) return;
-    this.uploading = true;
-    this.error = null;
+    this.uploading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const formData = new FormData();
     formData.append('file', this.uploadForm.value.file);
@@ -154,20 +154,20 @@ export class MediaListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           });
         }),
-        finalize(() => (this.uploading = false)),
+        finalize(() => this.uploading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.media = res?.items ?? [];
+          this.media.set(res?.items ?? []);
           this.prefetchImages();
           this.notification.success(NOTIFICATION_MESSAGES.media.create);
         },
         error: (err) => {
-          this.uploading = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.createFailed);
+          this.uploading.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.media.createFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -175,35 +175,42 @@ export class MediaListComponent implements OnInit {
 
   deleteMedia(m: MediaAsset): void {
     if (!confirm(`Delete "${m.key}"?`)) return;
-    this.deleting = true;
-    this.error = null;
+    this.deleting.set(true);
+    this.error.set(null);
     this.imageService
       .deleteMedia(m.id)
       .then(() => {
-        this.media = this.media.filter((x) => x.id !== m.id);
-        const url = this.imageUrls[m.id];
+        this.media.update((prev) => prev.filter((x) => x.id !== m.id));
+        const url = this.imageUrls()[m.id];
         if (url) {
           this.imageService.revokeObjectUrl(url);
-          delete this.imageUrls[m.id];
+          this.imageUrls.update((prev) => {
+            const next = { ...prev };
+            delete next[m.id];
+            return next;
+          });
         }
-        this.deleting = false;
+        this.deleting.set(false);
         this.notification.success(NOTIFICATION_MESSAGES.media.delete);
       })
       .catch((err) => {
-        this.deleting = false;
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed);
+        this.deleting.set(false);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.media.deleteFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       });
   }
 
   private getImageUrl(m: MediaAsset): void {
-    if (!m.url || this.imageUrls[m.id]) return;
+    if (!m.url || this.imageUrls()[m.id]) return;
     this.imageService
       .fetch(m.url)
       .then((blob) => {
-        this.imageUrls[m.id] = this.imageService.createObjectUrl(blob);
+        this.imageUrls.update((prev) => ({
+          ...prev,
+          [m.id]: this.imageService.createObjectUrl(blob),
+        }));
       })
       .catch(() => {
         // silently ignore failed image fetches
@@ -211,7 +218,7 @@ export class MediaListComponent implements OnInit {
   }
 
   private prefetchImages(): void {
-    for (const m of this.media) {
+    for (const m of this.media()) {
       this.getImageUrl(m);
     }
   }

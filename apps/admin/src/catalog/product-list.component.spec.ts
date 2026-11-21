@@ -150,8 +150,8 @@ describe('ProductListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.products.length).toBe(1);
-    expect(component.products[0].id).toBe('prod-1');
+    expect(component.products().length).toBe(1);
+    expect(component.products()[0].id).toBe('prod-1');
   });
 
   it('should create a product successfully', async () => {
@@ -175,7 +175,7 @@ describe('ProductListComponent', () => {
 
     const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/products`);
     expect(req).toBeDefined();
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should handle product creation failure', async () => {
@@ -197,7 +197,7 @@ describe('ProductListComponent', () => {
     });
     await component.createProduct();
 
-    expect(component.error).toContain('Validation failed');
+    expect(component.error()).toContain('Validation failed');
   });
 
   it('should delete a product successfully', async () => {
@@ -253,8 +253,8 @@ describe('MediaListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.media.length).toBe(1);
-    expect(component.media[0].key).toBe('image.jpg');
+    expect(component.media().length).toBe(1);
+    expect(component.media()[0].key).toBe('image.jpg');
   });
 
   it('should handle media upload failure', async () => {
@@ -266,7 +266,7 @@ describe('MediaListComponent', () => {
     });
     await component.uploadFile();
 
-    expect(component.error).toBe('Upload failed');
+    expect(component.error()).toBe('Upload failed');
   });
 });
 
@@ -329,10 +329,10 @@ describe('InventoryListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.inventory.length).toBe(2);
-    expect(component.inventory[0].lowStock).toBe(false);
-    expect(component.inventory[1].lowStock).toBe(true);
-    expect(component.variantSkus['var-1']).toBe('SKU-1');
+    expect(component.inventory().length).toBe(2);
+    expect(component.inventory()[0].lowStock).toBe(false);
+    expect(component.inventory()[1].lowStock).toBe(true);
+    expect(component.variantSkus()['var-1']).toBe('SKU-1');
   });
 
   it('should filter to low stock items only', async () => {
@@ -380,7 +380,7 @@ describe('InventoryAdjustmentComponent', () => {
   });
 
   it('should reject adjustment that would drop stock below zero', async () => {
-    component.inventory = [
+    component.inventory.set([
       {
         variantId: 'var-1',
         sku: 'SKU-001',
@@ -390,7 +390,7 @@ describe('InventoryAdjustmentComponent', () => {
         lowStockThreshold: 3,
         lowStock: false,
       },
-    ];
+    ]);
 
     // Initialize form controls like loadInventory() does
     const fb = new FormBuilder();
@@ -399,12 +399,12 @@ describe('InventoryAdjustmentComponent', () => {
 
     await component.adjustStock('var-1');
 
-    expect(component.error).toContain('below zero');
-    expect(component.inventory[0].available).toBe(5);
+    expect(component.error()).toContain('below zero');
+    expect(component.inventory()[0].available).toBe(5);
   });
 
   it('should apply successful adjustment and update available stock', async () => {
-    component.inventory = [
+    component.inventory.set([
       {
         variantId: 'var-1',
         sku: 'SKU-001',
@@ -414,7 +414,7 @@ describe('InventoryAdjustmentComponent', () => {
         lowStockThreshold: 3,
         lowStock: false,
       },
-    ];
+    ]);
 
     http.setResponse(`${baseUrl}/v1/admin/inventory/var-1/adjustments`, {
       variantId: 'var-1',
@@ -432,12 +432,12 @@ describe('InventoryAdjustmentComponent', () => {
 
     await component.adjustStock('var-1');
 
-    expect(component.error).toBeNull();
-    expect(component.success).toContain('Stock adjusted');
+    expect(component.error()).toBeNull();
+    expect(component.success()).toContain('Stock adjusted');
   });
 
   it('should not call API when delta or reason is missing', async () => {
-    component.inventory = [
+    component.inventory.set([
       {
         variantId: 'var-1',
         sku: 'SKU-001',
@@ -447,7 +447,7 @@ describe('InventoryAdjustmentComponent', () => {
         lowStockThreshold: 3,
         lowStock: false,
       },
-    ];
+    ]);
 
     await component.adjustStock('var-1');
 
@@ -492,8 +492,8 @@ describe('InventoryReservationComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.reservations.length).toBe(1);
-    expect(component.reservations[0].status).toBe('active');
+    expect(component.reservations().length).toBe(1);
+    expect(component.reservations()[0].status).toBe('active');
   });
 
   it('should create a reservation successfully', async () => {
@@ -513,7 +513,7 @@ describe('InventoryReservationComponent', () => {
 
     await component.createReservation();
 
-    expect(component.success).toContain('Reservation created');
+    expect(component.success()).toContain('Reservation created');
   });
 });
 
@@ -560,8 +560,8 @@ describe('StockMovementsComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.movements.length).toBe(2);
-    expect(component.movements[0].type).toBe('Reservation');
-    expect(component.movements[1].type).toBe('Release');
+    expect(component.movements().length).toBe(2);
+    expect(component.movements()[0].type).toBe('Reservation');
+    expect(component.movements()[1].type).toBe('Release');
   });
 });

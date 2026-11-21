@@ -132,8 +132,8 @@ describe('PageListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.pages.length).toBe(1);
-    expect(component.pages[0].id).toBe('page-1');
+    expect(component.pages().length).toBe(1);
+    expect(component.pages()[0].id).toBe('page-1');
   });
 
   it('should create a CMS page successfully', async () => {
@@ -153,7 +153,7 @@ describe('PageListComponent', () => {
     const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/pages`);
     expect(req).toBeDefined();
     expect(req!.body.content.en.slug).toBe('contact');
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should reject CMS page with missing slug', async () => {
@@ -171,7 +171,7 @@ describe('PageListComponent', () => {
     await component.createPage();
 
     expect(component.createForm.invalid).toBe(true);
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should handle permission-denied page creation', async () => {
@@ -188,7 +188,7 @@ describe('PageListComponent', () => {
     });
     await component.createPage();
 
-    expect(component.error).toContain('insufficient permissions');
+    expect(component.error()).toContain('insufficient permissions');
   });
 
   it('should delete a CMS page successfully', async () => {
@@ -239,8 +239,8 @@ describe('BannerListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.banners.length).toBe(1);
-    expect(component.banners[0].placement).toBe('homepage-hero');
+    expect(component.banners().length).toBe(1);
+    expect(component.banners()[0].placement).toBe('homepage-hero');
   });
 
   it('should create a banner successfully', async () => {
@@ -270,7 +270,7 @@ describe('BannerListComponent', () => {
     expect(req).toBeDefined();
     expect(req!.body.placement).toBe('sidebar');
     expect(req!.body.content.en.title).toBe('Sidebar Promo');
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should reject banner with missing placement', async () => {
@@ -291,7 +291,7 @@ describe('BannerListComponent', () => {
     await component.createBanner();
 
     expect(component.createForm.invalid).toBe(true);
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should handle permission-denied banner creation', async () => {
@@ -311,7 +311,7 @@ describe('BannerListComponent', () => {
     });
     await component.createBanner();
 
-    expect(component.error).toContain('insufficient permissions');
+    expect(component.error()).toContain('insufficient permissions');
   });
 
   it('should delete a banner successfully', async () => {

@@ -24,11 +24,11 @@
     >
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
 
-  @if (variants.length) {
+  @if (variants().length) {
     <table class="w-full border-collapse mb-4">
       <thead>
         <tr>
@@ -60,7 +60,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (v of variants; track v) {
+        @for (v of variants(); track v) {
           <tr>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ v.sku }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">
@@ -143,7 +143,7 @@
               <option value="archived">Archived</option>
             </select>
           </div>
-          @for (attr of attributeDefs; track attr) {
+          @for (attr of attributeDefs(); track attr) {
             <div class="mb-3">
               <label class="block mb-1 font-medium text-sm text-[var(--color-text-secondary)]"
                 >{{ attr.key }} ({{ attr.valueType }}){{ attr.required ? ' *' : '' }}</label
@@ -157,7 +157,7 @@
           }
           <button
             type="submit"
-            [disabled]="createForm.invalid || creating"
+            [disabled]="createForm.invalid || creating()"
             class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
           >
             Create
@@ -214,7 +214,7 @@
           </div>
           <button
             type="submit"
-            [disabled]="editForm.invalid || updating"
+            [disabled]="editForm.invalid || updating()"
             class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
           >
             Save

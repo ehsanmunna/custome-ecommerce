@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -45,12 +45,12 @@ export interface VariantPage {
   templateUrl: './inventory-list.component.html',
 })
 export class InventoryListComponent implements OnInit {
-  inventory: InventoryItem[] = [];
-  variantSkus: Record<string, string> = {};
+  inventory = signal<InventoryItem[]>([]);
+  variantSkus = signal<Record<string, string>>({});
 
   lowStockFilter = false;
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -65,8 +65,8 @@ export class InventoryListComponent implements OnInit {
   }
 
   loadInventory(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
     if (this.lowStockFilter) url.searchParams.set('lowStock', 'true');
@@ -83,22 +83,23 @@ export class InventoryListComponent implements OnInit {
             .pipe(map((variants) => ({ inventory, variants }))),
         ),
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load inventory';
+          this.error.set(err?.message ?? 'Failed to load inventory');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: ({ inventory, variants }) => {
-          this.inventory = inventory?.items ?? [];
+          this.inventory.set(inventory?.items ?? []);
           const flattened: Variant[] = ((variants?.items as any[]) ?? []).flatMap(
             (p: any) => p.variants || [],
           );
-          this.variantSkus = {};
+          const skus: Record<string, string> = {};
           for (const v of flattened) {
-            this.variantSkus[v.id] = v.sku;
+            skus[v.id] = v.sku;
           }
+          this.variantSkus.set(skus);
         },
       });
   }

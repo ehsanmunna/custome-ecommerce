@@ -1,4 +1,13 @@
-import { Component, EventEmitter, Inject, Input, OnInit, Output } from '@angular/core';
+import {
+  Component,
+  EventEmitter,
+  Inject,
+  Input,
+  OnInit,
+  Output,
+  computed,
+  signal,
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -289,15 +298,15 @@ export class AdminUserFormComponent implements OnInit {
           <p-button
             label="Add administrator"
             severity="primary"
-            [disabled]="creating || updating || saving"
+            [disabled]="creating() || updating() || saving()"
             (onClick)="openCreateModal()"
           ></p-button>
         }
       </div>
 
-      @if (error) {
+      @if (error()) {
         <div class="mb-4 p-3 rounded border border-[var(--color-danger)] bg-[var(--color-danger-light)] text-[var(--color-danger)] text-sm">
-          {{ error }}
+          {{ error() }}
         </div>
       }
 
@@ -313,7 +322,7 @@ export class AdminUserFormComponent implements OnInit {
           </tr>
         </thead>
         <tbody>
-          @for (user of users; track user.id) {
+          @for (user of users(); track user.id) {
             <tr class="border-b border-[var(--color-border)]">
               <td class="py-3 text-[var(--color-text)]">{{ user.email }}</td>
               <td class="py-3 text-[var(--color-text)]">{{ user.displayName }}</td>
@@ -336,7 +345,7 @@ export class AdminUserFormComponent implements OnInit {
                     type="button"
                     class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
                     (click)="openEditModal(user)"
-                    [disabled]="creating || updating || saving"
+                    [disabled]="creating() || updating() || saving()"
                   >
                     Edit
                   </button>
@@ -347,7 +356,7 @@ export class AdminUserFormComponent implements OnInit {
                       type="button"
                       class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"
                       (click)="toggleStatus(user)"
-                      [disabled]="creating || updating || saving"
+                      [disabled]="creating() || updating() || saving()"
                     >
                       Disable
                     </button>
@@ -358,7 +367,7 @@ export class AdminUserFormComponent implements OnInit {
                       type="button"
                       class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-danger)] text-[var(--color-danger-foreground)]"
                       (click)="toggleStatus(user)"
-                      [disabled]="creating || updating || saving"
+                      [disabled]="creating() || updating() || saving()"
                     >
                       Enable
                     </button>
@@ -376,14 +385,14 @@ export class AdminUserFormComponent implements OnInit {
         </tbody>
       </table>
 
-      @if (meta.total > 0) {
+      @if (meta().total > 0) {
         <div class="flex items-center justify-between text-sm text-[var(--color-text-muted)]">
-          <span>Showing {{ showingFrom }} to {{ showingTo }} of {{ meta.total }} administrators</span>
+          <span>Showing {{ showingFrom() }} to {{ showingTo() }} of {{ meta().total }} administrators</span>
           <div class="flex gap-1">
             <button
               type="button"
               class="btn btn-sm btn-outline"
-              [disabled]="meta.page === 1 || loading"
+              [disabled]="meta().page === 1 || loading()"
               (click)="previousPage()"
             >
               Prev
@@ -391,7 +400,7 @@ export class AdminUserFormComponent implements OnInit {
             <button
               type="button"
               class="btn btn-sm btn-outline"
-              [disabled]="meta.page * meta.pageSize >= meta.total || loading"
+              [disabled]="meta().page * meta().pageSize >= meta().total || loading()"
               (click)="nextPage()"
             >
               Next
@@ -404,8 +413,8 @@ export class AdminUserFormComponent implements OnInit {
         *ngIf="createModal || editModal"
         [mode]="editModal ? 'edit' : 'create'"
         [user]="editingUser"
-        [roles]="roles"
-        [saving]="creating || updating"
+        [roles]="roles()"
+        [saving]="creating() || updating()"
         [lockStatus]="editingUser ? isSelf(editingUser) : false"
         (save)="onFormSave($event)"
         (cancel)="closeModal()"
@@ -414,19 +423,29 @@ export class AdminUserFormComponent implements OnInit {
   `,
 })
 export class AdminUsersListComponent implements OnInit {
-  users: AdminUser[] = [];
-  roles: AdminRole[] = [];
-  loading = false;
-  error: string | null = null;
-  creating = false;
-  updating = false;
-  saving = false;
+  users = signal<AdminUser[]>([]);
+  roles = signal<AdminRole[]>([]);
+  loading = signal(false);
+  error = signal<string | null>(null);
+  creating = signal(false);
+  updating = signal(false);
+  saving = signal(false);
 
   page = 1;
   pageSize = 10;
-  meta: { total: number; page: number; pageSize: number } = { total: 0, page: 1, pageSize: 10 };
-  showingFrom = 1;
-  showingTo = 0;
+  meta = signal<{ total: number; page: number; pageSize: number }>({
+    total: 0,
+    page: 1,
+    pageSize: 10,
+  });
+  readonly showingFrom = computed(() => {
+    const meta = this.meta();
+    return meta.total > 0 ? (meta.page - 1) * meta.pageSize + 1 : 0;
+  });
+  readonly showingTo = computed(() => {
+    const meta = this.meta();
+    return meta.total > 0 ? Math.min(meta.page * meta.pageSize, meta.total) : 0;
+  });
 
   editingUser: AdminUser | null = null;
   createModal = false;
@@ -459,21 +478,19 @@ export class AdminUsersListComponent implements OnInit {
   }
 
   loadUsers(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<AdminUserPage>(
         `${this.config.apiBaseUrl}/v1/admin/users?page=${this.page}&pageSize=${this.pageSize}`,
         { headers: { Authorization: `Bearer ${token}` } },
       )
-      .pipe(finalize(() => (this.loading = false)))
+      .pipe(finalize(() => this.loading.set(false)))
       .subscribe({
         next: (res) => {
-          this.users = res?.items ?? [];
-          this.meta = res?.meta ?? { total: 0, page: this.page, pageSize: this.pageSize };
-          this.showingFrom = this.meta.total > 0 ? (this.meta.page - 1) * this.meta.pageSize + 1 : 0;
-          this.showingTo = this.meta.total > 0 ? Math.min(this.meta.page * this.meta.pageSize, this.meta.total) : 0;
+          this.users.set(res?.items ?? []);
+          this.meta.set(res?.meta ?? { total: 0, page: this.page, pageSize: this.pageSize });
         },
         error: (err: unknown) => {
           this.reportError(err, 'Failed to load administrators');
@@ -491,7 +508,7 @@ export class AdminUsersListComponent implements OnInit {
       .pipe(catchError(() => EMPTY))
       .subscribe({
         next: (res) => {
-          this.roles = res?.items ?? [];
+          this.roles.set(res?.items ?? []);
         },
       });
   }
@@ -504,7 +521,7 @@ export class AdminUsersListComponent implements OnInit {
   }
 
   nextPage(): void {
-    if (this.page * this.pageSize < this.meta.total) {
+    if (this.page * this.pageSize < this.meta().total) {
       this.page++;
       this.loadUsers();
     }
@@ -513,14 +530,14 @@ export class AdminUsersListComponent implements OnInit {
   openCreateModal(): void {
     this.editingUser = null;
     this.editModal = false;
-    this.error = null;
+    this.error.set(null);
     this.createModal = true;
   }
 
   openEditModal(user: AdminUser): void {
     this.editingUser = user;
     this.createModal = false;
-    this.error = null;
+    this.error.set(null);
     this.editModal = true;
   }
 
@@ -528,9 +545,9 @@ export class AdminUsersListComponent implements OnInit {
     this.createModal = false;
     this.editModal = false;
     this.editingUser = null;
-    this.saving = false;
-    this.creating = false;
-    this.updating = false;
+    this.saving.set(false);
+    this.creating.set(false);
+    this.updating.set(false);
   }
 
   isSelf(user: AdminUser): boolean {
@@ -540,10 +557,10 @@ export class AdminUsersListComponent implements OnInit {
   onFormSave(value: { email?: string; password?: string; displayName: string; status?: 'active' | 'disabled'; roleId: string }): void {
     const token = this.auth.token;
     const editingUser = this.editingUser;
-    this.error = null;
+    this.error.set(null);
 
     if (this.editModal && editingUser) {
-      this.updating = true;
+      this.updating.set(true);
       const body = {
         displayName: value.displayName,
         ...(value.status !== undefined && { status: value.status }),
@@ -555,34 +572,34 @@ export class AdminUsersListComponent implements OnInit {
         })
         .subscribe({
           next: () => {
-            this.updating = false;
+            this.updating.set(false);
             this.closeModal();
             this.notification.success(NOTIFICATION_MESSAGES.adminUser.update);
             this.loadUsers();
           },
           error: (err: unknown) => {
-            this.updating = false;
+            this.updating.set(false);
             this.reportError(err, NOTIFICATION_MESSAGES.adminUser.updateFailed);
           },
         });
       return;
     }
 
-    this.creating = true;
+    this.creating.set(true);
     this.http
       .post(`${this.config.apiBaseUrl}/v1/admin/users`, value, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .subscribe({
         next: () => {
-          this.creating = false;
+          this.creating.set(false);
           this.closeModal();
           this.notification.success(NOTIFICATION_MESSAGES.adminUser.create);
           this.page = 1;
           this.loadUsers();
         },
         error: (err: unknown) => {
-          this.creating = false;
+          this.creating.set(false);
           this.reportError(err, NOTIFICATION_MESSAGES.adminUser.createFailed);
         },
       });
@@ -591,7 +608,7 @@ export class AdminUsersListComponent implements OnInit {
   toggleStatus(user: AdminUser): void {
     const enable = user.status === 'disabled';
     if (!confirm(`${enable ? 'Enable' : 'Disable'} this administrator?`)) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     const request = enable
       ? this.http.patch(`${this.config.apiBaseUrl}/v1/admin/users/${user.id}`, { status: 'active' }, {
@@ -604,9 +621,11 @@ export class AdminUsersListComponent implements OnInit {
       .pipe(
         switchMap(() => this.loadUsersOnce(token)),
         catchError((err: any) => {
-          this.error = extractErrorMessage(
-            err,
-            enable ? NOTIFICATION_MESSAGES.adminUser.enableFailed : NOTIFICATION_MESSAGES.adminUser.disableFailed,
+          this.error.set(
+            extractErrorMessage(
+              err,
+              enable ? NOTIFICATION_MESSAGES.adminUser.enableFailed : NOTIFICATION_MESSAGES.adminUser.disableFailed,
+            ),
           );
           return EMPTY;
         }),
@@ -630,7 +649,7 @@ export class AdminUsersListComponent implements OnInit {
 
   private reportError(error: unknown, fallback: string): void {
     const message = extractErrorMessage(error, fallback);
-    this.error = message;
+    this.error.set(message);
     this.notification.error(message);
   }
 

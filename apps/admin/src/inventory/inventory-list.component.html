@@ -22,11 +22,11 @@
     </button>
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
 
-  @if (inventory.length) {
+  @if (inventory().length) {
     <table class="w-full border-collapse mb-4">
       <thead>
         <tr>
@@ -63,10 +63,10 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of inventory; track item) {
+        @for (item of inventory(); track item) {
           <tr [class.bg-red-50]="item.lowStock">
             <td class="border border-[var(--color-border)] p-2 text-left">
-              {{ variantSkus[item.variantId] || item.variantId }}
+              {{ variantSkus()[item.variantId] || item.variantId }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ item.onHand }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ item.reserved }}</td>

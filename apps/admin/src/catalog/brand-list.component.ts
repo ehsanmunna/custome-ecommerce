@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -51,15 +51,15 @@ export interface BrandPage {
   templateUrl: './brand-list.component.html',
 })
 export class BrandListComponent implements OnInit {
-  brands: Brand[] = [];
+  brands = signal<Brand[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   createModal = false;
   editModal = false;
-  creating = false;
-  updating = false;
+  creating = signal(false);
+  updating = signal(false);
   editingBrand: Brand | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
@@ -97,8 +97,8 @@ export class BrandListComponent implements OnInit {
   }
 
   loadBrands(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<BrandPage>(`${this.config.apiBaseUrl}/v1/admin/brands`, {
@@ -106,21 +106,21 @@ export class BrandListComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load brands';
+          this.error.set(err?.message ?? 'Failed to load brands');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.brands = res?.items ?? [];
+          this.brands.set(res?.items ?? []);
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load brands');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load brands'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -137,8 +137,8 @@ export class BrandListComponent implements OnInit {
 
   createBrand(): void {
     if (this.createForm.invalid) return;
-    this.creating = true;
-    this.error = null;
+    this.creating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body: any = {
@@ -160,20 +160,20 @@ export class BrandListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        finalize(() => (this.creating = false)),
+        finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeCreateModal();
-          this.brands = res?.items ?? [];
+          this.brands.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.brand.create);
         },
         error: (err) => {
-          this.creating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.brand.createFailed);
+          this.creating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.brand.createFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -198,8 +198,8 @@ export class BrandListComponent implements OnInit {
 
   updateBrand(): void {
     if (!this.editingBrand || this.editForm.invalid) return;
-    this.updating = true;
-    this.error = null;
+    this.updating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.editForm.value;
     const body: any = {
@@ -221,20 +221,20 @@ export class BrandListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        finalize(() => (this.updating = false)),
+        finalize(() => this.updating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeEditModal();
-          this.brands = res?.items ?? [];
+          this.brands.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.brand.update);
         },
         error: (err) => {
-          this.updating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.brand.updateFailed);
+          this.updating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.brand.updateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -242,7 +242,7 @@ export class BrandListComponent implements OnInit {
 
   deleteBrand(id: string): void {
     if (!confirm('Delete this brand?')) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .delete(`${this.config.apiBaseUrl}/v1/admin/brands/${id}`, {
@@ -258,13 +258,13 @@ export class BrandListComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.brands = res?.items ?? [];
+          this.brands.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.brand.delete);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.brand.deleteFailed);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.brand.deleteFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

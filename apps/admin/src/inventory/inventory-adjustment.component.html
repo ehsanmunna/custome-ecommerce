@@ -15,18 +15,18 @@
     </button>
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
-  @if (success) {
+  @if (success()) {
     <div
       class="text-[var(--color-success)] bg-[var(--color-success-foreground)]/10 p-2 rounded mb-4 border border-[var(--color-success)]/20"
     >
-      {{ success }}
+      {{ success() }}
     </div>
   }
 
-  @if (inventory.length) {
+  @if (inventory().length) {
     <form [formGroup]="adjustmentForm">
       <table class="w-full border-collapse mb-4">
       <thead>
@@ -64,7 +64,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (item of inventory; track item) {
+        @for (item of inventory(); track item) {
           <tr>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ item.variantId }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ item.onHand }}</td>
@@ -95,7 +95,7 @@
               @if (auth.hasPermission(permissions.inventory.adjust)) {
                 <button
                   (click)="adjustStock(item.variantId)"
-                  [disabled]="adjustingId === variantId"
+                  [disabled]="adjustingId() === variantId"
                   class="px-4 py-2 border-none rounded-md cursor-pointer opacity-60:cursor-not-allowed bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
                 >
                   Adjust

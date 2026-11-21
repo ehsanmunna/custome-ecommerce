@@ -175,9 +175,9 @@ describe('ProductListComponent action gating', () => {
   it('hides media upload and image delete without media permissions', () => {
     const fixture = createFixture((component) => {
       component.createModal = true;
-      component.media = [
+      component.media.set([
         { id: 'media-1', url: 'https://example.com/one.jpg', mimeType: 'image/jpeg', alt: {} },
-      ];
+      ]);
       component.createForm.patchValue({ mediaIds: ['media-1'] });
     });
 
@@ -192,9 +192,9 @@ describe('ProductListComponent action gating', () => {
 
     const fixture = createFixture((component) => {
       component.createModal = true;
-      component.media = [
+      component.media.set([
         { id: 'media-1', url: 'https://example.com/one.jpg', mimeType: 'image/jpeg', alt: {} },
-      ];
+      ]);
       component.createForm.patchValue({ mediaIds: ['media-1'] });
     });
 

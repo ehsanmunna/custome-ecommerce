@@ -122,8 +122,8 @@ describe('ShippingZoneListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.zones.length).toBe(1);
-    expect(component.zones[0].code).toBe('DHAKA');
+    expect(component.zones().length).toBe(1);
+    expect(component.zones()[0].code).toBe('DHAKA');
   });
 
   it('should create a shipping zone successfully', async () => {
@@ -135,7 +135,7 @@ describe('ShippingZoneListComponent', () => {
     const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/shipping/zones`);
     expect(req).toBeDefined();
     expect(req!.body.fee).toBe(15000);
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should reject duplicate shipping zone code', async () => {
@@ -144,7 +144,7 @@ describe('ShippingZoneListComponent', () => {
     component.createForm.setValue({ code: 'DHAKA', name: 'Dhaka Zone', fee: 100, active: true });
     await component.createZone();
 
-    expect(component.error).toContain('already exists');
+    expect(component.error()).toContain('already exists');
   });
 
   it('should delete a shipping zone successfully', async () => {
@@ -198,8 +198,8 @@ describe('CouponListComponent', () => {
 
     await component.ngOnInit();
 
-    expect(component.coupons.length).toBe(1);
-    expect(component.coupons[0].code).toBe('SAVE10');
+    expect(component.coupons().length).toBe(1);
+    expect(component.coupons()[0].code).toBe('SAVE10');
   });
 
   it('should create a coupon successfully', async () => {
@@ -219,7 +219,7 @@ describe('CouponListComponent', () => {
     const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/coupons`);
     expect(req).toBeDefined();
     expect(req!.body.minimumOrder).toBe(50000);
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
   });
 
   it('should reject invalid coupon date range', async () => {
@@ -236,7 +236,7 @@ describe('CouponListComponent', () => {
     });
     await component.createCoupon();
 
-    expect(component.error).toContain('later than start date');
+    expect(component.error()).toContain('later than start date');
   });
 
   it('should handle permission-denied coupon creation', async () => {
@@ -253,7 +253,7 @@ describe('CouponListComponent', () => {
     });
     await component.createCoupon();
 
-    expect(component.error).toContain('insufficient permissions');
+    expect(component.error()).toContain('insufficient permissions');
   });
 
   it('should delete a coupon successfully', async () => {

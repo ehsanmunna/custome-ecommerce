@@ -15,11 +15,11 @@
     </button>
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
 
-  @if (movements.length) {
+  @if (movements().length) {
     <table class="w-full border-collapse mb-4">
       <thead>
         <tr>
@@ -56,7 +56,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (m of movements; track m) {
+        @for (m of movements(); track m) {
           <tr>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ m.variantId }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ m.type }}</td>

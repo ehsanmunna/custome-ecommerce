@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -41,11 +41,11 @@ const ALLOWED_TRANSITIONS: Record<string, string[]> = {
 export class OrderStatusComponent implements OnInit {
   orderId: string | null = null;
   orderNumber = '';
-  order: any = null;
+  order = signal<any>(null);
 
-  loading = false;
-  error: string | null = null;
-  success: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
+  success = signal<string | null>(null);
 
   changing = false;
 
@@ -74,15 +74,15 @@ export class OrderStatusComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.orderId) {
-      this.error = 'No order ID specified';
+      this.error.set('No order ID specified');
       return;
     }
     this.loadOrder();
   }
 
   loadOrder(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<{ id: string; number: string; status: string }>(
@@ -91,16 +91,16 @@ export class OrderStatusComponent implements OnInit {
       )
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load order';
+          this.error.set(err?.message ?? 'Failed to load order');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => (this.loading.set(false))),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           if (res) {
-            this.order = res;
+            this.order.set(res);
             this.orderNumber = res.number;
             const currentStatus = res.status;
             this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
@@ -108,20 +108,20 @@ export class OrderStatusComponent implements OnInit {
           }
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load order');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load order'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
   }
 
   changeStatus(): void {
-    if (this.statusForm.invalid || !this.order) return;
+    if (this.statusForm.invalid || !this.order()) return;
     this.changing = true;
-    this.error = null;
-    this.success = null;
+    this.error.set(null);
+    this.success.set(null);
     const token = this.auth.token;
     const value = this.statusForm.value;
     const body: { status: string; note?: string } = { status: value.status };
@@ -142,8 +142,8 @@ export class OrderStatusComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.success = `Order status updated to ${value.status}`;
-          this.order = res;
+          this.success.set(`Order status updated to ${value.status}`);
+          this.order.set(res);
           this.orderNumber = res.number;
           const currentStatus = res.status;
           this.allowedNextStatuses = ALLOWED_TRANSITIONS[currentStatus] ?? [];
@@ -152,9 +152,9 @@ export class OrderStatusComponent implements OnInit {
         },
         error: (err) => {
           this.changing = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.order.statusUpdateFailed);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.order.statusUpdateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

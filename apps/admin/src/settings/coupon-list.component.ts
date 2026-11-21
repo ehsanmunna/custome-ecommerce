@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -47,10 +47,10 @@ export interface CouponPage {
 })
 export class CouponListComponent implements OnInit {
 
-  coupons: Coupon[] = [];
+  coupons = signal<Coupon[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   editingCoupon: Coupon | null = null;
 
@@ -98,27 +98,27 @@ export class CouponListComponent implements OnInit {
   }
 
   loadCoupons(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http.get<CouponPage>(`${this.config.apiBaseUrl}/v1/admin/coupons`, {
       headers: { Authorization: `Bearer ${token}` },
     }).pipe(
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load coupons';
+        this.error.set(err?.message ?? 'Failed to load coupons');
         return EMPTY;
       }),
-      finalize(() => this.loading = false),
+      finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (res) => {
-        this.coupons = res?.items ?? [];
+        this.coupons.set(res?.items ?? []);
       },
       error: (err) => {
-        this.loading = false;
-        this.error = extractErrorMessage(err, 'Failed to load coupons');
+        this.loading.set(false);
+        this.error.set(extractErrorMessage(err, 'Failed to load coupons'));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -127,7 +127,7 @@ export class CouponListComponent implements OnInit {
   createCoupon(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body = {
@@ -146,7 +146,7 @@ export class CouponListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })),
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create coupon';
+        this.error.set(err?.message ?? 'Failed to create coupon');
         return EMPTY;
       }),
       finalize(() => this.creating = false),
@@ -154,14 +154,14 @@ export class CouponListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.closeCreateModal();
-        this.coupons = res?.items ?? [];
+        this.coupons.set(res?.items ?? []);
         this.notification.success(NOTIFICATION_MESSAGES.coupon.create);
       },
       error: (err) => {
         this.creating = false;
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.createFailed);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.createFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -170,7 +170,7 @@ export class CouponListComponent implements OnInit {
   updateCoupon(): void {
     if (!this.editingCoupon || this.editForm.invalid) return;
     this.updating = true;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.editForm.value;
     const body = {
@@ -189,7 +189,7 @@ export class CouponListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })),
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to update coupon';
+        this.error.set(err?.message ?? 'Failed to update coupon');
         return EMPTY;
       }),
       finalize(() => this.updating = false),
@@ -197,14 +197,14 @@ export class CouponListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.closeEditModal();
-        this.coupons = res?.items ?? [];
+        this.coupons.set(res?.items ?? []);
         this.notification.success(NOTIFICATION_MESSAGES.coupon.update);
       },
       error: (err) => {
         this.updating = false;
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.updateFailed);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.updateFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -212,7 +212,7 @@ export class CouponListComponent implements OnInit {
 
   deleteCoupon(id: string): void {
     if (!confirm('Delete this coupon?')) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http.delete(`${this.config.apiBaseUrl}/v1/admin/coupons/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -221,19 +221,19 @@ export class CouponListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })),
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to delete coupon';
+        this.error.set(err?.message ?? 'Failed to delete coupon');
         return EMPTY;
       }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (res) => {
-        this.coupons = res?.items ?? [];
+        this.coupons.set(res?.items ?? []);
         this.notification.success(NOTIFICATION_MESSAGES.coupon.delete);
       },
       error: (err) => {
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.deleteFailed);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.coupon.deleteFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -250,7 +250,7 @@ export class CouponListComponent implements OnInit {
       active: true,
     });
     this.creating = true;
-    this.error = null;
+    this.error.set(null);
     this.createModal = true;
   }
 

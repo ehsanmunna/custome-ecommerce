@@ -8,14 +8,14 @@
 
   <h1 class="mt-0 text-2xl font-semibold text-[var(--color-text)]">Change Order Status</h1>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
-  @if (success) {
+  @if (success()) {
     <div
       class="text-[var(--color-success)] bg-[var(--color-success-foreground)]/10 p-2 rounded mb-4 border border-[var(--color-success)]/20"
     >
-      {{ success }}
+      {{ success() }}
     </div>
   }
 

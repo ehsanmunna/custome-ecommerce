@@ -27,11 +27,11 @@
     }
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
 
-  @if (products.length) {
+  @if (products().length) {
     <table class="w-full border-collapse mb-4">
       <thead>
         <tr>
@@ -73,7 +73,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (p of products; track p) {
+        @for (p of products(); track p) {
           <tr>
             <td class="border border-[var(--color-border)] p-2 text-left">
               {{ p.content['en']?.name || p.content['bn']?.name }}
@@ -82,10 +82,10 @@
               {{ p.variants[0].sku || '-' }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">
-              {{ categoryNames[p.categoryId] || p.categoryId }}
+               {{ categoryNames()[p.categoryId] || p.categoryId }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">
-              {{ brandNames[p.brandId || ''] || '-' }}
+               {{ brandNames()[p.brandId || ''] || '-' }}
             </td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ p.status }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">
@@ -132,7 +132,7 @@
               formControlName="categoryId"
               class="w-full p-2 border border-[var(--color-border)] rounded-md"
             >
-              @for (c of categories; track c) {
+               @for (c of categories(); track c) {
                 <option [value]="c.id">{{ c.content['en']?.name || c.content['bn']?.name }}</option>
               }
             </select>
@@ -146,7 +146,7 @@
               class="w-full p-2 border border-[var(--color-border)] rounded-md"
             >
               <option value="">None</option>
-              @for (b of brands; track b) {
+               @for (b of brands(); track b) {
                 <option [value]="b.id">{{ b.content['en']?.name || b.content['bn']?.name }}</option>
               }
             </select>
@@ -233,7 +233,7 @@
                   @if (auth.hasPermission(permissions.media.delete)) {
                     <button
                       (click)="deleteMedia(m.id)"
-                      [disabled]="uploadingMedia"
+                      [disabled]="uploadingMedia()"
                       class="absolute -top-1 -right-1 bg-[var(--color-danger)] text-[var(--color-danger-foreground)] text-xs font-bold px-1.5 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       ×
@@ -266,7 +266,7 @@
           }
           <button
             type="submit"
-            [disabled]="createForm.invalid || creating"
+            [disabled]="createForm.invalid || creating()"
             class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
           >
             Create
@@ -323,7 +323,7 @@
           </div>
           <button
             type="submit"
-            [disabled]="editForm.invalid || updating"
+            [disabled]="editForm.invalid || updating()"
             class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
           >
             Save

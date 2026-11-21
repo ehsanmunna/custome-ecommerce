@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   FormsModule,
@@ -45,10 +45,10 @@ export interface ShippingZonePage {
 })
 export class ShippingZoneListComponent implements OnInit {
 
-  zones: ShippingZone[] = [];
+  zones = signal<ShippingZone[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   editingZone: ShippingZone | null = null;
 
@@ -90,27 +90,27 @@ export class ShippingZoneListComponent implements OnInit {
   }
 
   loadZones(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http.get<ShippingZonePage>(`${this.config.apiBaseUrl}/v1/admin/shipping/zones`, {
       headers: { Authorization: `Bearer ${token}` },
     }).pipe(
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load shipping zones';
+        this.error.set(err?.message ?? 'Failed to load shipping zones');
         return EMPTY;
       }),
-      finalize(() => this.loading = false),
+      finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (res) => {
-        this.zones = res?.items ?? [];
+        this.zones.set(res?.items ?? []);
       },
       error: (err) => {
-        this.loading = false;
-        this.error = extractErrorMessage(err, 'Failed to load shipping zones');
+        this.loading.set(false);
+        this.error.set(extractErrorMessage(err, 'Failed to load shipping zones'));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -119,7 +119,7 @@ export class ShippingZoneListComponent implements OnInit {
   createZone(): void {
     if (this.createForm.invalid) return;
     this.creating = true;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body = {
@@ -135,7 +135,7 @@ export class ShippingZoneListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })),
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to create shipping zone';
+        this.error.set(err?.message ?? 'Failed to create shipping zone');
         return EMPTY;
       }),
       finalize(() => this.creating = false),
@@ -143,14 +143,14 @@ export class ShippingZoneListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.closeCreateModal();
-        this.zones = res?.items ?? [];
+        this.zones.set(res?.items ?? []);
         this.notification.success(NOTIFICATION_MESSAGES.shippingZone.create);
       },
       error: (err) => {
         this.creating = false;
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.createFailed);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.createFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -159,7 +159,7 @@ export class ShippingZoneListComponent implements OnInit {
   updateZone(): void {
     if (!this.editingZone || this.editForm.invalid) return;
     this.updating = true;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.editForm.value;
     const body = {
@@ -175,7 +175,7 @@ export class ShippingZoneListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })),
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to update shipping zone';
+        this.error.set(err?.message ?? 'Failed to update shipping zone');
         return EMPTY;
       }),
       finalize(() => this.updating = false),
@@ -183,14 +183,14 @@ export class ShippingZoneListComponent implements OnInit {
     ).subscribe({
       next: (res) => {
         this.closeEditModal();
-        this.zones = res?.items ?? [];
+        this.zones.set(res?.items ?? []);
         this.notification.success(NOTIFICATION_MESSAGES.shippingZone.update);
       },
       error: (err) => {
         this.updating = false;
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.updateFailed);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.updateFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -198,7 +198,7 @@ export class ShippingZoneListComponent implements OnInit {
 
   deleteZone(id: string): void {
     if (!confirm('Delete this shipping zone?')) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http.delete(`${this.config.apiBaseUrl}/v1/admin/shipping/zones/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -207,19 +207,19 @@ export class ShippingZoneListComponent implements OnInit {
         headers: { Authorization: `Bearer ${token}` },
       })),
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to delete shipping zone';
+        this.error.set(err?.message ?? 'Failed to delete shipping zone');
         return EMPTY;
       }),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (res) => {
-        this.zones = res?.items ?? [];
+        this.zones.set(res?.items ?? []);
         this.notification.success(NOTIFICATION_MESSAGES.shippingZone.delete);
       },
       error: (err) => {
-        this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.deleteFailed);
+        this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.shippingZone.deleteFailed));
         if (!isGlobalHttpError(err?.status)) {
-          this.notification.error(this.error);
+          this.notification.error(this.error()!);
         }
       },
     });
@@ -228,7 +228,7 @@ export class ShippingZoneListComponent implements OnInit {
   openCreateModal(): void {
     this.createForm.reset({ code: '', name: '', fee: 0, active: true });
     this.creating = true;
-    this.error = null;
+    this.error.set(null);
     this.createModal = true;
   }
 
@@ -253,3 +253,4 @@ export class ShippingZoneListComponent implements OnInit {
     this.editingZone = null;
   }
 }
+

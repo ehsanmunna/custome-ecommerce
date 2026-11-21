@@ -170,9 +170,9 @@ describe('AdminRolesListComponent data loading', () => {
 
     component.ngOnInit();
 
-    expect(component.roles).toHaveLength(2);
-    expect(component.permissions).toHaveLength(3);
-    expect(component.loading).toBe(false);
+    expect(component.roles()).toHaveLength(2);
+    expect(component.permissions()).toHaveLength(3);
+    expect(component.loading()).toBe(false);
     expect(http.getLastRequest('GET', rolesUrl())).toBeDefined();
     expect(http.getLastRequest('GET', permissionsUrl())).toBeDefined();
   });
@@ -185,7 +185,7 @@ describe('AdminRolesListComponent data loading', () => {
     component.ngOnInit();
 
     expect(http.getLastRequest('GET', rolesUrl(2))).toBeDefined();
-    expect(component.roles).toHaveLength(2);
+    expect(component.roles()).toHaveLength(2);
   });
 
   it('shows an inline load error and leaves the toast to the interceptor for global failures', () => {
@@ -198,8 +198,8 @@ describe('AdminRolesListComponent data loading', () => {
 
     component.ngOnInit();
 
-    expect(component.loading).toBe(false);
-    expect(component.error).toBe('Roles unavailable');
+    expect(component.loading()).toBe(false);
+    expect(component.error()).toBe('Roles unavailable');
     expect(notification.error).not.toHaveBeenCalled();
   });
 
@@ -213,8 +213,8 @@ describe('AdminRolesListComponent data loading', () => {
 
     component.ngOnInit();
 
-    expect(component.permissions).toEqual([]);
-    expect(component.permissionsError).toBe('Catalog unavailable');
+    expect(component.permissions()).toEqual([]);
+    expect(component.permissionsError()).toBe('Catalog unavailable');
     expect(notification.error).toHaveBeenCalledWith('Catalog unavailable');
   });
 
@@ -230,7 +230,7 @@ describe('AdminRolesListComponent data loading', () => {
     expect(http.getLastRequest('DELETE', `${baseUrl}/v1/admin/roles/role-staff`)).toBeDefined();
     expect(notification.success).toHaveBeenCalledWith(NOTIFICATION_MESSAGES.role.delete);
     expect(http.getRequests('GET', `${baseUrl}/v1/admin/roles`)).toHaveLength(1);
-    expect(component.deleting).toBe(false);
+    expect(component.deleting()).toBe(false);
   });
 
   it('keeps the role and reports the conflict when deletion is rejected', () => {
@@ -245,8 +245,8 @@ describe('AdminRolesListComponent data loading', () => {
     component.ngOnInit();
     component.deleteRole(staffRole);
 
-    expect(component.roles).toHaveLength(2);
-    expect(component.error).toBe('Role is assigned to administrators');
+    expect(component.roles()).toHaveLength(2);
+    expect(component.error()).toBe('Role is assigned to administrators');
     expect(notification.error).toHaveBeenCalledWith('Role is assigned to administrators');
     expect(notification.success).not.toHaveBeenCalled();
   });
@@ -276,7 +276,7 @@ describe('AdminRolesListComponent data loading', () => {
       permissionKeys: ['admin.roles.read'],
     });
     expect(component.createModal).toBe(false);
-    expect(component.saving).toBe(false);
+    expect(component.saving()).toBe(false);
     expect(notification.success).toHaveBeenCalledWith(NOTIFICATION_MESSAGES.role.create);
     expect(http.getRequests('GET', `${baseUrl}/v1/admin/roles`)).toHaveLength(1);
   });
@@ -322,8 +322,8 @@ describe('AdminRolesListComponent data loading', () => {
     component.onSave({ key: 'owner', name: 'Owner copy', permissionKeys: ['admin.roles.read'] });
 
     expect(component.createModal).toBe(true);
-    expect(component.saving).toBe(false);
-    expect(component.error).toBe('Role key already exists');
+    expect(component.saving()).toBe(false);
+    expect(component.error()).toBe('Role key already exists');
     expect(notification.error).toHaveBeenCalledWith('Role key already exists');
     expect(notification.success).not.toHaveBeenCalled();
   });
@@ -343,7 +343,7 @@ describe('AdminRolesListComponent data loading', () => {
 
     expect(notification.success).toHaveBeenCalledWith(NOTIFICATION_MESSAGES.role.create);
     expect(component.createModal).toBe(false);
-    expect(component.error).toBe('Refresh failed');
+    expect(component.error()).toBe('Refresh failed');
   });
 
   it('refreshes the administrator snapshot after saving their own role', () => {
@@ -423,18 +423,18 @@ describe('AdminRolesListComponent data loading', () => {
     seedCatalog(http);
     component.ngOnInit();
 
-    component.search = 'staf';
-    expect(component.filteredRoles.map((role) => role.key)).toEqual(['staff']);
+    component.search.set('staf');
+    expect(component.filteredRoles().map((role) => role.key)).toEqual(['staff']);
 
-    component.search = 'OWN';
-    expect(component.filteredRoles.map((role) => role.key)).toEqual(['owner']);
+    component.search.set('OWN');
+    expect(component.filteredRoles().map((role) => role.key)).toEqual(['owner']);
 
-    component.search = '';
-    component.typeFilter = 'system';
-    expect(component.filteredRoles.map((role) => role.key)).toEqual(['owner']);
+    component.search.set('');
+    component.typeFilter.set('system');
+    expect(component.filteredRoles().map((role) => role.key)).toEqual(['owner']);
 
-    component.typeFilter = 'custom';
-    expect(component.filteredRoles.map((role) => role.key)).toEqual(['staff']);
+    component.typeFilter.set('custom');
+    expect(component.filteredRoles().map((role) => role.key)).toEqual(['staff']);
   });
 });
 

@@ -119,10 +119,10 @@ describe('SalesMetricsComponent', () => {
     component.to = '2026-01-31T23:59:59.000Z';
     await component.loadOverview();
 
-    expect(component.overview).toBeDefined();
-    expect(component.overview!.orderCount).toBe(25);
-    expect(component.overview!.revenue).toBe(250000);
-    expect(component.error).toBeNull();
+    expect(component.overview()).toBeDefined();
+    expect(component.overview()!.orderCount).toBe(25);
+    expect(component.overview()!.revenue).toBe(250000);
+    expect(component.error()).toBeNull();
   });
 
   it('should show empty state when there are no orders', async () => {
@@ -136,9 +136,9 @@ describe('SalesMetricsComponent', () => {
     component.to = '2026-01-31T23:59:59.000Z';
     await component.loadOverview();
 
-    expect(component.overview!.orderCount).toBe(0);
-    expect(component.overview!.revenue).toBe(0);
-    expect(component.error).toBeNull();
+    expect(component.overview()!.orderCount).toBe(0);
+    expect(component.overview()!.revenue).toBe(0);
+    expect(component.error()).toBeNull();
   });
 
   it('should handle API error for sales metrics', async () => {
@@ -148,7 +148,7 @@ describe('SalesMetricsComponent', () => {
     component.to = '2026-01-31T23:59:59.000Z';
     await component.loadOverview();
 
-    expect(component.error).toContain('insufficient permissions');
+    expect(component.error()).toContain('insufficient permissions');
   });
 
   it('should call analytics overview API with correct params', async () => {
@@ -205,10 +205,10 @@ describe('LowStockIndicatorsComponent', () => {
 
     await component.loadLowStock();
 
-    expect(component.lowStockItems.length).toBe(1);
-    expect(component.lowStockItems[0].variantId).toBe('var-1');
-    expect(component.lowStockItems[0].lowStock).toBe(true);
-    expect(component.error).toBeNull();
+    expect(component.lowStockItems().length).toBe(1);
+    expect(component.lowStockItems()[0].variantId).toBe('var-1');
+    expect(component.lowStockItems()[0].lowStock).toBe(true);
+    expect(component.error()).toBeNull();
   });
 
   it('should show empty state when no low-stock variants', async () => {
@@ -221,8 +221,8 @@ describe('LowStockIndicatorsComponent', () => {
 
     await component.loadLowStock();
 
-    expect(component.lowStockItems.length).toBe(0);
-    expect(component.error).toBeNull();
+    expect(component.lowStockItems().length).toBe(0);
+    expect(component.error()).toBeNull();
   });
 
   it('should handle API error for low-stock indicators', async () => {
@@ -230,7 +230,7 @@ describe('LowStockIndicatorsComponent', () => {
 
     await component.loadLowStock();
 
-    expect(component.error).toContain('insufficient permissions');
+    expect(component.error()).toContain('insufficient permissions');
   });
 
   it('should call inventory API with lowStock param', async () => {

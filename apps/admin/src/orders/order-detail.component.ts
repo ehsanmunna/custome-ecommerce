@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -49,10 +49,10 @@ export interface OrderDetail {
 export class OrderDetailComponent implements OnInit {
 
   orderId: string | null = null;
-  order: OrderDetail | null = null;
+  order = signal<OrderDetail | null>(null);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -67,29 +67,29 @@ export class OrderDetailComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.orderId) {
-      this.error = 'No order ID specified';
+      this.error.set('No order ID specified');
       return;
     }
     this.loadOrder();
   }
 
   loadOrder(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http.get<OrderDetail>(
       `${this.config.apiBaseUrl}/v1/admin/orders/${this.orderId}`,
       { headers: { Authorization: `Bearer ${token}` } },
     ).pipe(
       catchError((err: any) => {
-        this.error = err?.message ?? 'Failed to load order';
+        this.error.set(err?.message ?? 'Failed to load order');
         return EMPTY;
       }),
-      finalize(() => this.loading = false),
+      finalize(() => this.loading.set(false)),
       takeUntilDestroyed(this.destroyRef)
     ).subscribe({
       next: (res) => {
-        this.order = res ?? null;
+        this.order.set(res ?? null);
       }
     });
   }

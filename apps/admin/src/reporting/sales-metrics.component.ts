@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
@@ -61,11 +61,11 @@ export interface AnalyticsOverview {
         </div>
       }
 
-      @if (error) {
-        <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+      @if (error()) {
+        <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
       }
 
-      @if (overview) {
+      @if (overview(); as overview) {
         <div class="flex gap-4">
           <div
             class="border border-[var(--color-border)] rounded-lg p-4 bg-[var(--color-surface-secondary)] flex-1"
@@ -96,17 +96,17 @@ export interface AnalyticsOverview {
         </div>
       }
 
-      @if (loading) {
+      @if (loading()) {
         <div class="text-[var(--color-text-muted)]">Loading...</div>
       }
     </div>
   `,
 })
 export class SalesMetricsComponent implements OnInit {
-  overview: AnalyticsOverview | null = null;
+  overview = signal<AnalyticsOverview | null>(null);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
   protected readonly permissions = ADMIN_PERMISSIONS;
@@ -130,8 +130,8 @@ export class SalesMetricsComponent implements OnInit {
   }
 
   loadOverview(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const url = `${this.config.apiBaseUrl}/v1/admin/analytics/overview?from=${this.from}&to=${this.to}`;
     this.http
@@ -140,15 +140,15 @@ export class SalesMetricsComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load sales metrics';
+          this.error.set(err?.message ?? 'Failed to load sales metrics');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.overview = res ?? null;
+          this.overview.set(res ?? null);
         },
       });
   }

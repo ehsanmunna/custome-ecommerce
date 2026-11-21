@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -56,15 +56,15 @@ export interface AttributeDefinitionPage {
   templateUrl: './attribute-list.component.html',
 })
 export class AttributeListComponent implements OnInit {
-  categories: Category[] = [];
-  attributes: AttributeDefinition[] = [];
+  categories = signal<Category[]>([]);
+  attributes = signal<AttributeDefinition[]>([]);
   selectedCategoryId = '';
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   createModal = false;
-  creating = false;
+  creating = signal(false);
 
   createForm: FormGroup;
 
@@ -101,20 +101,20 @@ export class AttributeListComponent implements OnInit {
       })
       .pipe(
         catchError(() => {
-          this.categories = [];
+          this.categories.set([]);
           return EMPTY;
         }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.categories = res?.items ?? [];
+          this.categories.set(res?.items ?? []);
         },
         error: (err) => {
-          this.categories = [];
-          this.error = extractErrorMessage(err, 'Failed to load categories');
+          this.categories.set([]);
+          this.error.set(extractErrorMessage(err, 'Failed to load categories'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -122,11 +122,11 @@ export class AttributeListComponent implements OnInit {
 
   loadAttributes(): void {
     if (!this.selectedCategoryId) {
-      this.attributes = [];
+      this.attributes.set([]);
       return;
     }
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<AttributeDefinitionPage>(
@@ -135,21 +135,21 @@ export class AttributeListComponent implements OnInit {
       )
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load attributes';
+          this.error.set(err?.message ?? 'Failed to load attributes');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.attributes = res?.items ?? [];
+          this.attributes.set(res?.items ?? []);
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load attributes');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load attributes'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -173,8 +173,8 @@ export class AttributeListComponent implements OnInit {
 
   createAttribute(): void {
     if (this.createForm.invalid || !this.selectedCategoryId) return;
-    this.creating = true;
-    this.error = null;
+    this.creating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body: any = {
@@ -203,20 +203,20 @@ export class AttributeListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        finalize(() => (this.creating = false)),
+        finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeCreateModal();
-          this.attributes = res?.items ?? [];
+          this.attributes.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.attribute.create);
         },
         error: (err) => {
-          this.creating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.attribute.createFailed);
+          this.creating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.attribute.createFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

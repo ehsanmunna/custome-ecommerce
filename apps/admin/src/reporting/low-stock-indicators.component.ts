@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
@@ -53,11 +53,11 @@ export interface InventoryPage {
         </div>
       }
 
-      @if (error) {
-        <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+      @if (error()) {
+        <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
       }
 
-      @if (lowStockItems.length) {
+      @if (lowStockItems().length) {
         <table class="w-full border-collapse mb-4">
           <thead>
             <tr>
@@ -89,7 +89,7 @@ export interface InventoryPage {
             </tr>
           </thead>
           <tbody>
-            @for (item of lowStockItems; track item) {
+            @for (item of lowStockItems(); track item) {
               <tr>
                 <td class="border border-[var(--color-border)] p-2 text-left">
                   {{ item.variantId }}
@@ -112,17 +112,17 @@ export interface InventoryPage {
         <p class="text-[var(--color-text-muted)]">No low-stock variants found.</p>
       }
 
-      @if (loading) {
+      @if (loading()) {
         <div class="text-[var(--color-text-muted)]">Loading...</div>
       }
     </div>
   `,
 })
 export class LowStockIndicatorsComponent implements OnInit {
-  lowStockItems: InventoryItem[] = [];
+  lowStockItems = signal<InventoryItem[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
   protected readonly permissions = ADMIN_PERMISSIONS;
@@ -138,8 +138,8 @@ export class LowStockIndicatorsComponent implements OnInit {
   }
 
   loadLowStock(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const url = new URL(`${this.config.apiBaseUrl}/v1/admin/inventory`);
     url.searchParams.set('lowStock', 'true');
@@ -149,15 +149,15 @@ export class LowStockIndicatorsComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load low-stock indicators';
+          this.error.set(err?.message ?? 'Failed to load low-stock indicators');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.lowStockItems = res?.items ?? [];
+          this.lowStockItems.set(res?.items ?? []);
         },
       });
   }

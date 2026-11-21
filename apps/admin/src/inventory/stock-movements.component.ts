@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import { HttpClient } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
@@ -41,10 +41,10 @@ export interface MovementLedgerEntry {
   templateUrl: './stock-movements.component.html',
 })
 export class StockMovementsComponent implements OnInit {
-  movements: MovementLedgerEntry[] = [];
+  movements = signal<MovementLedgerEntry[]>([]);
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -59,8 +59,8 @@ export class StockMovementsComponent implements OnInit {
   }
 
   loadMovements(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<{ items: Reservation[] }>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
@@ -68,24 +68,26 @@ export class StockMovementsComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load stock movements';
+          this.error.set(err?.message ?? 'Failed to load stock movements');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           const reservations = res?.items ?? [];
-          this.movements = reservations.map((r) => ({
-            id: r.id,
-            variantId: r.variantId,
-            type: this.mapType(r.status),
-            quantity: r.quantity,
-            reason: r.source,
-            status: r.status,
-            createdAt: r.expiresAt,
-          }));
+          this.movements.set(
+            reservations.map((r) => ({
+              id: r.id,
+              variantId: r.variantId,
+              type: this.mapType(r.status),
+              quantity: r.quantity,
+              reason: r.source,
+              status: r.status,
+              createdAt: r.expiresAt,
+            })),
+          );
         },
       });
   }

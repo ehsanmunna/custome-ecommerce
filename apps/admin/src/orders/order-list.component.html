@@ -29,11 +29,11 @@
     </button>
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
 
-  @if (orders.length) {
+  @if (orders().length) {
     <table class="w-full border-collapse mb-4">
       <thead>
         <tr>
@@ -70,7 +70,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (order of orders; track order) {
+        @for (order of orders(); track order) {
           <tr>
             <td class="border border-[var(--color-border)] p-2 text-left">#{{ order.number }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ order.status }}</td>

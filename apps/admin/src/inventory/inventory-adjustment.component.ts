@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -60,13 +60,13 @@ export interface InventoryAdjustmentResult {
   templateUrl: './inventory-adjustment.component.html',
 })
 export class InventoryAdjustmentComponent implements OnInit {
-  inventory: InventoryItem[] = [];
+  inventory = signal<InventoryItem[]>([]);
 
-  loading = false;
-  error: string | null = null;
-  success: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
+  success = signal<string | null>(null);
 
-  adjustingId: string | null = null;
+  adjustingId = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -93,9 +93,9 @@ export class InventoryAdjustmentComponent implements OnInit {
   }
 
   loadInventory(): void {
-    this.loading = true;
-    this.error = null;
-    this.success = null;
+    this.loading.set(true);
+    this.error.set(null);
+    this.success.set(null);
     const token = this.auth.token;
     this.http
       .get<InventoryPage>(`${this.config.apiBaseUrl}/v1/admin/inventory`, {
@@ -103,19 +103,21 @@ export class InventoryAdjustmentComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load inventory';
+          this.error.set(err?.message ?? 'Failed to load inventory');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.inventory = (res?.items ?? []).map((item: any) => ({
-            ...item,
-            sku: item.variantId,
-          }));
-          for (const item of this.inventory) {
+          this.inventory.set(
+            (res?.items ?? []).map((item: any) => ({
+              ...item,
+              sku: item.variantId,
+            })),
+          );
+          for (const item of this.inventory()) {
             this.adjustmentForm.addControl('delta_' + item.variantId, this.fb.control(''));
             this.adjustmentForm.addControl(
               'reason_' + item.variantId,
@@ -124,10 +126,10 @@ export class InventoryAdjustmentComponent implements OnInit {
           }
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load inventory');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load inventory'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -141,17 +143,17 @@ export class InventoryAdjustmentComponent implements OnInit {
 
     if (!delta || !reason) return;
 
-    const item = this.inventory.find((i) => i.variantId === variantId);
+    const item = this.inventory().find((i) => i.variantId === variantId);
     if (!item) return;
 
     if (delta < 0 && Math.abs(delta) > item.available) {
-      this.error = `Cannot reduce stock below zero. Available: ${item.available}`;
+      this.error.set(`Cannot reduce stock below zero. Available: ${item.available}`);
       return;
     }
 
-    this.adjustingId = variantId;
-    this.error = null;
-    this.success = null;
+    this.adjustingId.set(variantId);
+    this.error.set(null);
+    this.success.set(null);
 
     const token = this.auth.token;
     const body: InventoryAdjustmentInput = {
@@ -168,25 +170,27 @@ export class InventoryAdjustmentComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        finalize(() => (this.adjustingId = null)),
+        finalize(() => this.adjustingId.set(null)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           deltaCtrl?.setValue('');
           reasonCtrl?.setValue('');
-          this.inventory = (res?.items ?? []).map((item: any) => ({
-            ...item,
-            sku: item.variantId,
-          }));
-          this.success = `Stock adjusted for ${variantId}`;
+          this.inventory.set(
+            (res?.items ?? []).map((item: any) => ({
+              ...item,
+              sku: item.variantId,
+            })),
+          );
+          this.success.set(`Stock adjusted for ${variantId}`);
           this.notification.success(NOTIFICATION_MESSAGES.inventory.adjust);
         },
         error: (err) => {
-          this.adjustingId = null;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.adjustFailed);
+          this.adjustingId.set(null);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.adjustFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

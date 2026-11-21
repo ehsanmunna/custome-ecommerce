@@ -13,7 +13,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { AuthAccess } from '../auth/auth-access.decorator';
-import { Roles } from '../auth/roles.decorator';
 import { CatalogService } from './catalog.service';
 import {
   parseCatalogInput,
@@ -27,7 +26,6 @@ export class AdminProductController {
 
   @Get()
   @AuthAccess({ access: 'admin', permission: 'catalog.products.read', scope: 'store' })
-  @Roles('owner', 'manager')
   products(@Query() query: Record<string, unknown>) {
     const input = parseCatalogInput(productAdminQuerySchema, query);
     return this.catalog.adminProducts({ ...input, locale: 'bn' });
@@ -35,21 +33,18 @@ export class AdminProductController {
 
   @Get(':productId')
   @AuthAccess({ access: 'admin', permission: 'catalog.products.read', scope: 'store' })
-  @Roles('owner', 'manager')
   product(@Param('productId', ParseUUIDPipe) id: string) {
     return this.catalog.adminProduct(id);
   }
 
   @Post()
   @AuthAccess({ access: 'admin', permission: 'catalog.products.create', scope: 'store' })
-  @Roles('owner', 'manager', 'staff')
   createProduct(@Body() body: unknown) {
     return this.catalog.createProduct(parseCatalogInput(productInputSchema, body));
   }
 
   @Patch(':productId')
   @AuthAccess({ access: 'admin', permission: 'catalog.products.update', scope: 'store' })
-  @Roles('owner', 'manager')
   updateProduct(@Param('productId', ParseUUIDPipe) id: string, @Body() body: unknown) {
     return this.catalog.updateProduct(id, parseCatalogInput(productInputSchema, body));
   }
@@ -57,8 +52,8 @@ export class AdminProductController {
   @Delete(':productId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @AuthAccess({ access: 'admin', permission: 'catalog.products.delete', scope: 'store' })
-  @Roles('owner')
   async deleteProduct(@Param('productId', ParseUUIDPipe) id: string): Promise<void> {
     await this.catalog.deleteProduct(id);
   }
 }
+

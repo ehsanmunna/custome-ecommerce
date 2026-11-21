@@ -171,8 +171,8 @@ describe('OrderStatusComponent action gating', () => {
 
     component.changeStatus();
 
-    expect(component.error).toBe('Forbidden');
-    expect(component.success).toBeNull();
+    expect(component.error()).toBe('Forbidden');
+    expect(component.success()).toBeNull();
   });
 });
 
@@ -249,7 +249,7 @@ describe('ReturnStatusComponent action gating', () => {
 
     component.changeStatus();
 
-    expect(component.error).toBe('Forbidden');
-    expect(component.success).toBeNull();
+    expect(component.error()).toBe('Forbidden');
+    expect(component.success()).toBeNull();
   });
 });

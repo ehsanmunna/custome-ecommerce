@@ -17,11 +17,11 @@
     }
   </div>
 
-  @if (error) {
-    <div class="text-[var(--color-danger)] mb-4">{{ error }}</div>
+  @if (error()) {
+    <div class="text-[var(--color-danger)] mb-4">{{ error() }}</div>
   }
 
-  @if (zones.length) {
+  @if (zones().length) {
     <table class="w-full border-collapse mb-4">
       <thead>
         <tr>
@@ -53,7 +53,7 @@
         </tr>
       </thead>
       <tbody>
-        @for (z of zones; track z) {
+        @for (z of zones(); track z) {
           <tr>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ z.code }}</td>
             <td class="border border-[var(--color-border)] p-2 text-left">{{ z.name }}</td>
@@ -139,7 +139,7 @@
           </div>
           <button
             type="submit"
-            [disabled]="createForm.invalid || creating"
+            [disabled]="createForm.invalid || creating()"
             class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
           >
             Create Zone
@@ -205,7 +205,7 @@
           </div>
           <button
             type="submit"
-            [disabled]="editForm.invalid || updating"
+            [disabled]="editForm.invalid || updating()"
             class="px-4 py-2 border-none rounded-md cursor-pointer bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
           >
             Save

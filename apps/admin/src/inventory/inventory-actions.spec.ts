@@ -180,8 +180,8 @@ describe('InventoryAdjustmentComponent action gating', () => {
     component.adjustStock('var-1');
     await fixture.whenStable();
 
-    expect(component.error).toBe('Forbidden');
-    expect(component.success).toBeNull();
+    expect(component.error()).toBe('Forbidden');
+    expect(component.success()).toBeNull();
   });
 });
 
@@ -262,7 +262,7 @@ describe('InventoryReservationComponent action gating', () => {
     component.releaseReservation('res-1');
     await fixture.whenStable();
 
-    expect(component.error).toBe('Forbidden');
-    expect(component.success).toBeNull();
+    expect(component.error()).toBe('Forbidden');
+    expect(component.success()).toBeNull();
   });
 });

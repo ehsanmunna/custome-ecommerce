@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 
 import { AuthService, type AdminUser } from '../auth/auth.service';
 
@@ -7,7 +7,7 @@ import { AuthService, type AdminUser } from '../auth/auth.service';
   standalone: true,
   imports: [],
   template: `
-    @if (user) {
+    @if (user(); as user) {
       <div class="profile">
         <h1>Profile</h1>
         <p><strong>Email:</strong> {{ user.email }}</p>
@@ -41,13 +41,13 @@ import { AuthService, type AdminUser } from '../auth/auth.service';
 })
 export class ProfileComponent implements OnInit {
   private readonly auth = inject(AuthService);
-  user: AdminUser | null = null;
+  user = signal<AdminUser | null>(null);
 
   async ngOnInit(): Promise<void> {
     try {
-      this.user = await this.auth.me();
+      this.user.set(await this.auth.me());
     } catch {
-      this.user = null;
+      this.user.set(null);
     }
   }
 

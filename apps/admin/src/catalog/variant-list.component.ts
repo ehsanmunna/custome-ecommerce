@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -63,17 +63,17 @@ export interface AttributeDefinitionPage {
   templateUrl: './variant-list.component.html',
 })
 export class VariantListComponent implements OnInit {
-  variants: Variant[] = [];
-  attributeDefs: AttributeDefinition[] = [];
+  variants = signal<Variant[]>([]);
+  attributeDefs = signal<AttributeDefinition[]>([]);
   productId!: string;
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   createModal = false;
   editModal = false;
-  creating = false;
-  updating = false;
+  creating = signal(false);
+  updating = signal(false);
   editingVariant: Variant | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
@@ -105,7 +105,7 @@ export class VariantListComponent implements OnInit {
 
   ngOnInit(): void {
     if (!this.productId) {
-      this.error = 'No product ID specified';
+      this.error.set('No product ID specified');
       return;
     }
     this.loadVariants();
@@ -117,8 +117,8 @@ export class VariantListComponent implements OnInit {
   }
 
   loadVariants(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<{ items: Variant[] }>(
@@ -127,21 +127,21 @@ export class VariantListComponent implements OnInit {
       )
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load variants';
+          this.error.set(err?.message ?? 'Failed to load variants');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.variants = res?.items ?? [];
+          this.variants.set(res?.items ?? []);
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load variants');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load variants'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -165,23 +165,23 @@ export class VariantListComponent implements OnInit {
           return EMPTY;
         }),
         catchError(() => {
-          this.attributeDefs = [];
+          this.attributeDefs.set([]);
           return EMPTY;
         }),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (attrRes) => {
-          this.attributeDefs = attrRes?.items ?? [];
-          for (const attr of this.attributeDefs) {
+          this.attributeDefs.set(attrRes?.items ?? []);
+          for (const attr of this.attributeDefs()) {
             this.createForm.addControl('attr_' + attr.key, this.fb.control(''));
           }
         },
         error: (err) => {
-          this.attributeDefs = [];
-          this.error = extractErrorMessage(err, 'Failed to load attribute definitions');
+          this.attributeDefs.set([]);
+          this.error.set(extractErrorMessage(err, 'Failed to load attribute definitions'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -198,12 +198,12 @@ export class VariantListComponent implements OnInit {
 
   createVariant(): void {
     if (this.createForm.invalid) return;
-    this.creating = true;
-    this.error = null;
+    this.creating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const attributes: Record<string, unknown> = {};
-    for (const attr of this.attributeDefs) {
+    for (const attr of this.attributeDefs()) {
       const ctrlValue = value['attr_' + attr.key];
       if (ctrlValue !== undefined && ctrlValue !== '') {
         attributes[attr.key] = attr.valueType === 'number' ? Number(ctrlValue) : ctrlValue;
@@ -226,20 +226,20 @@ export class VariantListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        finalize(() => (this.creating = false)),
+        finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeCreateModal();
-          this.variants = res?.items ?? [];
+          this.variants.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.variant.create);
         },
         error: (err) => {
-          this.creating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.createFailed);
+          this.creating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.createFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -262,8 +262,8 @@ export class VariantListComponent implements OnInit {
 
   updateVariant(): void {
     if (!this.editingVariant || this.editForm.invalid) return;
-    this.updating = true;
-    this.error = null;
+    this.updating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.editForm.value;
     const body: VariantInput = {
@@ -283,20 +283,20 @@ export class VariantListComponent implements OnInit {
             { headers: { Authorization: `Bearer ${token}` } },
           ),
         ),
-        finalize(() => (this.updating = false)),
+        finalize(() => this.updating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeEditModal();
-          this.variants = res?.items ?? [];
+          this.variants.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.variant.update);
         },
         error: (err) => {
-          this.updating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.updateFailed);
+          this.updating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.updateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -304,7 +304,7 @@ export class VariantListComponent implements OnInit {
 
   deleteVariant(id: string): void {
     if (!confirm('Delete this variant?')) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .delete(`${this.config.apiBaseUrl}/v1/admin/variants/${id}`, {
@@ -321,13 +321,13 @@ export class VariantListComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.variants = res?.items ?? [];
+          this.variants.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.variant.delete);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.deleteFailed);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.variant.deleteFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

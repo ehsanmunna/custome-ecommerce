@@ -143,8 +143,8 @@ describe('AdminUsersListComponent', () => {
 
     component.ngOnInit();
 
-    expect(component.users.length).toBe(1);
-    expect(component.users[0].email).toBe('admin@example.com');
+    expect(component.users().length).toBe(1);
+    expect(component.users()[0].email).toBe('admin@example.com');
     const req = http.getLastRequest('GET', `${baseUrl}/v1/admin/users?page=1&pageSize=10`);
     expect(req).toBeDefined();
   });
@@ -159,7 +159,7 @@ describe('AdminUsersListComponent', () => {
 
     component.ngOnInit();
 
-    expect(component.error).toBe('List unavailable');
+    expect(component.error()).toBe('List unavailable');
     expect(notification.error).toHaveBeenCalledWith('List unavailable');
   });
 
@@ -181,7 +181,7 @@ describe('AdminUsersListComponent', () => {
     expect(req).toBeDefined();
     expect(req!.body.email).toBe('new@example.com');
     expect(component.createModal).toBe(false);
-    expect(component.error).toBeNull();
+    expect(component.error()).toBeNull();
     expect(notification.success).toHaveBeenCalledWith('Administrator created');
     expect(component.page).toBe(1);
     const refreshes = http.getRequests('GET', `${baseUrl}/v1/admin/users`);
@@ -202,7 +202,7 @@ describe('AdminUsersListComponent', () => {
     expect(req).toBeDefined();
     expect(req!.body.displayName).toBe('Renamed Admin');
     expect(component.editModal).toBe(false);
-    expect(component.users[0].displayName).toBe('Renamed Admin');
+    expect(component.users()[0].displayName).toBe('Renamed Admin');
     expect(notification.success).toHaveBeenCalledWith('Administrator updated');
   });
 
@@ -226,7 +226,7 @@ describe('AdminUsersListComponent', () => {
 
     expect(notification.success).toHaveBeenCalledWith('Administrator created');
     expect(component.createModal).toBe(false);
-    expect(component.error).toBe('Refresh failed');
+    expect(component.error()).toBe('Refresh failed');
     expect(notification.error).toHaveBeenCalledWith('Refresh failed');
   });
 
@@ -248,8 +248,8 @@ describe('AdminUsersListComponent', () => {
     });
 
     expect(component.createModal).toBe(true);
-    expect(component.creating).toBe(false);
-    expect(component.error).toBe('Email already exists');
+    expect(component.creating()).toBe(false);
+    expect(component.error()).toBe('Email already exists');
     expect(notification.error).toHaveBeenCalledWith('Email already exists');
     expect(notification.success).not.toHaveBeenCalled();
   });
@@ -269,7 +269,7 @@ describe('AdminUsersListComponent', () => {
 
     expect(component.editModal).toBe(true);
     expect(component.editingUser).toBe(userFixture);
-    expect(component.error).toBe('Role is required');
+    expect(component.error()).toBe('Role is required');
     expect(notification.success).not.toHaveBeenCalled();
   });
 
@@ -283,7 +283,7 @@ describe('AdminUsersListComponent', () => {
 
     const req = http.getLastRequest('POST', `${baseUrl}/v1/admin/users/user-1/disable`);
     expect(req).toBeDefined();
-    expect(component.users[0].status).toBe('disabled');
+    expect(component.users()[0].status).toBe('disabled');
     expect(notification.success).toHaveBeenCalledWith('Administrator disabled');
   });
 });

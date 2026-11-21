@@ -1,4 +1,4 @@
-import { Component, Inject, OnInit } from '@angular/core';
+import { Component, Inject, OnInit, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse, HttpClient } from '@angular/common/http';
 import { forkJoin, map, Observable, of, switchMap } from 'rxjs';
@@ -50,21 +50,21 @@ type RoleTypeFilter = 'all' | 'system' | 'custom';
           type="search"
           class="toolbar-search"
           placeholder="Search by name or key"
-          [value]="search"
+          [value]="search()"
           (input)="onSearchInput($event)"
         />
-        <select class="toolbar-type" [value]="typeFilter" (change)="onTypeChange($event)">
+        <select class="toolbar-type" [value]="typeFilter()" (change)="onTypeChange($event)">
           <option value="all">All roles</option>
           <option value="system">System</option>
           <option value="custom">Custom</option>
         </select>
       </app-list-toolbar>
 
-      @if (error) {
+      @if (error()) {
         <div
           class="page-error mb-4 p-3 rounded border border-[var(--color-danger)] bg-[var(--color-danger-light)] text-[var(--color-danger)] text-sm"
         >
-          {{ error }}
+          {{ error() }}
         </div>
       }
 
@@ -80,12 +80,12 @@ type RoleTypeFilter = 'all' | 'system' | 'custom';
           </tr>
         </thead>
         <tbody>
-          @if (loading) {
+          @if (loading()) {
             <tr class="loading-row">
               <td class="py-4 text-center text-[var(--color-text-muted)]" colspan="6">Loading roles…</td>
             </tr>
           } @else {
-            @for (role of filteredRoles; track role.id) {
+            @for (role of filteredRoles(); track role.id) {
               <tr class="role-row border-b border-[var(--color-border)]">
                 <td class="py-3 text-[var(--color-text)]">{{ role.name }}</td>
                 <td class="py-3 text-[var(--color-text-muted)]">{{ role.key }}</td>
@@ -108,7 +108,7 @@ type RoleTypeFilter = 'all' | 'system' | 'custom';
                     <button
                       type="button"
                       class="role-delete"
-                      [disabled]="deleting"
+                      [disabled]="deleting()"
                       (click)="deleteRole(role)"
                     >
                       Delete
@@ -131,10 +131,10 @@ type RoleTypeFilter = 'all' | 'system' | 'custom';
         <app-admin-role-form
           [mode]="editingRole ? 'edit' : 'create'"
           [role]="editingRole"
-          [permissions]="permissions"
-          [permissionsLoading]="permissionsLoading"
-          [permissionsError]="permissionsError"
-          [saving]="saving"
+          [permissions]="permissions()"
+          [permissionsLoading]="permissionsLoading()"
+          [permissionsError]="permissionsError()"
+          [saving]="saving()"
           (save)="onSave($event)"
           (cancel)="closeModal()"
           (retryPermissions)="loadPermissions()"
@@ -150,20 +150,20 @@ export class AdminRolesListComponent implements OnInit {
     { label: 'Roles' },
   ];
 
-  roles: Role[] = [];
-  permissions: Permission[] = [];
-  loading = false;
-  error: string | null = null;
-  permissionsLoading = false;
-  permissionsError: string | null = null;
-  deleting = false;
+  roles = signal<Role[]>([]);
+  permissions = signal<Permission[]>([]);
+  loading = signal(false);
+  error = signal<string | null>(null);
+  permissionsLoading = signal(false);
+  permissionsError = signal<string | null>(null);
+  deleting = signal(false);
 
-  search = '';
-  typeFilter: RoleTypeFilter = 'all';
+  search = signal('');
+  typeFilter = signal<RoleTypeFilter>('all');
 
   createModal = false;
   editingRole: Role | null = null;
-  saving = false;
+  saving = signal(false);
 
   private readonly http: HttpClient;
   readonly auth: AuthService;
@@ -188,14 +188,15 @@ export class AdminRolesListComponent implements OnInit {
     this.loadPermissions();
   }
 
-  get filteredRoles(): Role[] {
-    const term = this.search.trim().toLowerCase();
+  readonly filteredRoles = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    const typeFilter = this.typeFilter();
 
-    return this.roles.filter((role) => {
-      if (this.typeFilter === 'system' && !role.system) {
+    return this.roles().filter((role) => {
+      if (typeFilter === 'system' && !role.system) {
         return false;
       }
-      if (this.typeFilter === 'custom' && role.system) {
+      if (typeFilter === 'custom' && role.system) {
         return false;
       }
       if (term.length === 0) {
@@ -203,48 +204,48 @@ export class AdminRolesListComponent implements OnInit {
       }
       return role.name.toLowerCase().includes(term) || role.key.toLowerCase().includes(term);
     });
-  }
+  });
 
   loadRoles(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
 
     this.fetchAllPages<Role>('roles').subscribe({
       next: (roles) => {
-        this.roles = roles;
-        this.loading = false;
+        this.roles.set(roles);
+        this.loading.set(false);
       },
       error: (err: unknown) => {
-        this.loading = false;
+        this.loading.set(false);
         this.reportError(err, 'Failed to load roles');
       },
     });
   }
 
   loadPermissions(): void {
-    this.permissionsLoading = true;
-    this.permissionsError = null;
+    this.permissionsLoading.set(true);
+    this.permissionsError.set(null);
 
     this.fetchAllPages<Permission>('permissions').subscribe({
       next: (permissions) => {
-        this.permissions = permissions;
-        this.permissionsLoading = false;
+        this.permissions.set(permissions);
+        this.permissionsLoading.set(false);
       },
       error: (err: unknown) => {
-        this.permissions = [];
-        this.permissionsLoading = false;
-        this.permissionsError = extractErrorMessage(err, 'Failed to load permissions');
+        this.permissions.set([]);
+        this.permissionsLoading.set(false);
+        this.permissionsError.set(extractErrorMessage(err, 'Failed to load permissions'));
         this.reportError(err, 'Failed to load permissions');
       },
     });
   }
 
   onSearchInput(event: Event): void {
-    this.search = (event.target as HTMLInputElement).value;
+    this.search.set((event.target as HTMLInputElement).value);
   }
 
   onTypeChange(event: Event): void {
-    this.typeFilter = (event.target as HTMLSelectElement).value as RoleTypeFilter;
+    this.typeFilter.set((event.target as HTMLSelectElement).value as RoleTypeFilter);
   }
 
   openCreateModal(): void {
@@ -260,13 +261,13 @@ export class AdminRolesListComponent implements OnInit {
   closeModal(): void {
     this.createModal = false;
     this.editingRole = null;
-    this.saving = false;
+    this.saving.set(false);
   }
 
   onSave(value: RoleFormValue): void {
     const token = this.auth.token;
     const headers = { Authorization: `Bearer ${token}` };
-    this.saving = true;
+    this.saving.set(true);
 
     if (this.editingRole) {
       const roleId = this.editingRole.id;
@@ -287,7 +288,7 @@ export class AdminRolesListComponent implements OnInit {
               roleId === this.auth.role?.id,
             ),
           error: (err: unknown) => {
-            this.saving = false;
+            this.saving.set(false);
             this.reportError(err, NOTIFICATION_MESSAGES.role.updateFailed);
           },
         });
@@ -305,14 +306,14 @@ export class AdminRolesListComponent implements OnInit {
     this.http.post(`${this.config.apiBaseUrl}/v1/admin/roles`, body, { headers }).subscribe({
       next: () => this.finishSave(NOTIFICATION_MESSAGES.role.create),
       error: (err: unknown) => {
-        this.saving = false;
+        this.saving.set(false);
         this.reportError(err, NOTIFICATION_MESSAGES.role.createFailed);
       },
     });
   }
 
   private finishSave(message: string, refreshOwnPermissions = false): void {
-    this.saving = false;
+    this.saving.set(false);
     this.closeModal();
     this.notification.success(message);
     this.loadRoles();
@@ -340,8 +341,8 @@ export class AdminRolesListComponent implements OnInit {
       return;
     }
 
-    this.deleting = true;
-    this.error = null;
+    this.deleting.set(true);
+    this.error.set(null);
     const token = this.auth.token;
 
     this.http
@@ -350,12 +351,12 @@ export class AdminRolesListComponent implements OnInit {
       })
       .subscribe({
         next: () => {
-          this.deleting = false;
+          this.deleting.set(false);
           this.notification.success(NOTIFICATION_MESSAGES.role.delete);
           this.loadRoles();
         },
         error: (err: unknown) => {
-          this.deleting = false;
+          this.deleting.set(false);
           this.reportError(err, NOTIFICATION_MESSAGES.role.deleteFailed);
         },
       });
@@ -395,7 +396,7 @@ export class AdminRolesListComponent implements OnInit {
 
   private reportError(error: unknown, fallback: string): void {
     const message = extractErrorMessage(error, fallback);
-    this.error = message;
+    this.error.set(message);
 
     if (!(error instanceof HttpErrorResponse) || !isGlobalHttpError(error.status)) {
       this.notification.error(message);

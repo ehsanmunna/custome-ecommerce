@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -53,17 +53,17 @@ export interface CategoryPage {
   templateUrl: './category-list.component.html',
 })
 export class CategoryListComponent implements OnInit {
-  categories: Category[] = [];
-  rootCategories: Category[] = [];
+  categories = signal<Category[]>([]);
+  rootCategories = signal<Category[]>([]);
   expanded: Record<string, boolean> = {};
 
-  loading = false;
-  error: string | null = null;
+  loading = signal(false);
+  error = signal<string | null>(null);
 
   createModal = false;
   editModal = false;
-  creating = false;
-  updating = false;
+  creating = signal(false);
+  updating = signal(false);
   editingCategory: Category | null = null;
 
   private readonly destroyRef = inject(DestroyRef);
@@ -104,8 +104,8 @@ export class CategoryListComponent implements OnInit {
   }
 
   loadCategories(): void {
-    this.loading = true;
-    this.error = null;
+    this.loading.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .get<CategoryPage>(`${this.config.apiBaseUrl}/v1/admin/categories`, {
@@ -113,37 +113,38 @@ export class CategoryListComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load categories';
+          this.error.set(err?.message ?? 'Failed to load categories');
+          this.categories.set([]);
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.categories = res?.items ?? [];
+          this.categories.set(res?.items ?? []);
           this.buildTree();
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load categories');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load categories'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
   }
 
   buildTree(): void {
-    this.rootCategories = this.categories.filter((c) => !c.parentId);
+    this.rootCategories.set(this.categories().filter((c) => !c.parentId));
   }
 
   childCount(parentId: string): number {
-    return this.categories.filter((c) => c.parentId === parentId).length;
+    return this.categories().filter((c) => c.parentId === parentId).length;
   }
 
   childrenOf(parentId: string): Category[] {
-    return this.categories.filter((c) => c.parentId === parentId);
+    return this.categories().filter((c) => c.parentId === parentId);
   }
 
   toggleChildren(id: string): void {
@@ -169,8 +170,8 @@ export class CategoryListComponent implements OnInit {
 
   createCategory(): void {
     if (this.createForm.invalid) return;
-    this.creating = true;
-    this.error = null;
+    this.creating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body: any = {
@@ -194,21 +195,21 @@ export class CategoryListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        finalize(() => (this.creating = false)),
+        finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeCreateModal();
-          this.categories = res?.items ?? [];
+          this.categories.set(res?.items ?? []);
           this.buildTree();
           this.notification.success(NOTIFICATION_MESSAGES.category.create);
         },
         error: (err) => {
-          this.creating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.category.createFailed);
+          this.creating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.category.createFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -234,8 +235,8 @@ export class CategoryListComponent implements OnInit {
 
   updateCategory(): void {
     if (!this.editingCategory || this.editForm.invalid) return;
-    this.updating = true;
-    this.error = null;
+    this.updating.set(true);
+    this.error.set(null);
     const token = this.auth.token;
     const value = this.editForm.value;
     const body: any = {
@@ -258,21 +259,21 @@ export class CategoryListComponent implements OnInit {
             headers: { Authorization: `Bearer ${token}` },
           }),
         ),
-        finalize(() => (this.updating = false)),
+        finalize(() => this.updating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.closeEditModal();
-          this.categories = res?.items ?? [];
+          this.categories.set(res?.items ?? []);
           this.buildTree();
           this.notification.success(NOTIFICATION_MESSAGES.category.update);
         },
         error: (err) => {
-          this.updating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.category.updateFailed);
+          this.updating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.category.updateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -280,7 +281,7 @@ export class CategoryListComponent implements OnInit {
 
   deleteCategory(id: string): void {
     if (!confirm('Delete this category?')) return;
-    this.error = null;
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .delete(`${this.config.apiBaseUrl}/v1/admin/categories/${id}`, {
@@ -296,14 +297,14 @@ export class CategoryListComponent implements OnInit {
       )
       .subscribe({
         next: (res) => {
-          this.categories = res?.items ?? [];
+          this.categories.set(res?.items ?? []);
           this.buildTree();
           this.notification.success(NOTIFICATION_MESSAGES.category.delete);
         },
         error: (err) => {
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.category.deleteFailed);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.category.deleteFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });

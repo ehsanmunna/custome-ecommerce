@@ -1,4 +1,4 @@
-import { Component, DestroyRef, Inject, OnInit, inject } from '@angular/core';
+import { Component, DestroyRef, Inject, OnInit, inject, signal } from '@angular/core';
 
 import {
   FormsModule,
@@ -51,13 +51,13 @@ export interface ReservationInput {
   templateUrl: './inventory-reservation.component.html',
 })
 export class InventoryReservationComponent implements OnInit {
-  reservations: Reservation[] = [];
+  reservations = signal<Reservation[]>([]);
 
-  loading = false;
-  creating = false;
-  processingId: string | null = null;
-  error: string | null = null;
-  success: string | null = null;
+  loading = signal(false);
+  creating = signal(false);
+  processingId = signal<string | null>(null);
+  error = signal<string | null>(null);
+  success = signal<string | null>(null);
 
   private readonly destroyRef = inject(DestroyRef);
 
@@ -84,9 +84,9 @@ export class InventoryReservationComponent implements OnInit {
   }
 
   loadReservations(): void {
-    this.loading = true;
-    this.error = null;
-    this.success = null;
+    this.loading.set(true);
+    this.error.set(null);
+    this.success.set(null);
     const token = this.auth.token;
     this.http
       .get<ReservationPage>(`${this.config.apiBaseUrl}/v1/admin/inventory/reservations`, {
@@ -94,21 +94,21 @@ export class InventoryReservationComponent implements OnInit {
       })
       .pipe(
         catchError((err: any) => {
-          this.error = err?.message ?? 'Failed to load reservations';
+          this.error.set(err?.message ?? 'Failed to load reservations');
           return EMPTY;
         }),
-        finalize(() => (this.loading = false)),
+        finalize(() => this.loading.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.reservations = res?.items ?? [];
+          this.reservations.set(res?.items ?? []);
         },
         error: (err) => {
-          this.loading = false;
-          this.error = extractErrorMessage(err, 'Failed to load reservations');
+          this.loading.set(false);
+          this.error.set(extractErrorMessage(err, 'Failed to load reservations'));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -116,9 +116,9 @@ export class InventoryReservationComponent implements OnInit {
 
   createReservation(): void {
     if (this.createForm.invalid) return;
-    this.creating = true;
-    this.error = null;
-    this.success = null;
+    this.creating.set(true);
+    this.error.set(null);
+    this.success.set(null);
     const token = this.auth.token;
     const value = this.createForm.value;
     const body: ReservationInput = {
@@ -141,21 +141,21 @@ export class InventoryReservationComponent implements OnInit {
             },
           ),
         ),
-        finalize(() => (this.creating = false)),
+        finalize(() => this.creating.set(false)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
           this.createForm.reset({ variantId: '', quantity: 1, expiresAt: '' });
-          this.reservations = res?.items ?? [];
-          this.success = 'Reservation created';
+          this.reservations.set(res?.items ?? []);
+          this.success.set('Reservation created');
           this.notification.success(NOTIFICATION_MESSAGES.inventory.reservationCreate);
         },
         error: (err) => {
-          this.creating = false;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.reservationCreateFailed);
+          this.creating.set(false);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.reservationCreateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
@@ -170,8 +170,8 @@ export class InventoryReservationComponent implements OnInit {
   }
 
   private updateReservationStatus(reservationId: string, status: string): void {
-    this.processingId = reservationId;
-    this.error = null;
+    this.processingId.set(reservationId);
+    this.error.set(null);
     const token = this.auth.token;
     this.http
       .patch(
@@ -188,20 +188,20 @@ export class InventoryReservationComponent implements OnInit {
             },
           ),
         ),
-        finalize(() => (this.processingId = null)),
+        finalize(() => this.processingId.set(null)),
         takeUntilDestroyed(this.destroyRef),
       )
       .subscribe({
         next: (res) => {
-          this.success = `Reservation ${status}`;
-          this.reservations = res?.items ?? [];
+          this.success.set(`Reservation ${status}`);
+          this.reservations.set(res?.items ?? []);
           this.notification.success(NOTIFICATION_MESSAGES.inventory.reservationUpdate);
         },
         error: (err) => {
-          this.processingId = null;
-          this.error = extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.reservationUpdateFailed);
+          this.processingId.set(null);
+          this.error.set(extractErrorMessage(err, NOTIFICATION_MESSAGES.inventory.reservationUpdateFailed));
           if (!isGlobalHttpError(err?.status)) {
-            this.notification.error(this.error);
+            this.notification.error(this.error()!);
           }
         },
       });
